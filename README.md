@@ -12,6 +12,8 @@
 ![Apache Jena](https://img.shields.io/badge/Apache%20Jena-4.10-blue.svg)
 ![React](https://img.shields.io/badge/React-18-61DAFB.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.13-3776AB.svg)
+![Pandapower](https://img.shields.io/badge/Pandapower-enabled-00A86B.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 **Enterprise-grade platform for transforming CIM power system models into semantic knowledge graphs with GraphRAG and LLM integration**
