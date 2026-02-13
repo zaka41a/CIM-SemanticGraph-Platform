@@ -1,0 +1,3 @@
+# Exclude markup/style files from GitHub Linguist language stats
+*.html linguist-detectable=false
+*.css linguist-detectable=false

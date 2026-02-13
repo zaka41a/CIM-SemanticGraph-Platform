@@ -1,0 +1,15 @@
+# OS / IDE
+.DS_Store
+.idea/
+
+# Secrets
+backend/.env
+
+# Build artifacts
+backend/target/
+powerflow-service/app/__pycache__/
+
+# Generated reports and export pages
+backend/target/site/jacoco/**/*.html
+backend/target/site/jacoco/**/*.css
+examples/cim test/*.html
