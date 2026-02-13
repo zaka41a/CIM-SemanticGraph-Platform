@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmbeddingService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.service</a> &gt; <span class="el_source">EmbeddingService.java</span></div><h1>EmbeddingService.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.service;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+/**
+ * Embedding Service for GraphRAG
+ *
+ * Generates vector embeddings for semantic search
+ * This is a simplified implementation - in production, you would integrate
+ * with OpenAI, Hugging Face, or other embedding models
+ */
+<span class="nc" id="L17">@Slf4j</span>
+@Service
+<span class="nc" id="L19">public class EmbeddingService {</span>
+
+    @Value(&quot;${graphrag.embedding.dimension}&quot;)
+    private int embeddingDimension;
+
+    @Value(&quot;${graphrag.embedding.cache-enabled}&quot;)
+    private boolean cacheEnabled;
+
+    // Simple in-memory cache for embeddings
+<span class="nc" id="L28">    private final Map&lt;String, float[]&gt; embeddingCache = new HashMap&lt;&gt;();</span>
+
+    /**
+     * Generate embedding for text
+     *
+     * NOTE: This is a simplified implementation using TF-IDF-like approach
+     * For production, integrate with:
+     * - OpenAI Embeddings API
+     * - sentence-transformers (via REST API)
+     * - Hugging Face models
+     *
+     * @param text Input text
+     * @return Embedding vector
+     */
+    @Cacheable(value = &quot;embeddings&quot;, condition = &quot;#root.target.cacheEnabled&quot;)
+    public float[] generateEmbedding(String text) {
+<span class="nc" id="L44">        log.debug(&quot;Generating embedding for text: {} characters&quot;, text.length());</span>
+
+        // Check cache
+<span class="nc bnc" id="L47" title="All 4 branches missed.">        if (cacheEnabled &amp;&amp; embeddingCache.containsKey(text)) {</span>
+<span class="nc" id="L48">            log.debug(&quot;Returning cached embedding&quot;);</span>
+<span class="nc" id="L49">            return embeddingCache.get(text);</span>
+        }
+
+        // Simple embedding generation (for demo purposes)
+<span class="nc" id="L53">        float[] embedding = generateSimpleEmbedding(text);</span>
+
+        // Cache the embedding
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        if (cacheEnabled) {</span>
+<span class="nc" id="L57">            embeddingCache.put(text, embedding);</span>
+        }
+
+<span class="nc" id="L60">        return embedding;</span>
+    }
+
+    /**
+     * Calculate cosine similarity between two embeddings
+     *
+     * @param vec1 First embedding vector
+     * @param vec2 Second embedding vector
+     * @return Similarity score (0.0 to 1.0)
+     */
+    public double cosineSimilarity(float[] vec1, float[] vec2) {
+<span class="nc bnc" id="L71" title="All 2 branches missed.">        if (vec1.length != vec2.length) {</span>
+<span class="nc" id="L72">            throw new IllegalArgumentException(&quot;Vectors must have same dimension&quot;);</span>
+        }
+
+<span class="nc" id="L75">        double dotProduct = 0.0;</span>
+<span class="nc" id="L76">        double norm1 = 0.0;</span>
+<span class="nc" id="L77">        double norm2 = 0.0;</span>
+
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        for (int i = 0; i &lt; vec1.length; i++) {</span>
+<span class="nc" id="L80">            dotProduct += vec1[i] * vec2[i];</span>
+<span class="nc" id="L81">            norm1 += vec1[i] * vec1[i];</span>
+<span class="nc" id="L82">            norm2 += vec2[i] * vec2[i];</span>
+        }
+
+<span class="nc bnc" id="L85" title="All 4 branches missed.">        if (norm1 == 0.0 || norm2 == 0.0) {</span>
+<span class="nc" id="L86">            return 0.0;</span>
+        }
+
+<span class="nc" id="L89">        return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));</span>
+    }
+
+    /**
+     * Find similar entities based on embedding similarity
+     *
+     * @param queryEmbedding Query embedding
+     * @param candidates     Map of entity URIs to their embeddings
+     * @param topK           Number of top results to return
+     * @return List of similar entity URIs
+     */
+    public List&lt;String&gt; findSimilarEntities(float[] queryEmbedding,
+                                           Map&lt;String, float[]&gt; candidates,
+                                           int topK) {
+<span class="nc" id="L103">        log.debug(&quot;Finding similar entities. Candidates: {}, topK: {}&quot;, candidates.size(), topK);</span>
+
+        // Calculate similarities
+<span class="nc" id="L106">        Map&lt;String, Double&gt; similarities = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        for (Map.Entry&lt;String, float[]&gt; entry : candidates.entrySet()) {</span>
+<span class="nc" id="L108">            double similarity = cosineSimilarity(queryEmbedding, entry.getValue());</span>
+<span class="nc" id="L109">            similarities.put(entry.getKey(), similarity);</span>
+<span class="nc" id="L110">        }</span>
+
+        // Sort by similarity and get top K
+<span class="nc" id="L113">        return similarities.entrySet().stream()</span>
+<span class="nc" id="L114">                .sorted(Map.Entry.&lt;String, Double&gt;comparingByValue().reversed())</span>
+<span class="nc" id="L115">                .limit(topK)</span>
+<span class="nc" id="L116">                .map(Map.Entry::getKey)</span>
+<span class="nc" id="L117">                .toList();</span>
+    }
+
+    /**
+     * Batch generate embeddings
+     *
+     * @param texts List of texts
+     * @return List of embeddings
+     */
+    public List&lt;float[]&gt; batchGenerateEmbeddings(List&lt;String&gt; texts) {
+<span class="nc" id="L127">        log.info(&quot;Generating embeddings for {} texts&quot;, texts.size());</span>
+
+<span class="nc" id="L129">        List&lt;float[]&gt; embeddings = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        for (String text : texts) {</span>
+<span class="nc" id="L131">            embeddings.add(generateEmbedding(text));</span>
+<span class="nc" id="L132">        }</span>
+
+<span class="nc" id="L134">        return embeddings;</span>
+    }
+
+    /**
+     * Clear embedding cache
+     */
+    public void clearCache() {
+<span class="nc" id="L141">        log.info(&quot;Clearing embedding cache. Size: {}&quot;, embeddingCache.size());</span>
+<span class="nc" id="L142">        embeddingCache.clear();</span>
+<span class="nc" id="L143">    }</span>
+
+    /**
+     * Get cache size
+     */
+    public int getCacheSize() {
+<span class="nc" id="L149">        return embeddingCache.size();</span>
+    }
+
+    /**
+     * Simple embedding generation using character n-grams and hashing
+     * This is a placeholder for actual embedding model integration
+     */
+    private float[] generateSimpleEmbedding(String text) {
+<span class="nc" id="L157">        float[] embedding = new float[embeddingDimension];</span>
+
+        // Normalize text
+<span class="nc" id="L160">        String normalized = text.toLowerCase().trim();</span>
+
+        // Use hash-based approach for simplicity
+        // This creates a consistent but simple embedding
+<span class="nc" id="L164">        Random random = new Random(normalized.hashCode());</span>
+
+<span class="nc bnc" id="L166" title="All 2 branches missed.">        for (int i = 0; i &lt; embeddingDimension; i++) {</span>
+<span class="nc" id="L167">            embedding[i] = (float) (random.nextGaussian() * 0.1);</span>
+        }
+
+        // Add some semantic structure based on keywords
+<span class="nc" id="L171">        String[] keywords = {&quot;equipment&quot;, &quot;substation&quot;, &quot;line&quot;, &quot;transformer&quot;,</span>
+                           &quot;voltage&quot;, &quot;power&quot;, &quot;energy&quot;, &quot;network&quot;, &quot;grid&quot;};
+
+<span class="nc bnc" id="L174" title="All 4 branches missed.">        for (int i = 0; i &lt; keywords.length &amp;&amp; i &lt; embeddingDimension; i++) {</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">            if (normalized.contains(keywords[i])) {</span>
+<span class="nc" id="L176">                embedding[i % embeddingDimension] += 0.5f;</span>
+            }
+        }
+
+        // Normalize the embedding
+<span class="nc" id="L181">        float norm = 0.0f;</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">        for (float v : embedding) {</span>
+<span class="nc" id="L183">            norm += v * v;</span>
+        }
+<span class="nc" id="L185">        norm = (float) Math.sqrt(norm);</span>
+
+<span class="nc bnc" id="L187" title="All 2 branches missed.">        if (norm &gt; 0) {</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">            for (int i = 0; i &lt; embedding.length; i++) {</span>
+<span class="nc" id="L189">                embedding[i] /= norm;</span>
+            }
+        }
+
+<span class="nc" id="L193">        return embedding;</span>
+    }
+
+    /**
+     * TODO: Integration with real embedding models
+     *
+     * For production deployment, implement integration with:
+     *
+     * 1. OpenAI Embeddings API:
+     *    - Model: text-embedding-ada-002
+     *    - Dimension: 1536
+     *    - API: https://api.openai.com/v1/embeddings
+     *
+     * 2. Sentence Transformers (via Python service):
+     *    - Model: all-MiniLM-L6-v2 or all-mpnet-base-v2
+     *    - Deploy as microservice
+     *    - REST API integration
+     *
+     * 3. Hugging Face Inference API:
+     *    - Various models available
+     *    - Easy integration with REST API
+     *
+     * Example OpenAI integration:
+     *
+     * public float[] generateOpenAIEmbedding(String text) {
+     *     WebClient client = WebClient.builder()
+     *         .baseUrl(&quot;https://api.openai.com/v1&quot;)
+     *         .defaultHeader(&quot;Authorization&quot;, &quot;Bearer &quot; + apiKey)
+     *         .build();
+     *
+     *     Map&lt;String, Object&gt; request = Map.of(
+     *         &quot;model&quot;, &quot;text-embedding-ada-002&quot;,
+     *         &quot;input&quot;, text
+     *     );
+     *
+     *     return client.post()
+     *         .uri(&quot;/embeddings&quot;)
+     *         .bodyValue(request)
+     *         .retrieve()
+     *         .bodyToMono(EmbeddingResponse.class)
+     *         .map(response -&gt; response.getData().get(0).getEmbedding())
+     *         .block();
+     * }
+     */
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CimTransformerService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.service</a> &gt; <span class="el_source">CimTransformerService.java</span></div><h1>CimTransformerService.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.service;
+
+import com.cim.semanticgraph.dto.ValidationResult;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.ontology.OntModel;
+import org.apache.jena.rdf.model.*;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+<span class="nc" id="L25">@Slf4j</span>
+@Service
+<span class="nc" id="L27">@RequiredArgsConstructor</span>
+public class CimTransformerService {
+
+    private final JenaService jenaService;
+    private final OntModel ontModel;
+
+    @Value(&quot;${cim.schema.base-uri}&quot;)
+    private String cimBaseUri;
+
+    @Value(&quot;${cim.namespaces.cim}&quot;)
+    private String cimNamespace;
+
+    @Value(&quot;${cim.import.validate}&quot;)
+    private boolean validateOnImport;
+
+    public Model transformCimXmlToRdf(InputStream inputStream) throws Exception {
+<span class="nc" id="L43">        log.info(&quot;Starting CIM/XML to RDF transformation&quot;);</span>
+
+<span class="nc" id="L45">        Model model = ModelFactory.createDefaultModel();</span>
+<span class="nc" id="L46">        model.setNsPrefix(&quot;cim&quot;, cimNamespace);</span>
+<span class="nc" id="L47">        model.setNsPrefix(&quot;rdf&quot;, RDF.getURI());</span>
+<span class="nc" id="L48">        model.setNsPrefix(&quot;rdfs&quot;, RDFS.getURI());</span>
+
+        try {
+<span class="nc" id="L51">            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();</span>
+<span class="nc" id="L52">            factory.setNamespaceAware(true);</span>
+<span class="nc" id="L53">            DocumentBuilder builder = factory.newDocumentBuilder();</span>
+<span class="nc" id="L54">            Document doc = builder.parse(inputStream);</span>
+<span class="nc" id="L55">            doc.getDocumentElement().normalize();</span>
+
+<span class="nc" id="L57">            log.info(&quot;XML parsed successfully. Root element: {}&quot;, doc.getDocumentElement().getNodeName());</span>
+
+<span class="nc" id="L59">            transformElementToRdf(doc.getDocumentElement(), model, new HashMap&lt;&gt;());</span>
+
+<span class="nc" id="L61">            log.info(&quot;Transformation completed. Total triples: {}&quot;, model.size());</span>
+<span class="nc" id="L62">            return model;</span>
+
+<span class="nc" id="L64">        } catch (Exception e) {</span>
+<span class="nc" id="L65">            log.error(&quot;Error transforming CIM/XML to RDF&quot;, e);</span>
+<span class="nc" id="L66">            throw new RuntimeException(&quot;CIM transformation failed: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    public Model transformCimRdfToModel(InputStream inputStream, String format) {
+<span class="nc" id="L71">        log.info(&quot;Loading CIM/RDF data in format: {} (base URI: {})&quot;, format, cimBaseUri);</span>
+
+<span class="nc" id="L73">        Model model = ModelFactory.createDefaultModel();</span>
+        try {
+<span class="nc" id="L75">            model.read(inputStream, cimBaseUri, format);</span>
+<span class="nc" id="L76">            long tripleCount = model.size();</span>
+<span class="nc" id="L77">            log.info(&quot;CIM/RDF loaded successfully. Triples: {}&quot;, tripleCount);</span>
+
+<span class="nc bnc" id="L79" title="All 2 branches missed.">            if (tripleCount == 0) {</span>
+<span class="nc" id="L80">                log.warn(&quot;WARNING: Model is empty after parsing! This might indicate:&quot;);</span>
+<span class="nc" id="L81">                log.warn(&quot;   - File format mismatch (expected: {})&quot;, format);</span>
+<span class="nc" id="L82">                log.warn(&quot;   - Empty or invalid RDF file&quot;);</span>
+<span class="nc" id="L83">                log.warn(&quot;   - Incorrect base URI: {}&quot;, cimBaseUri);</span>
+            } else {
+<span class="nc" id="L85">                log.info(&quot;Successfully parsed {} triples from RDF file&quot;, tripleCount);</span>
+            }
+
+<span class="nc" id="L88">            return model;</span>
+<span class="nc" id="L89">        } catch (Exception e) {</span>
+<span class="nc" id="L90">            log.error(&quot;Error loading CIM/RDF with format '{}'&quot;, format, e);</span>
+<span class="nc" id="L91">            throw new RuntimeException(&quot;Failed to load CIM/RDF: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    public ValidationResult validateCimSchema(Model model) {
+<span class="nc" id="L96">        log.info(&quot;Validating CIM schema compliance&quot;);</span>
+
+<span class="nc" id="L98">        List&lt;String&gt; errors = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L99">        List&lt;String&gt; warnings = new ArrayList&lt;&gt;();</span>
+
+        try {
+<span class="nc bnc" id="L102" title="All 2 branches missed.">            if (!hasRequiredCIMClasses(model)) {</span>
+<span class="nc" id="L103">                errors.add(&quot;Model does not contain required CIM classes&quot;);</span>
+            }
+
+<span class="nc" id="L106">            validatePropertyDomains(model, errors, warnings);</span>
+<span class="nc" id="L107">            validateCardinality(model, warnings);</span>
+
+<span class="nc" id="L109">            boolean isValid = errors.isEmpty();</span>
+<span class="nc" id="L110">            log.info(&quot;Validation completed. Valid: {}, Errors: {}, Warnings: {}&quot;,</span>
+<span class="nc" id="L111">                    isValid, errors.size(), warnings.size());</span>
+
+<span class="nc" id="L113">            return ValidationResult.builder()</span>
+<span class="nc" id="L114">                    .valid(isValid)</span>
+<span class="nc" id="L115">                    .errors(errors)</span>
+<span class="nc" id="L116">                    .warnings(warnings)</span>
+<span class="nc" id="L117">                    .build();</span>
+
+<span class="nc" id="L119">        } catch (Exception e) {</span>
+<span class="nc" id="L120">            log.error(&quot;Error during validation&quot;, e);</span>
+<span class="nc" id="L121">            errors.add(&quot;Validation error: &quot; + e.getMessage());</span>
+<span class="nc" id="L122">            return ValidationResult.builder()</span>
+<span class="nc" id="L123">                    .valid(false)</span>
+<span class="nc" id="L124">                    .errors(errors)</span>
+<span class="nc" id="L125">                    .warnings(warnings)</span>
+<span class="nc" id="L126">                    .build();</span>
+        }
+    }
+
+    public Model enrichWithInferences(Model model) {
+<span class="nc" id="L131">        log.info(&quot;Enriching model with OWL inferences&quot;);</span>
+
+        try {
+<span class="nc" id="L134">            OntModel reasoningModel = ModelFactory.createOntologyModel();</span>
+<span class="nc" id="L135">            reasoningModel.add(model);</span>
+
+<span class="nc bnc" id="L137" title="All 4 branches missed.">            if (ontModel != null &amp;&amp; ontModel.size() &gt; 0) {</span>
+<span class="nc" id="L138">                reasoningModel.addSubModel(ontModel);</span>
+            }
+
+<span class="nc" id="L141">            Model inferredModel = ModelFactory.createDefaultModel();</span>
+<span class="nc" id="L142">            inferredModel.add(reasoningModel);</span>
+
+<span class="nc" id="L144">            long originalSize = model.size();</span>
+<span class="nc" id="L145">            long enrichedSize = inferredModel.size();</span>
+<span class="nc" id="L146">            long inferredTriples = enrichedSize - originalSize;</span>
+
+<span class="nc" id="L148">            log.info(&quot;Inference completed. Original: {}, Inferred: {}, Total: {}&quot;,</span>
+<span class="nc" id="L149">                    originalSize, inferredTriples, enrichedSize);</span>
+
+<span class="nc" id="L151">            return inferredModel;</span>
+
+<span class="nc" id="L153">        } catch (Exception e) {</span>
+<span class="nc" id="L154">            log.error(&quot;Error during inference&quot;, e);</span>
+<span class="nc" id="L155">            log.warn(&quot;Returning original model without inference&quot;);</span>
+<span class="nc" id="L156">            return model;</span>
+        }
+    }
+
+    public Map&lt;String, Object&gt; importCimData(InputStream inputStream, String format) throws Exception {
+<span class="nc" id="L161">        log.info(&quot;Importing CIM data. Format: {}&quot;, format);</span>
+
+        Model model;
+
+<span class="nc bnc" id="L165" title="All 4 branches missed.">        if (&quot;CIM/XML&quot;.equalsIgnoreCase(format) || &quot;application/xml&quot;.equalsIgnoreCase(format)) {</span>
+<span class="nc" id="L166">            model = transformCimXmlToRdf(inputStream);</span>
+        } else {
+<span class="nc" id="L168">            String rdfFormat = mapFormatToJena(format);</span>
+<span class="nc" id="L169">            log.info(&quot;Transforming CIM/RDF with format mapping: {} -&gt; {}&quot;, format, rdfFormat);</span>
+<span class="nc" id="L170">            model = transformCimRdfToModel(inputStream, rdfFormat);</span>
+        }
+
+<span class="nc bnc" id="L173" title="All 4 branches missed.">        if (model == null || model.isEmpty()) {</span>
+<span class="nc" id="L174">            log.error(&quot;Model is empty after transformation! Format: {}&quot;, format);</span>
+<span class="nc" id="L175">            throw new RuntimeException(&quot;Failed to parse CIM data. The model is empty. Please check the file format and content.&quot;);</span>
+        }
+
+<span class="nc" id="L178">        log.info(&quot;Model transformed successfully. Initial triple count: {}&quot;, model.size());</span>
+
+<span class="nc bnc" id="L180" title="All 2 branches missed.">        if (validateOnImport) {</span>
+<span class="nc" id="L181">            ValidationResult validation = validateCimSchema(model);</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">            if (!validation.isValid()) {</span>
+<span class="nc" id="L183">                log.warn(&quot;Validation failed but continuing import. Errors: {}&quot;, validation.getErrors());</span>
+            }
+        }
+
+<span class="nc" id="L187">        long originalSize = model.size();</span>
+<span class="nc" id="L188">        log.info(&quot;Model size before enrichment: {} triples&quot;, originalSize);</span>
+
+<span class="nc" id="L190">        Model enrichedModel = enrichWithInferences(model);</span>
+<span class="nc" id="L191">        long enrichedSize = enrichedModel.size();</span>
+<span class="nc" id="L192">        long inferredTriples = enrichedSize - originalSize;</span>
+
+<span class="nc" id="L194">        log.info(&quot;Model size after enrichment: {} triples ({} inferred)&quot;, enrichedSize, inferredTriples);</span>
+
+<span class="nc" id="L196">        jenaService.importRdfData(</span>
+            new java.io.ByteArrayInputStream(
+<span class="nc" id="L198">                writeModelToString(enrichedModel).getBytes()</span>
+            ),
+            &quot;RDF/XML&quot;
+        );
+
+<span class="nc" id="L203">        Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L204">        stats.put(&quot;originalTriples&quot;, originalSize);</span>
+<span class="nc" id="L205">        stats.put(&quot;inferredTriples&quot;, inferredTriples);</span>
+<span class="nc" id="L206">        stats.put(&quot;totalTriples&quot;, enrichedSize);</span>
+<span class="nc" id="L207">        stats.put(&quot;format&quot;, format);</span>
+
+<span class="nc" id="L209">        log.info(&quot;CIM import completed successfully. Stats: originalTriples={}, inferredTriples={}, totalTriples={}&quot;,</span>
+<span class="nc" id="L210">                originalSize, inferredTriples, enrichedSize);</span>
+<span class="nc" id="L211">        return stats;</span>
+    }
+
+    private void transformElementToRdf(Element element, Model model, Map&lt;String, Resource&gt; resourceMap) {
+<span class="nc" id="L215">        String elementName = element.getLocalName();</span>
+<span class="nc" id="L216">        String namespace = element.getNamespaceURI();</span>
+
+<span class="nc bnc" id="L218" title="All 2 branches missed.">        if (namespace == null) {</span>
+<span class="nc" id="L219">            namespace = cimNamespace;</span>
+        }
+
+<span class="nc" id="L222">        String resourceId = element.getAttribute(&quot;rdf:ID&quot;);</span>
+<span class="nc bnc" id="L223" title="All 4 branches missed.">        if (resourceId == null || resourceId.isEmpty()) {</span>
+<span class="nc" id="L224">            resourceId = element.getAttribute(&quot;ID&quot;);</span>
+        }
+<span class="nc bnc" id="L226" title="All 4 branches missed.">        if (resourceId == null || resourceId.isEmpty()) {</span>
+<span class="nc" id="L227">            resourceId = &quot;resource_&quot; + System.nanoTime();</span>
+        }
+
+<span class="nc" id="L230">        String resourceUri = namespace + resourceId;</span>
+<span class="nc" id="L231">        Resource resource = model.createResource(resourceUri);</span>
+
+<span class="nc" id="L233">        resourceMap.put(resourceId, resource);</span>
+
+<span class="nc" id="L235">        Resource classResource = model.createResource(namespace + elementName);</span>
+<span class="nc" id="L236">        resource.addProperty(RDF.type, classResource);</span>
+
+<span class="nc bnc" id="L238" title="All 2 branches missed.">        for (int i = 0; i &lt; element.getAttributes().getLength(); i++) {</span>
+<span class="nc" id="L239">            Node attr = element.getAttributes().item(i);</span>
+<span class="nc" id="L240">            String attrName = attr.getNodeName();</span>
+<span class="nc" id="L241">            String attrValue = attr.getNodeValue();</span>
+
+<span class="nc bnc" id="L243" title="All 6 branches missed.">            if (!attrName.startsWith(&quot;xmlns&quot;) &amp;&amp; !attrName.equals(&quot;rdf:ID&quot;) &amp;&amp; !attrName.equals(&quot;ID&quot;)) {</span>
+<span class="nc" id="L244">                Property property = model.createProperty(namespace + attrName);</span>
+<span class="nc" id="L245">                resource.addProperty(property, attrValue);</span>
+            }
+        }
+
+<span class="nc" id="L249">        NodeList children = element.getChildNodes();</span>
+<span class="nc bnc" id="L250" title="All 2 branches missed.">        for (int i = 0; i &lt; children.getLength(); i++) {</span>
+<span class="nc" id="L251">            Node child = children.item(i);</span>
+<span class="nc bnc" id="L252" title="All 2 branches missed.">            if (child.getNodeType() == Node.ELEMENT_NODE) {</span>
+<span class="nc" id="L253">                Element childElement = (Element) child;</span>
+<span class="nc" id="L254">                String childName = childElement.getLocalName();</span>
+
+<span class="nc" id="L256">                Property property = model.createProperty(namespace + childName);</span>
+
+<span class="nc" id="L258">                String refId = childElement.getAttribute(&quot;rdf:resource&quot;);</span>
+<span class="nc bnc" id="L259" title="All 4 branches missed.">                if (refId == null || refId.isEmpty()) {</span>
+<span class="nc" id="L260">                    refId = childElement.getAttribute(&quot;resource&quot;);</span>
+                }
+
+<span class="nc bnc" id="L263" title="All 4 branches missed.">                if (refId != null &amp;&amp; !refId.isEmpty()) {</span>
+<span class="nc" id="L264">                    Resource refResource = model.createResource(refId);</span>
+<span class="nc" id="L265">                    resource.addProperty(property, refResource);</span>
+<span class="nc bnc" id="L266" title="All 2 branches missed.">                } else if (childElement.hasChildNodes()) {</span>
+<span class="nc" id="L267">                    transformElementToRdf(childElement, model, resourceMap);</span>
+                } else {
+<span class="nc" id="L269">                    String value = childElement.getTextContent();</span>
+<span class="nc bnc" id="L270" title="All 4 branches missed.">                    if (value != null &amp;&amp; !value.trim().isEmpty()) {</span>
+<span class="nc" id="L271">                        resource.addProperty(property, value);</span>
+                    }
+                }
+            }
+        }
+<span class="nc" id="L276">    }</span>
+
+    private boolean hasRequiredCIMClasses(Model model) {
+<span class="nc" id="L279">        String[] requiredClasses = {</span>
+            &quot;IdentifiedObject&quot;, &quot;Equipment&quot;, &quot;PowerSystemResource&quot;,
+            &quot;Substation&quot;, &quot;GeneratingUnit&quot;, &quot;ACLineSegment&quot;, &quot;EnergyConsumer&quot;,
+            &quot;VoltageLevel&quot;, &quot;Terminal&quot;, &quot;TransformerEnd&quot;, &quot;SynchronousMachine&quot;
+        };
+
+        // Return true if ANY known CIM class is present (not all are required)
+<span class="nc bnc" id="L286" title="All 2 branches missed.">        for (String className : requiredClasses) {</span>
+<span class="nc" id="L287">            Resource classResource = model.createResource(cimNamespace + className);</span>
+<span class="nc bnc" id="L288" title="All 2 branches missed.">            if (model.contains(null, RDF.type, classResource)) {</span>
+<span class="nc" id="L289">                log.debug(&quot;Found CIM class: {}&quot;, className);</span>
+<span class="nc" id="L290">                return true;</span>
+            }
+        }
+
+        // Fallback: check if any resource uses the CIM namespace at all
+<span class="nc" id="L295">        StmtIterator iter = model.listStatements(null, RDF.type, (RDFNode) null);</span>
+<span class="nc bnc" id="L296" title="All 2 branches missed.">        while (iter.hasNext()) {</span>
+<span class="nc" id="L297">            Statement stmt = iter.nextStatement();</span>
+<span class="nc" id="L298">            Resource type = stmt.getObject().asResource();</span>
+<span class="nc bnc" id="L299" title="All 4 branches missed.">            if (type.getURI() != null &amp;&amp; type.getURI().startsWith(cimNamespace)) {</span>
+<span class="nc" id="L300">                log.debug(&quot;Found CIM-namespaced type: {}&quot;, type.getURI());</span>
+<span class="nc" id="L301">                return true;</span>
+            }
+<span class="nc" id="L303">        }</span>
+
+<span class="nc" id="L305">        return false;</span>
+    }
+
+    private void validatePropertyDomains(Model model, List&lt;String&gt; errors, List&lt;String&gt; warnings) {
+<span class="nc" id="L309">        log.debug(&quot;Validating property domains&quot;);</span>
+<span class="nc" id="L310">    }</span>
+
+    private void validateCardinality(Model model, List&lt;String&gt; warnings) {
+<span class="nc" id="L313">        log.debug(&quot;Validating cardinality constraints&quot;);</span>
+<span class="nc" id="L314">    }</span>
+
+    private String mapFormatToJena(String format) {
+<span class="nc" id="L317">        String upperFormat = format.toUpperCase();</span>
+<span class="nc" id="L318">        log.debug(&quot;Mapping format '{}' to Jena format&quot;, format);</span>
+
+<span class="nc bnc" id="L320" title="All 5 branches missed.">        return switch (upperFormat) {</span>
+            case &quot;CIM/RDF&quot;, &quot;RDF/XML&quot;, &quot;APPLICATION/RDF+XML&quot; -&gt; {
+<span class="nc" id="L322">                log.debug(&quot;Mapped to RDF/XML&quot;);</span>
+<span class="nc" id="L323">                yield &quot;RDF/XML&quot;;</span>
+            }
+            case &quot;TURTLE&quot;, &quot;TEXT/TURTLE&quot;, &quot;TTL&quot; -&gt; {
+<span class="nc" id="L326">                log.debug(&quot;Mapped to TURTLE&quot;);</span>
+<span class="nc" id="L327">                yield &quot;TURTLE&quot;;</span>
+            }
+            case &quot;N-TRIPLES&quot;, &quot;APPLICATION/N-TRIPLES&quot;, &quot;NTRIPLES&quot; -&gt; {
+<span class="nc" id="L330">                log.debug(&quot;Mapped to N-TRIPLES&quot;);</span>
+<span class="nc" id="L331">                yield &quot;N-TRIPLES&quot;;</span>
+            }
+            case &quot;JSON-LD&quot;, &quot;APPLICATION/LD+JSON&quot;, &quot;JSONLD&quot; -&gt; {
+<span class="nc" id="L334">                log.debug(&quot;Mapped to JSON-LD&quot;);</span>
+<span class="nc" id="L335">                yield &quot;JSON-LD&quot;;</span>
+            }
+            default -&gt; {
+<span class="nc" id="L338">                log.warn(&quot;Unknown format '{}', defaulting to RDF/XML&quot;, format);</span>
+<span class="nc" id="L339">                yield &quot;RDF/XML&quot;;</span>
+            }
+        };
+    }
+
+    private String writeModelToString(Model model) {
+<span class="nc" id="L345">        java.io.StringWriter writer = new java.io.StringWriter();</span>
+<span class="nc" id="L346">        model.write(writer, &quot;RDF/XML&quot;);</span>
+<span class="nc" id="L347">        return writer.toString();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

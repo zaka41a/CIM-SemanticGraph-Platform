@@ -1,0 +1,990 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CIMNetworkExtractor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.loadflow.extractor</a> &gt; <span class="el_source">CIMNetworkExtractor.java</span></div><h1>CIMNetworkExtractor.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.loadflow.extractor;
+
+import com.cim.semanticgraph.loadflow.model.Branch;
+import com.cim.semanticgraph.loadflow.model.Bus;
+import com.cim.semanticgraph.loadflow.model.NetworkModel;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.query.*;
+import org.apache.jena.rdf.model.Model;
+import org.springframework.stereotype.Component;
+
+/**
+ * CIM Network Extractor
+ *
+ * Extracts network topology and parameters from CIM RDF model
+ * and converts to internal load flow representation.
+ *
+ * Supports:
+ * - TopologicalNode (buses)
+ * - ACLineSegment (transmission lines)
+ * - PowerTransformer (transformers)
+ * - EnergyConsumer (loads)
+ * - GeneratingUnit (generators)
+ */
+<span class="fc" id="L24">@Slf4j</span>
+@Component
+<span class="nc" id="L26">public class CIMNetworkExtractor {</span>
+
+    private static final String CIM_PREFIX = &quot;http://iec.ch/TC57/CIM100#&quot;;
+    private static final double DEFAULT_BASE_MVA = 100.0;
+    private static final double DEFAULT_BASE_VOLTAGE_KV = 110.0;
+
+    /**
+     * Extract network model from CIM RDF graph
+     */
+    public NetworkModel extractNetwork(Model cimModel) {
+<span class="nc" id="L36">        log.info(&quot;═══════════════════════════════════════════════════════════&quot;);</span>
+<span class="nc" id="L37">        log.info(&quot;Starting CIM Network Extraction&quot;);</span>
+<span class="nc" id="L38">        log.info(&quot;═══════════════════════════════════════════════════════════&quot;);</span>
+        
+<span class="nc bnc" id="L40" title="All 4 branches missed.">        if (cimModel == null || cimModel.isEmpty()) {</span>
+<span class="nc" id="L41">            log.error(&quot;❌ CIM model is null or empty!&quot;);</span>
+<span class="nc" id="L42">            throw new IllegalArgumentException(&quot;CIM model cannot be null or empty&quot;);</span>
+        }
+        
+<span class="nc" id="L45">        log.info(&quot;CIM model size: {} triples&quot;, cimModel.size());</span>
+
+<span class="nc" id="L47">        NetworkModel network = NetworkModel.builder()</span>
+<span class="nc" id="L48">                .networkId(&quot;CIM-Network-&quot; + System.currentTimeMillis())</span>
+<span class="nc" id="L49">                .name(&quot;Extracted CIM Network&quot;)</span>
+<span class="nc" id="L50">                .baseMva(DEFAULT_BASE_MVA)</span>
+<span class="nc" id="L51">                .build();</span>
+
+        try {
+            // Extract buses (TopologicalNodes or ConnectivityNodes)
+<span class="nc" id="L55">            log.info(&quot;Step 1/5: Extracting buses...&quot;);</span>
+<span class="nc" id="L56">            extractBuses(cimModel, network);</span>
+<span class="nc" id="L57">            log.info(&quot;✅ Buses extracted: {}&quot;, network.getBusCount());</span>
+
+            // Extract branches (ACLineSegments and PowerTransformers)
+<span class="nc" id="L60">            log.info(&quot;Step 2/5: Extracting branches...&quot;);</span>
+<span class="nc" id="L61">            extractBranches(cimModel, network);</span>
+<span class="nc" id="L62">            log.info(&quot;✅ Branches extracted: {}&quot;, network.getBranchCount());</span>
+
+            // Extract loads (EnergyConsumers)
+<span class="nc" id="L65">            log.info(&quot;Step 3/5: Extracting loads...&quot;);</span>
+<span class="nc" id="L66">            extractLoads(cimModel, network);</span>
+<span class="nc" id="L67">            double totalLoadP = network.getBuses().stream()</span>
+<span class="nc" id="L68">                    .mapToDouble(Bus::getLoadMw)</span>
+<span class="nc" id="L69">                    .sum();</span>
+<span class="nc" id="L70">            double totalLoadQ = network.getBuses().stream()</span>
+<span class="nc" id="L71">                    .mapToDouble(Bus::getLoadMvar)</span>
+<span class="nc" id="L72">                    .sum();</span>
+<span class="nc" id="L73">            log.info(&quot;✅ Loads extracted. Total: P={} MW, Q={} MVAr&quot;, totalLoadP, totalLoadQ);</span>
+
+            // Extract generators (GeneratingUnits, SynchronousMachines)
+<span class="nc" id="L76">            log.info(&quot;Step 4/5: Extracting generators...&quot;);</span>
+<span class="nc" id="L77">            extractGenerators(cimModel, network);</span>
+<span class="nc" id="L78">            double totalGenP = network.getBuses().stream()</span>
+<span class="nc" id="L79">                    .mapToDouble(Bus::getGenerationMw)</span>
+<span class="nc" id="L80">                    .sum();</span>
+<span class="nc" id="L81">            double totalGenQ = network.getBuses().stream()</span>
+<span class="nc" id="L82">                    .mapToDouble(Bus::getGenerationMvar)</span>
+<span class="nc" id="L83">                    .sum();</span>
+<span class="nc" id="L84">            log.info(&quot;✅ Generators extracted. Total: P={} MW, Q={} MVAr&quot;, totalGenP, totalGenQ);</span>
+
+            // Ensure at least one slack bus exists
+<span class="nc" id="L87">            log.info(&quot;Step 5/5: Ensuring slack bus...&quot;);</span>
+<span class="nc" id="L88">            ensureSlackBus(network);</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">            log.info(&quot;✅ Slack bus: {}&quot;, network.getSlackBus() != null ? network.getSlackBus().getId() : &quot;NONE&quot;);</span>
+
+            // Final validation
+<span class="nc" id="L92">            log.info(&quot;═══════════════════════════════════════════════════════════&quot;);</span>
+<span class="nc" id="L93">            log.info(&quot;Network Extraction Summary:&quot;);</span>
+<span class="nc" id="L94">            log.info(&quot;  - Buses: {} ({} PQ, {} PV, {} Slack)&quot;, </span>
+<span class="nc" id="L95">                    network.getBusCount(),</span>
+<span class="nc" id="L96">                    network.getBuses().stream().filter(Bus::isPQ).count(),</span>
+<span class="nc" id="L97">                    network.getBuses().stream().filter(Bus::isPV).count(),</span>
+<span class="nc" id="L98">                    network.getBuses().stream().filter(Bus::isSlack).count());</span>
+<span class="nc" id="L99">            log.info(&quot;  - Branches: {}&quot;, network.getBranchCount());</span>
+<span class="nc" id="L100">            log.info(&quot;  - Total Generation: {} MW / {} MVAr&quot;, totalGenP, totalGenQ);</span>
+<span class="nc" id="L101">            log.info(&quot;  - Total Load: {} MW / {} MVAr&quot;, totalLoadP, totalLoadQ);</span>
+<span class="nc" id="L102">            log.info(&quot;═══════════════════════════════════════════════════════════&quot;);</span>
+
+            // Validation warnings
+<span class="nc bnc" id="L105" title="All 4 branches missed.">            if (totalGenP == 0.0 &amp;&amp; totalLoadP &gt; 0.0) {</span>
+<span class="nc" id="L106">                log.error(&quot;⚠️ WARNING: Network has load but NO generation! Load flow may not converge.&quot;);</span>
+            }
+<span class="nc bnc" id="L108" title="All 4 branches missed.">            if (totalLoadP == 0.0 &amp;&amp; totalGenP &gt; 0.0) {</span>
+<span class="nc" id="L109">                log.warn(&quot;⚠️ WARNING: Network has generation but NO load!&quot;);</span>
+            }
+<span class="nc bnc" id="L111" title="All 2 branches missed.">            if (network.getBranchCount() == 0) {</span>
+<span class="nc" id="L112">                log.warn(&quot;⚠️ WARNING: Network has NO branches! All buses are isolated.&quot;);</span>
+            }
+
+<span class="nc" id="L115">        } catch (Exception e) {</span>
+<span class="nc" id="L116">            log.error(&quot;❌ Error extracting CIM network: {}&quot;, e.getMessage(), e);</span>
+<span class="nc" id="L117">            throw new RuntimeException(&quot;Failed to extract network from CIM model: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L118">        }</span>
+
+<span class="nc" id="L120">        return network;</span>
+    }
+
+    /**
+     * Extract buses from CIM TopologicalNodes or ConnectivityNodes
+     */
+    private void extractBuses(Model cimModel, NetworkModel network) {
+        // First, build a map of VoltageLevel name → base voltage (kV)
+        // This serves as a lookup for buses whose voltage can't be found directly
+<span class="nc" id="L129">        java.util.Map&lt;String, Double&gt; voltageLevelMap = new java.util.HashMap&lt;&gt;();</span>
+<span class="nc" id="L130">        String vlQuery = &quot;&quot;&quot;</span>
+                PREFIX cim: &lt;%s&gt;
+                PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
+                SELECT ?vl ?vlName ?nomV WHERE {
+                    ?vl rdf:type cim:VoltageLevel .
+                    ?vl cim:IdentifiedObject.name ?vlName .
+                    ?vl cim:VoltageLevel.BaseVoltage ?bv .
+                    ?bv cim:BaseVoltage.nominalVoltage ?nomV .
+                }
+<span class="nc" id="L139">                &quot;&quot;&quot;.formatted(CIM_PREFIX);</span>
+<span class="nc" id="L140">        try (QueryExecution qexec = QueryExecutionFactory.create(QueryFactory.create(vlQuery), cimModel)) {</span>
+<span class="nc" id="L141">            ResultSet vlResults = qexec.execSelect();</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">            while (vlResults.hasNext()) {</span>
+<span class="nc" id="L143">                QuerySolution soln = vlResults.nextSolution();</span>
+<span class="nc" id="L144">                String vlName = soln.getLiteral(&quot;vlName&quot;).getString();</span>
+<span class="nc" id="L145">                double nomV = soln.getLiteral(&quot;nomV&quot;).getDouble();</span>
+                // Store as kV (CIM BaseVoltage.nominalVoltage is in kV)
+<span class="nc" id="L147">                voltageLevelMap.put(vlName.toLowerCase(), nomV);</span>
+<span class="nc" id="L148">                log.debug(&quot;VoltageLevel '{}' -&gt; {} kV&quot;, vlName, nomV);</span>
+<span class="nc" id="L149">            }</span>
+<span class="nc" id="L150">        } catch (Exception e) {</span>
+<span class="nc" id="L151">            log.warn(&quot;Could not extract VoltageLevel map: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L152">        }</span>
+<span class="nc" id="L153">        log.info(&quot;Built VoltageLevel map with {} entries: {}&quot;, voltageLevelMap.size(), voltageLevelMap);</span>
+
+        // Extract buses with multiple voltage resolution paths
+<span class="nc" id="L156">        String query = &quot;&quot;&quot;</span>
+                PREFIX cim: &lt;%s&gt;
+                PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
+
+                SELECT DISTINCT ?node ?name ?baseVoltage ?vlVoltage
+                WHERE {
+                    { ?node rdf:type cim:TopologicalNode }
+                    UNION
+                    { ?node rdf:type cim:ConnectivityNode }
+                    OPTIONAL { ?node cim:IdentifiedObject.name ?name }
+                    OPTIONAL { ?node cim:TopologicalNode.BaseVoltage ?bv .
+                               ?bv cim:BaseVoltage.nominalVoltage ?baseVoltage }
+                    OPTIONAL { ?node cim:ConnectivityNode.ConnectivityNodeContainer ?vl .
+                               ?vl cim:VoltageLevel.BaseVoltage ?bv2 .
+                               ?bv2 cim:BaseVoltage.nominalVoltage ?vlVoltage }
+                }
+<span class="nc" id="L172">                &quot;&quot;&quot;.formatted(CIM_PREFIX);</span>
+
+<span class="nc" id="L174">        try (QueryExecution qexec = QueryExecutionFactory.create(QueryFactory.create(query), cimModel)) {</span>
+<span class="nc" id="L175">            ResultSet results = qexec.execSelect();</span>
+<span class="nc" id="L176">            int busIndex = 0;</span>
+
+<span class="nc bnc" id="L178" title="All 2 branches missed.">            while (results.hasNext()) {</span>
+<span class="nc" id="L179">                QuerySolution soln = results.nextSolution();</span>
+<span class="nc" id="L180">                String nodeId = soln.getResource(&quot;node&quot;).getLocalName();</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">                String busId = nodeId.endsWith(&quot;_CN&quot;) ? nodeId.substring(0, nodeId.length() - 3) : nodeId;</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">                String busName = soln.contains(&quot;name&quot;) ? soln.getLiteral(&quot;name&quot;).getString() : busId;</span>
+
+                // Resolve base voltage with multiple fallback strategies
+<span class="nc" id="L185">                double baseVoltageKv = DEFAULT_BASE_VOLTAGE_KV;</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">                if (soln.contains(&quot;baseVoltage&quot;)) {</span>
+                    // Path 1: Direct TopologicalNode.BaseVoltage
+<span class="nc" id="L188">                    baseVoltageKv = soln.getLiteral(&quot;baseVoltage&quot;).getDouble();</span>
+                    // Values &gt; 1000 are likely in Volts, convert to kV
+<span class="nc bnc" id="L190" title="All 2 branches missed.">                    if (baseVoltageKv &gt; 1000) baseVoltageKv /= 1000.0;</span>
+<span class="nc bnc" id="L191" title="All 2 branches missed.">                } else if (soln.contains(&quot;vlVoltage&quot;)) {</span>
+                    // Path 2: Through ConnectivityNodeContainer → VoltageLevel
+<span class="nc" id="L193">                    baseVoltageKv = soln.getLiteral(&quot;vlVoltage&quot;).getDouble();</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">                    if (baseVoltageKv &gt; 1000) baseVoltageKv /= 1000.0;</span>
+                } else {
+                    // Path 3: Infer from bus name (e.g. &quot;Brauweiler 380kV Bus CN&quot;)
+<span class="nc" id="L197">                    baseVoltageKv = inferVoltageFromName(busName, voltageLevelMap);</span>
+                }
+
+<span class="nc" id="L200">                Bus existingBus = network.getBus(busId);</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">                if (existingBus == null) {</span>
+<span class="nc" id="L202">                    Bus bus = Bus.builder()</span>
+<span class="nc" id="L203">                            .id(busId)</span>
+<span class="nc" id="L204">                            .name(busName)</span>
+<span class="nc" id="L205">                            .index(busIndex++)</span>
+<span class="nc" id="L206">                            .type(Bus.BusType.PQ)</span>
+<span class="nc" id="L207">                            .baseVoltageKv(baseVoltageKv)</span>
+<span class="nc" id="L208">                            .voltageMagnitude(1.0)</span>
+<span class="nc" id="L209">                            .voltageAngle(0.0)</span>
+<span class="nc" id="L210">                            .voltageMin(0.95)</span>
+<span class="nc" id="L211">                            .voltageMax(1.05)</span>
+<span class="nc" id="L212">                            .inService(true)</span>
+<span class="nc" id="L213">                            .violatesLimits(false)</span>
+<span class="nc" id="L214">                            .build();</span>
+
+<span class="nc" id="L216">                    network.addBus(bus);</span>
+<span class="nc" id="L217">                    log.info(&quot;Bus {} '{}' baseVoltage={} kV&quot;, busId, busName, baseVoltageKv);</span>
+                }
+<span class="nc" id="L219">            }</span>
+
+<span class="nc" id="L221">            log.info(&quot;Extracted {} buses from CIM model&quot;, busIndex);</span>
+<span class="nc" id="L222">        } catch (Exception e) {</span>
+<span class="nc" id="L223">            log.warn(&quot;Error extracting buses: {}. Creating default bus.&quot;, e.getMessage());</span>
+<span class="nc" id="L224">            createDefaultBus(network);</span>
+<span class="nc" id="L225">        }</span>
+<span class="nc" id="L226">    }</span>
+
+    /**
+     * Infer base voltage from bus name using regex patterns and VoltageLevel map.
+     * Handles patterns like &quot;380kV&quot;, &quot;220 kV&quot;, &quot;110kv&quot; in bus names.
+     */
+    private double inferVoltageFromName(String name, java.util.Map&lt;String, Double&gt; voltageLevelMap) {
+<span class="nc bnc" id="L233" title="All 2 branches missed.">        if (name == null) return DEFAULT_BASE_VOLTAGE_KV;</span>
+
+        // Try regex: match &quot;NNNkV&quot; or &quot;NNN kV&quot; in the name
+<span class="nc" id="L236">        java.util.regex.Matcher matcher = java.util.regex.Pattern</span>
+<span class="nc" id="L237">                .compile(&quot;(\\d+)\\s*[kK][vV]&quot;)</span>
+<span class="nc" id="L238">                .matcher(name);</span>
+<span class="nc bnc" id="L239" title="All 2 branches missed.">        if (matcher.find()) {</span>
+<span class="nc" id="L240">            double kv = Double.parseDouble(matcher.group(1));</span>
+<span class="nc" id="L241">            log.debug(&quot;Inferred voltage {} kV from name '{}'&quot;, kv, name);</span>
+<span class="nc" id="L242">            return kv;</span>
+        }
+
+        // Try matching against VoltageLevel names
+<span class="nc" id="L246">        String lowerName = name.toLowerCase();</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">        for (var entry : voltageLevelMap.entrySet()) {</span>
+<span class="nc bnc" id="L248" title="All 2 branches missed.">            if (lowerName.contains(entry.getKey())) {</span>
+<span class="nc" id="L249">                log.debug(&quot;Inferred voltage {} kV from VoltageLevel match '{}'&quot;, entry.getValue(), entry.getKey());</span>
+<span class="nc" id="L250">                return entry.getValue();</span>
+            }
+<span class="nc" id="L252">        }</span>
+
+<span class="nc" id="L254">        return DEFAULT_BASE_VOLTAGE_KV;</span>
+    }
+
+    /**
+     * Extract branches (transmission lines and transformers)
+     */
+    private void extractBranches(Model cimModel, NetworkModel network) {
+        // Extract AC Line Segments
+<span class="nc" id="L262">        extractACLineSegments(cimModel, network);</span>
+
+        // Extract Power Transformers
+<span class="nc" id="L265">        extractPowerTransformers(cimModel, network);</span>
+<span class="nc" id="L266">    }</span>
+
+    /**
+     * Extract AC line segments
+     */
+    private void extractACLineSegments(Model cimModel, NetworkModel network) {
+<span class="nc" id="L272">        log.info(&quot;Extracting AC line segments from CIM model...&quot;);</span>
+        
+        // More robust query - finds all terminals connected to each line
+        // Works even without sequenceNumber
+<span class="nc" id="L276">        String query = &quot;&quot;&quot;</span>
+                PREFIX cim: &lt;%s&gt;
+                PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
+
+                SELECT ?line ?name ?r ?x ?bch ?rating ?terminal ?node ?seq
+                WHERE {
+                    ?line rdf:type cim:ACLineSegment .
+                    OPTIONAL { ?line cim:IdentifiedObject.name ?name }
+                    OPTIONAL { ?line cim:ACLineSegment.r ?r }
+                    OPTIONAL { ?line cim:ACLineSegment.x ?x }
+                    OPTIONAL { ?line cim:ACLineSegment.bch ?bch }
+                    OPTIONAL { ?line cim:ACLineSegment.thermalRating ?rating }
+                    OPTIONAL {
+                        ?terminal cim:Terminal.ConductingEquipment ?line .
+                        ?terminal cim:Terminal.ConnectivityNode ?node .
+                        OPTIONAL { ?terminal cim:Terminal.sequenceNumber ?seq }
+                    }
+                }
+                ORDER BY ?line ?seq
+<span class="nc" id="L295">                &quot;&quot;&quot;.formatted(CIM_PREFIX);</span>
+
+<span class="nc" id="L297">        int lineCount = 0;</span>
+<span class="nc" id="L298">        int linesWithoutTerminals = 0;</span>
+<span class="nc" id="L299">        int linesWithoutBuses = 0;</span>
+
+        // Collect terminals for each line
+<span class="nc" id="L302">        java.util.Map&lt;String, LineData&gt; lineDataMap = new java.util.HashMap&lt;&gt;();</span>
+
+<span class="nc" id="L304">        try (QueryExecution qexec = QueryExecutionFactory.create(QueryFactory.create(query), cimModel)) {</span>
+<span class="nc" id="L305">            ResultSet results = qexec.execSelect();</span>
+            
+<span class="nc" id="L307">            log.debug(&quot;AC line extraction query executed. Processing results...&quot;);</span>
+
+<span class="nc bnc" id="L309" title="All 2 branches missed.">            while (results.hasNext()) {</span>
+<span class="nc" id="L310">                QuerySolution soln = results.nextSolution();</span>
+<span class="nc" id="L311">                String lineId = soln.getResource(&quot;line&quot;).getLocalName();</span>
+                
+<span class="nc" id="L313">                LineData lineData = lineDataMap.computeIfAbsent(lineId, k -&gt; {</span>
+<span class="nc" id="L314">                    LineData ld = new LineData();</span>
+<span class="nc" id="L315">                    ld.id = k;</span>
+<span class="nc bnc" id="L316" title="All 2 branches missed.">                    ld.name = soln.contains(&quot;name&quot;) ? soln.getLiteral(&quot;name&quot;).getString() : k;</span>
+<span class="nc bnc" id="L317" title="All 2 branches missed.">                    ld.r = soln.contains(&quot;r&quot;) ? soln.getLiteral(&quot;r&quot;).getDouble() : 0.01;</span>
+<span class="nc bnc" id="L318" title="All 2 branches missed.">                    ld.x = soln.contains(&quot;x&quot;) ? soln.getLiteral(&quot;x&quot;).getDouble() : 0.1;</span>
+<span class="nc bnc" id="L319" title="All 2 branches missed.">                    ld.bch = soln.contains(&quot;bch&quot;) ? soln.getLiteral(&quot;bch&quot;).getDouble() : 0.0;</span>
+<span class="nc bnc" id="L320" title="All 2 branches missed.">                    ld.ratingMva = soln.contains(&quot;rating&quot;) ? soln.getLiteral(&quot;rating&quot;).getDouble() : 500.0;</span>
+<span class="nc" id="L321">                    return ld;</span>
+                });
+
+                // Collect connected nodes
+<span class="nc bnc" id="L325" title="All 2 branches missed.">                if (soln.contains(&quot;node&quot;)) {</span>
+<span class="nc" id="L326">                    String nodeId = soln.getResource(&quot;node&quot;).getLocalName();</span>
+<span class="nc bnc" id="L327" title="All 2 branches missed.">                    int seq = soln.contains(&quot;seq&quot;) ? soln.getLiteral(&quot;seq&quot;).getInt() : -1;</span>
+                    
+<span class="nc bnc" id="L329" title="All 4 branches missed.">                    if (seq == 1 || lineData.fromNodeId == null) {</span>
+<span class="nc bnc" id="L330" title="All 4 branches missed.">                        if (lineData.fromNodeId == null || seq == 1) {</span>
+<span class="nc" id="L331">                            lineData.fromNodeId = nodeId;</span>
+<span class="nc bnc" id="L332" title="All 2 branches missed.">                        } else if (lineData.toNodeId == null) {</span>
+<span class="nc" id="L333">                            lineData.toNodeId = nodeId;</span>
+                        }
+<span class="nc bnc" id="L335" title="All 4 branches missed.">                    } else if (seq == 2 || lineData.toNodeId == null) {</span>
+<span class="nc" id="L336">                        lineData.toNodeId = nodeId;</span>
+                    }
+                }
+<span class="nc" id="L339">            }</span>
+<span class="nc" id="L340">        } catch (Exception e) {</span>
+<span class="nc" id="L341">            log.error(&quot;❌ Error querying AC lines: {}&quot;, e.getMessage(), e);</span>
+<span class="nc" id="L342">        }</span>
+
+        // Now process collected line data
+<span class="nc bnc" id="L345" title="All 2 branches missed.">        for (LineData lineData : lineDataMap.values()) {</span>
+<span class="nc bnc" id="L346" title="All 4 branches missed.">            if (lineData.fromNodeId == null || lineData.toNodeId == null) {</span>
+<span class="nc" id="L347">                linesWithoutTerminals++;</span>
+<span class="nc" id="L348">                log.warn(&quot;⚠️ Line {} has missing terminal connections (from: {}, to: {})&quot;, </span>
+                        lineData.id, 
+<span class="nc bnc" id="L350" title="All 2 branches missed.">                        lineData.fromNodeId != null ? lineData.fromNodeId : &quot;MISSING&quot;, </span>
+<span class="nc bnc" id="L351" title="All 2 branches missed.">                        lineData.toNodeId != null ? lineData.toNodeId : &quot;MISSING&quot;);</span>
+<span class="nc" id="L352">                continue;</span>
+            }
+            
+            // Remove _CN suffix if present
+<span class="nc bnc" id="L356" title="All 2 branches missed.">            final String fromBusId = lineData.fromNodeId.endsWith(&quot;_CN&quot;) ? </span>
+<span class="nc" id="L357">                    lineData.fromNodeId.substring(0, lineData.fromNodeId.length() - 3) : lineData.fromNodeId;</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">            final String toBusId = lineData.toNodeId.endsWith(&quot;_CN&quot;) ? </span>
+<span class="nc" id="L359">                    lineData.toNodeId.substring(0, lineData.toNodeId.length() - 3) : lineData.toNodeId;</span>
+
+            // Try to find buses with flexible matching
+<span class="nc" id="L362">            Bus fromBus = findBusFlexible(network, fromBusId, lineData.fromNodeId);</span>
+<span class="nc" id="L363">            Bus toBus = findBusFlexible(network, toBusId, lineData.toNodeId);</span>
+
+<span class="nc bnc" id="L365" title="All 4 branches missed.">            if (fromBus != null &amp;&amp; toBus != null) {</span>
+<span class="nc" id="L366">                String finalFromBusId = fromBus.getId();</span>
+<span class="nc" id="L367">                String finalToBusId = toBus.getId();</span>
+
+<span class="nc" id="L369">                Branch branch = Branch.builder()</span>
+<span class="nc" id="L370">                        .id(lineData.id)</span>
+<span class="nc" id="L371">                        .name(lineData.name)</span>
+<span class="nc" id="L372">                        .type(Branch.BranchType.LINE)</span>
+<span class="nc" id="L373">                        .fromBusId(finalFromBusId)</span>
+<span class="nc" id="L374">                        .toBusId(finalToBusId)</span>
+<span class="nc" id="L375">                        .resistance(lineData.r)</span>
+<span class="nc" id="L376">                        .reactance(lineData.x)</span>
+<span class="nc" id="L377">                        .susceptance(lineData.bch)</span>
+<span class="nc" id="L378">                        .turnsRatio(1.0)</span>
+<span class="nc" id="L379">                        .phaseShift(0.0)</span>
+<span class="nc" id="L380">                        .ratingMva(lineData.ratingMva)</span>
+<span class="nc" id="L381">                        .inService(true)</span>
+<span class="nc" id="L382">                        .overloaded(false)</span>
+<span class="nc" id="L383">                        .build();</span>
+
+<span class="nc" id="L385">                network.addBranch(branch);</span>
+<span class="nc" id="L386">                lineCount++;</span>
+<span class="nc" id="L387">                log.info(&quot;✅ Connected line {} (name: {}, R={}, X={}) from bus {} to bus {}&quot;, </span>
+<span class="nc" id="L388">                        lineData.id, lineData.name, lineData.r, lineData.x, finalFromBusId, finalToBusId);</span>
+<span class="nc" id="L389">            } else {</span>
+<span class="nc" id="L390">                linesWithoutBuses++;</span>
+<span class="nc" id="L391">                log.warn(&quot;❌ Could not find buses for line {} (fromNode: {}, toNode: {}). Available buses: {}&quot;, </span>
+                        lineData.id, lineData.fromNodeId, lineData.toNodeId, 
+<span class="nc" id="L393">                        network.getBuses().stream()</span>
+<span class="nc" id="L394">                                .map(Bus::getId)</span>
+<span class="nc" id="L395">                                .collect(java.util.stream.Collectors.joining(&quot;, &quot;)));</span>
+            }
+<span class="nc" id="L397">        }</span>
+
+<span class="nc" id="L399">        log.info(&quot;AC line extraction complete: {} lines connected, {} without terminals, {} without buses&quot;, </span>
+<span class="nc" id="L400">                lineCount, linesWithoutTerminals, linesWithoutBuses);</span>
+        
+<span class="nc bnc" id="L402" title="All 2 branches missed.">        if (lineCount == 0) {</span>
+<span class="nc" id="L403">            log.error(&quot;⚠️ NO LINES WERE EXTRACTED! All buses are isolated.&quot;);</span>
+        }
+<span class="nc" id="L405">    }</span>
+
+    /**
+     * Helper class to collect line data from multiple result rows
+     */
+    private static class LineData {
+        String id;
+        String name;
+        double r;
+        double x;
+        double bch;
+        double ratingMva;
+        String fromNodeId;
+        String toNodeId;
+    }
+
+    /**
+     * Find bus with flexible matching (exact, without _CN, or partial)
+     */
+    private Bus findBusFlexible(NetworkModel network, String busId, String originalNodeId) {
+        // Try exact match first
+<span class="nc" id="L426">        Bus bus = network.getBus(busId);</span>
+<span class="nc bnc" id="L427" title="All 2 branches missed.">        if (bus != null) return bus;</span>
+        
+        // Try without _CN suffix
+<span class="nc bnc" id="L430" title="All 4 branches missed.">        if (originalNodeId != null &amp;&amp; originalNodeId.endsWith(&quot;_CN&quot;)) {</span>
+<span class="nc" id="L431">            String busIdWithoutSuffix = originalNodeId.substring(0, originalNodeId.length() - 3);</span>
+<span class="nc" id="L432">            bus = network.getBus(busIdWithoutSuffix);</span>
+<span class="nc bnc" id="L433" title="All 2 branches missed.">            if (bus != null) {</span>
+<span class="nc" id="L434">                log.debug(&quot;Found bus by removing _CN suffix: {} -&gt; {}&quot;, originalNodeId, busIdWithoutSuffix);</span>
+<span class="nc" id="L435">                return bus;</span>
+            }
+        }
+        
+        // Try partial match
+<span class="nc" id="L440">        final String searchId = busId;</span>
+<span class="nc" id="L441">        bus = network.getBuses().stream()</span>
+<span class="nc" id="L442">                .filter(b -&gt; {</span>
+<span class="nc" id="L443">                    String id = b.getId();</span>
+<span class="nc bnc" id="L444" title="All 2 branches missed.">                    return searchId.contains(id) || </span>
+<span class="nc bnc" id="L445" title="All 2 branches missed.">                           id.contains(searchId) ||</span>
+<span class="nc bnc" id="L446" title="All 2 branches missed.">                           searchId.replace(&quot;_CN&quot;, &quot;&quot;).equals(id);</span>
+                })
+<span class="nc" id="L448">                .findFirst()</span>
+<span class="nc" id="L449">                .orElse(null);</span>
+        
+<span class="nc bnc" id="L451" title="All 2 branches missed.">        if (bus != null) {</span>
+<span class="nc" id="L452">            log.debug(&quot;Found bus by flexible match: {} -&gt; {}&quot;, busId, bus.getId());</span>
+        }
+        
+<span class="nc" id="L455">        return bus;</span>
+    }
+
+    /**
+     * Extract power transformers
+     */
+    private void extractPowerTransformers(Model cimModel, NetworkModel network) {
+        // Query transformer with terminal connections AND rated power
+<span class="nc" id="L463">        String query = &quot;&quot;&quot;</span>
+                PREFIX cim: &lt;%s&gt;
+                PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
+
+                SELECT ?xfmr ?name ?r ?x ?ratedS ?fromNode ?toNode
+                WHERE {
+                    ?xfmr rdf:type cim:PowerTransformer .
+                    OPTIONAL { ?xfmr cim:IdentifiedObject.name ?name }
+                    OPTIONAL { ?xfmr cim:PowerTransformer.r ?r }
+                    OPTIONAL { ?xfmr cim:PowerTransformer.x ?x }
+                    OPTIONAL {
+                        ?end cim:PowerTransformerEnd.PowerTransformer ?xfmr .
+                        ?end cim:PowerTransformerEnd.ratedS ?ratedS
+                    }
+                    OPTIONAL {
+                        ?t1 cim:Terminal.ConductingEquipment ?xfmr .
+                        ?t1 cim:Terminal.ConnectivityNode ?fromNode .
+                        ?t2 cim:Terminal.ConductingEquipment ?xfmr .
+                        ?t2 cim:Terminal.ConnectivityNode ?toNode .
+                        FILTER(?t1 != ?t2)
+                    }
+                }
+<span class="nc" id="L485">                &quot;&quot;&quot;.formatted(CIM_PREFIX);</span>
+
+<span class="nc" id="L487">        java.util.Set&lt;String&gt; processedXfmrs = new java.util.HashSet&lt;&gt;();</span>
+
+<span class="nc" id="L489">        try (QueryExecution qexec = QueryExecutionFactory.create(QueryFactory.create(query), cimModel)) {</span>
+<span class="nc" id="L490">            ResultSet results = qexec.execSelect();</span>
+<span class="nc" id="L491">            int xfmrCount = 0;</span>
+
+<span class="nc bnc" id="L493" title="All 2 branches missed.">            while (results.hasNext()) {</span>
+<span class="nc" id="L494">                QuerySolution soln = results.nextSolution();</span>
+<span class="nc" id="L495">                String xfmrId = soln.getResource(&quot;xfmr&quot;).getLocalName();</span>
+<span class="nc bnc" id="L496" title="All 2 branches missed.">                if (processedXfmrs.contains(xfmrId)) continue;</span>
+<span class="nc" id="L497">                processedXfmrs.add(xfmrId);</span>
+
+<span class="nc bnc" id="L499" title="All 2 branches missed.">                String xfmrName = soln.contains(&quot;name&quot;) ? soln.getLiteral(&quot;name&quot;).getString() : xfmrId;</span>
+<span class="nc bnc" id="L500" title="All 2 branches missed.">                double ratedMva = soln.contains(&quot;ratedS&quot;) ? soln.getLiteral(&quot;ratedS&quot;).getDouble() : 150.0;</span>
+
+                // Default per-unit impedance for transformer (on transformer MVA base)
+<span class="nc bnc" id="L503" title="All 2 branches missed.">                double r = soln.contains(&quot;r&quot;) ? soln.getLiteral(&quot;r&quot;).getDouble() : 0.005;</span>
+<span class="nc bnc" id="L504" title="All 2 branches missed.">                double x = soln.contains(&quot;x&quot;) ? soln.getLiteral(&quot;x&quot;).getDouble() : 0.05;</span>
+
+<span class="nc bnc" id="L506" title="All 2 branches missed.">                String fromNodeId = soln.contains(&quot;fromNode&quot;) ? soln.getResource(&quot;fromNode&quot;).getLocalName() : null;</span>
+<span class="nc bnc" id="L507" title="All 2 branches missed.">                String toNodeId = soln.contains(&quot;toNode&quot;) ? soln.getResource(&quot;toNode&quot;).getLocalName() : null;</span>
+
+<span class="nc" id="L509">                Bus fromBus = null;</span>
+<span class="nc" id="L510">                Bus toBus = null;</span>
+
+                // Try direct terminal connectivity first
+<span class="nc bnc" id="L513" title="All 4 branches missed.">                if (fromNodeId != null &amp;&amp; toNodeId != null) {</span>
+<span class="nc bnc" id="L514" title="All 2 branches missed.">                    String fromBusId = fromNodeId.endsWith(&quot;_CN&quot;) ?</span>
+<span class="nc" id="L515">                            fromNodeId.substring(0, fromNodeId.length() - 3) : fromNodeId;</span>
+<span class="nc bnc" id="L516" title="All 2 branches missed.">                    String toBusId = toNodeId.endsWith(&quot;_CN&quot;) ?</span>
+<span class="nc" id="L517">                            toNodeId.substring(0, toNodeId.length() - 3) : toNodeId;</span>
+<span class="nc" id="L518">                    fromBus = findBusFlexible(network, fromBusId, fromNodeId);</span>
+<span class="nc" id="L519">                    toBus = findBusFlexible(network, toBusId, toNodeId);</span>
+                }
+
+                // Fallback: infer connections from transformer name
+                // e.g. &quot;Brauweiler 380/220 Transformer&quot; → find Brauweiler 380kV and 220kV buses
+<span class="nc bnc" id="L524" title="All 4 branches missed.">                if (fromBus == null || toBus == null) {</span>
+<span class="nc" id="L525">                    Bus[] inferred = inferTransformerBuses(xfmrName, network);</span>
+<span class="nc bnc" id="L526" title="All 2 branches missed.">                    if (inferred != null) {</span>
+<span class="nc" id="L527">                        fromBus = inferred[0];</span>
+<span class="nc" id="L528">                        toBus = inferred[1];</span>
+<span class="nc" id="L529">                        log.info(&quot;Inferred transformer {} connections from name: {} -&gt; {}&quot;,</span>
+<span class="nc" id="L530">                                xfmrName, fromBus.getId(), toBus.getId());</span>
+                    }
+                }
+
+<span class="nc bnc" id="L534" title="All 4 branches missed.">                if (fromBus != null &amp;&amp; toBus != null) {</span>
+                    // Ensure HV bus is 'from' and LV bus is 'to'
+<span class="nc bnc" id="L536" title="All 2 branches missed.">                    if (fromBus.getBaseVoltageKv() &lt; toBus.getBaseVoltageKv()) {</span>
+<span class="nc" id="L537">                        Bus temp = fromBus;</span>
+<span class="nc" id="L538">                        fromBus = toBus;</span>
+<span class="nc" id="L539">                        toBus = temp;</span>
+                    }
+
+<span class="nc" id="L542">                    Branch branch = Branch.builder()</span>
+<span class="nc" id="L543">                            .id(xfmrId)</span>
+<span class="nc" id="L544">                            .name(xfmrName)</span>
+<span class="nc" id="L545">                            .type(Branch.BranchType.TRANSFORMER)</span>
+<span class="nc" id="L546">                            .fromBusId(fromBus.getId())</span>
+<span class="nc" id="L547">                            .toBusId(toBus.getId())</span>
+<span class="nc" id="L548">                            .resistance(r)</span>
+<span class="nc" id="L549">                            .reactance(x)</span>
+<span class="nc" id="L550">                            .susceptance(0.0)</span>
+<span class="nc" id="L551">                            .turnsRatio(fromBus.getBaseVoltageKv() / toBus.getBaseVoltageKv())</span>
+<span class="nc" id="L552">                            .phaseShift(0.0)</span>
+<span class="nc" id="L553">                            .ratingMva(ratedMva)</span>
+<span class="nc" id="L554">                            .inService(true)</span>
+<span class="nc" id="L555">                            .overloaded(false)</span>
+<span class="nc" id="L556">                            .build();</span>
+
+<span class="nc" id="L558">                    network.addBranch(branch);</span>
+<span class="nc" id="L559">                    xfmrCount++;</span>
+<span class="nc" id="L560">                    log.info(&quot;✅ Connected transformer {} '{}' (R={}, X={}, ratio={}, ratedMVA={}) from {} ({} kV) to {} ({} kV)&quot;,</span>
+<span class="nc" id="L561">                            xfmrId, xfmrName, r, x, branch.getTurnsRatio(), ratedMva,</span>
+<span class="nc" id="L562">                            fromBus.getId(), fromBus.getBaseVoltageKv(),</span>
+<span class="nc" id="L563">                            toBus.getId(), toBus.getBaseVoltageKv());</span>
+<span class="nc" id="L564">                } else {</span>
+<span class="nc" id="L565">                    log.warn(&quot;❌ Could not connect transformer {} '{}'. No matching buses found.&quot;, xfmrId, xfmrName);</span>
+                }
+<span class="nc" id="L567">            }</span>
+
+<span class="nc" id="L569">            log.info(&quot;Extracted {} power transformers&quot;, xfmrCount);</span>
+<span class="nc" id="L570">        } catch (Exception e) {</span>
+<span class="nc" id="L571">            log.warn(&quot;Error extracting transformers: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L572">        }</span>
+<span class="nc" id="L573">    }</span>
+
+    /**
+     * Infer transformer bus connections from name pattern.
+     * Handles names like &quot;Brauweiler 380/220 Transformer&quot; or &quot;Cologne 220/110 Transformer&quot;.
+     * Finds buses matching the substation name and voltage levels.
+     */
+    private Bus[] inferTransformerBuses(String xfmrName, NetworkModel network) {
+<span class="nc bnc" id="L581" title="All 2 branches missed.">        if (xfmrName == null) return null;</span>
+
+        // Extract voltage levels from name, e.g. &quot;380/220&quot; or &quot;380kV/220kV&quot;
+<span class="nc" id="L584">        java.util.regex.Matcher voltageMatcher = java.util.regex.Pattern</span>
+<span class="nc" id="L585">                .compile(&quot;(\\d+)\\s*[kK]?[vV]?\\s*/\\s*(\\d+)\\s*[kK]?[vV]?&quot;)</span>
+<span class="nc" id="L586">                .matcher(xfmrName);</span>
+
+<span class="nc bnc" id="L588" title="All 2 branches missed.">        if (!voltageMatcher.find()) return null;</span>
+
+<span class="nc" id="L590">        double hvKv = Double.parseDouble(voltageMatcher.group(1));</span>
+<span class="nc" id="L591">        double lvKv = Double.parseDouble(voltageMatcher.group(2));</span>
+
+        // Extract substation name (everything before the voltage pattern)
+<span class="nc" id="L594">        String substationPart = xfmrName.substring(0, voltageMatcher.start()).trim().toLowerCase();</span>
+
+<span class="nc" id="L596">        log.debug(&quot;Inferring transformer buses: substation='{}', HV={}kV, LV={}kV&quot;, substationPart, hvKv, lvKv);</span>
+
+        // Find HV and LV buses matching the substation name and voltage
+<span class="nc" id="L599">        Bus hvBus = null;</span>
+<span class="nc" id="L600">        Bus lvBus = null;</span>
+
+<span class="nc bnc" id="L602" title="All 2 branches missed.">        for (Bus bus : network.getBuses()) {</span>
+<span class="nc" id="L603">            String busNameLower = bus.getName().toLowerCase();</span>
+<span class="nc" id="L604">            double busKv = bus.getBaseVoltageKv();</span>
+
+<span class="nc bnc" id="L606" title="All 2 branches missed.">            if (busNameLower.contains(substationPart)) {</span>
+<span class="nc bnc" id="L607" title="All 2 branches missed.">                if (Math.abs(busKv - hvKv) &lt; 1.0) {</span>
+<span class="nc" id="L608">                    hvBus = bus;</span>
+<span class="nc bnc" id="L609" title="All 2 branches missed.">                } else if (Math.abs(busKv - lvKv) &lt; 1.0) {</span>
+<span class="nc" id="L610">                    lvBus = bus;</span>
+                }
+            }
+<span class="nc" id="L613">        }</span>
+
+<span class="nc bnc" id="L615" title="All 4 branches missed.">        if (hvBus != null &amp;&amp; lvBus != null) {</span>
+<span class="nc" id="L616">            return new Bus[]{hvBus, lvBus};</span>
+        }
+
+        // Broader search: just match voltage levels
+<span class="nc bnc" id="L620" title="All 4 branches missed.">        if (hvBus == null || lvBus == null) {</span>
+<span class="nc bnc" id="L621" title="All 2 branches missed.">            for (Bus bus : network.getBuses()) {</span>
+<span class="nc" id="L622">                String busNameLower = bus.getName().toLowerCase();</span>
+<span class="nc" id="L623">                double busKv = bus.getBaseVoltageKv();</span>
+
+                // Check if bus name contains the substation hint
+<span class="nc bnc" id="L626" title="All 2 branches missed.">                boolean nameMatch = substationPart.isEmpty() ||</span>
+<span class="nc bnc" id="L627" title="All 2 branches missed.">                        busNameLower.contains(substationPart) ||</span>
+<span class="nc bnc" id="L628" title="All 2 branches missed.">                        substationPart.contains(busNameLower.split(&quot;\\s+&quot;)[0]);</span>
+
+<span class="nc bnc" id="L630" title="All 2 branches missed.">                if (nameMatch) {</span>
+<span class="nc bnc" id="L631" title="All 4 branches missed.">                    if (hvBus == null &amp;&amp; Math.abs(busKv - hvKv) &lt; 1.0) {</span>
+<span class="nc" id="L632">                        hvBus = bus;</span>
+<span class="nc bnc" id="L633" title="All 4 branches missed.">                    } else if (lvBus == null &amp;&amp; Math.abs(busKv - lvKv) &lt; 1.0) {</span>
+<span class="nc" id="L634">                        lvBus = bus;</span>
+                    }
+                }
+<span class="nc" id="L637">            }</span>
+        }
+
+<span class="nc bnc" id="L640" title="All 4 branches missed.">        if (hvBus != null &amp;&amp; lvBus != null) {</span>
+<span class="nc" id="L641">            return new Bus[]{hvBus, lvBus};</span>
+        }
+
+<span class="nc" id="L644">        log.warn(&quot;Could not infer transformer buses for '{}' (HV={}kV, LV={}kV)&quot;, xfmrName, hvKv, lvKv);</span>
+<span class="nc" id="L645">        return null;</span>
+    }
+
+    /**
+     * Extract loads from EnergyConsumers and ConformLoads
+     */
+    private void extractLoads(Model cimModel, NetworkModel network) {
+<span class="nc" id="L652">        log.info(&quot;Starting load extraction from CIM model&quot;);</span>
+
+<span class="nc" id="L654">        int loadCount = 0;</span>
+<span class="nc" id="L655">        int loadsWithoutBus = 0;</span>
+<span class="nc" id="L656">        double totalLoadP = 0.0;</span>
+<span class="nc" id="L657">        double totalLoadQ = 0.0;</span>
+
+        // Query for EnergyConsumer (includes subclasses like ConformLoad)
+        // Note: ConformLoad uses pfixed/qfixed instead of p/q
+<span class="nc" id="L661">        String queryEnergyConsumer = &quot;&quot;&quot;</span>
+                PREFIX cim: &lt;%s&gt;
+                PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
+
+                SELECT ?load ?node ?p ?q ?pfixed ?qfixed ?name
+                WHERE {
+                    { ?load rdf:type cim:EnergyConsumer }
+                    UNION
+                    { ?load rdf:type cim:ConformLoad }
+                    OPTIONAL { ?load cim:IdentifiedObject.name ?name }
+                    OPTIONAL { ?load cim:EnergyConsumer.p ?p }
+                    OPTIONAL { ?load cim:EnergyConsumer.q ?q }
+                    OPTIONAL { ?load cim:EnergyConsumer.pfixed ?pfixed }
+                    OPTIONAL { ?load cim:EnergyConsumer.qfixed ?qfixed }
+                    OPTIONAL {
+                        ?t cim:Terminal.ConductingEquipment ?load .
+                        ?t cim:Terminal.ConnectivityNode ?node
+                    }
+                }
+<span class="nc" id="L680">                &quot;&quot;&quot;.formatted(CIM_PREFIX);</span>
+
+<span class="nc" id="L682">        java.util.Set&lt;String&gt; processedLoads = new java.util.HashSet&lt;&gt;();</span>
+
+<span class="nc" id="L684">        try (QueryExecution qexec = QueryExecutionFactory.create(QueryFactory.create(queryEnergyConsumer), cimModel)) {</span>
+<span class="nc" id="L685">            ResultSet results = qexec.execSelect();</span>
+<span class="nc" id="L686">            log.debug(&quot;Load extraction query executed. Processing results...&quot;);</span>
+
+<span class="nc bnc" id="L688" title="All 2 branches missed.">            while (results.hasNext()) {</span>
+<span class="nc" id="L689">                QuerySolution soln = results.nextSolution();</span>
+<span class="nc" id="L690">                String loadId = soln.getResource(&quot;load&quot;).getLocalName();</span>
+
+                // Skip if already processed (UNION might return duplicates)
+<span class="nc bnc" id="L693" title="All 2 branches missed.">                if (processedLoads.contains(loadId)) {</span>
+<span class="nc" id="L694">                    continue;</span>
+                }
+<span class="nc" id="L696">                processedLoads.add(loadId);</span>
+
+<span class="nc bnc" id="L698" title="All 2 branches missed.">                String loadName = soln.contains(&quot;name&quot;) ? soln.getLiteral(&quot;name&quot;).getString() : loadId;</span>
+<span class="nc bnc" id="L699" title="All 2 branches missed.">                String nodeId = soln.contains(&quot;node&quot;) ? soln.getResource(&quot;node&quot;).getLocalName() : null;</span>
+
+                // Check both p/q (EnergyConsumer) and pfixed/qfixed (ConformLoad)
+<span class="nc" id="L702">                double p = 0.0;</span>
+<span class="nc" id="L703">                double q = 0.0;</span>
+
+<span class="nc bnc" id="L705" title="All 2 branches missed.">                if (soln.contains(&quot;p&quot;)) {</span>
+<span class="nc" id="L706">                    p = soln.getLiteral(&quot;p&quot;).getDouble();</span>
+<span class="nc bnc" id="L707" title="All 2 branches missed.">                } else if (soln.contains(&quot;pfixed&quot;)) {</span>
+<span class="nc" id="L708">                    p = soln.getLiteral(&quot;pfixed&quot;).getDouble();</span>
+                }
+
+<span class="nc bnc" id="L711" title="All 2 branches missed.">                if (soln.contains(&quot;q&quot;)) {</span>
+<span class="nc" id="L712">                    q = soln.getLiteral(&quot;q&quot;).getDouble();</span>
+<span class="nc bnc" id="L713" title="All 2 branches missed.">                } else if (soln.contains(&quot;qfixed&quot;)) {</span>
+<span class="nc" id="L714">                    q = soln.getLiteral(&quot;qfixed&quot;).getDouble();</span>
+                }
+
+<span class="nc bnc" id="L717" title="All 2 branches missed.">                if (nodeId == null) {</span>
+<span class="nc" id="L718">                    log.warn(&quot;Load {} has no ConnectivityNode connection&quot;, loadId);</span>
+<span class="nc" id="L719">                    loadsWithoutBus++;</span>
+<span class="nc" id="L720">                    continue;</span>
+                }
+
+<span class="nc" id="L723">                Bus bus = findBusFlexible(network, nodeId, nodeId);</span>
+
+<span class="nc bnc" id="L725" title="All 2 branches missed.">                if (bus != null) {</span>
+<span class="nc" id="L726">                    bus.setLoadMw(bus.getLoadMw() + p);</span>
+<span class="nc" id="L727">                    bus.setLoadMvar(bus.getLoadMvar() + q);</span>
+<span class="nc" id="L728">                    totalLoadP += p;</span>
+<span class="nc" id="L729">                    totalLoadQ += q;</span>
+<span class="nc" id="L730">                    loadCount++;</span>
+<span class="nc" id="L731">                    log.info(&quot;✅ Connected load {} (name: {}, P={} MW, Q={} MVAr) to bus {}&quot;,</span>
+<span class="nc" id="L732">                            loadId, loadName, p, q, bus.getId());</span>
+                } else {
+<span class="nc" id="L734">                    log.warn(&quot;❌ Could not find bus for load {} (node: {}). Available buses: {}&quot;,</span>
+<span class="nc" id="L735">                            loadId, nodeId, network.getBuses().stream()</span>
+<span class="nc" id="L736">                                    .map(Bus::getId)</span>
+<span class="nc" id="L737">                                    .collect(java.util.stream.Collectors.joining(&quot;, &quot;)));</span>
+<span class="nc" id="L738">                    loadsWithoutBus++;</span>
+                }
+<span class="nc" id="L740">            }</span>
+<span class="nc" id="L741">        } catch (Exception e) {</span>
+<span class="nc" id="L742">            log.error(&quot;❌ Error extracting loads: {}&quot;, e.getMessage(), e);</span>
+<span class="nc" id="L743">        }</span>
+
+<span class="nc" id="L745">        log.info(&quot;Load extraction complete: {} loads connected, {} without bus connection. Total: P={} MW, Q={} MVAr&quot;,</span>
+<span class="nc" id="L746">                loadCount, loadsWithoutBus, totalLoadP, totalLoadQ);</span>
+
+<span class="nc bnc" id="L748" title="All 2 branches missed.">        if (loadCount == 0) {</span>
+<span class="nc" id="L749">            log.error(&quot;⚠️ NO LOADS WERE EXTRACTED! This will result in zero load values.&quot;);</span>
+<span class="nc" id="L750">            log.error(&quot;Available buses in network: {}&quot;, network.getBuses().stream()</span>
+<span class="nc" id="L751">                    .map(b -&gt; b.getId() + &quot; (type: &quot; + b.getType() + &quot;)&quot;)</span>
+<span class="nc" id="L752">                    .collect(java.util.stream.Collectors.joining(&quot;, &quot;)));</span>
+        }
+<span class="nc" id="L754">    }</span>
+
+    /**
+     * Extract generators from GeneratingUnits and SynchronousMachines
+     */
+    private void extractGenerators(Model cimModel, NetworkModel network) {
+<span class="nc" id="L760">        log.info(&quot;Starting generator extraction from CIM model&quot;);</span>
+
+<span class="nc" id="L762">        int genCount = 0;</span>
+<span class="nc" id="L763">        int gensWithoutBus = 0;</span>
+<span class="nc" id="L764">        double totalGenP = 0.0;</span>
+<span class="nc" id="L765">        double totalGenQ = 0.0;</span>
+
+        // Query for SynchronousMachines
+<span class="nc" id="L768">        String querySync = &quot;&quot;&quot;</span>
+                PREFIX cim: &lt;%s&gt;
+                PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
+
+                SELECT ?gen ?node ?p ?q ?minQ ?maxQ ?maxP ?name
+                WHERE {
+                    ?gen rdf:type cim:SynchronousMachine .
+                    OPTIONAL { ?gen cim:IdentifiedObject.name ?name }
+                    OPTIONAL { ?gen cim:RotatingMachine.p ?p }
+                    OPTIONAL { ?gen cim:RotatingMachine.q ?q }
+                    OPTIONAL { ?gen cim:RotatingMachine.minQ ?minQ }
+                    OPTIONAL { ?gen cim:RotatingMachine.maxQ ?maxQ }
+                    OPTIONAL {
+                        ?gen cim:RotatingMachine.GeneratingUnit ?gu .
+                        ?gu cim:GeneratingUnit.maxOperatingP ?maxP
+                    }
+                    OPTIONAL {
+                        ?t cim:Terminal.ConductingEquipment ?gen .
+                        ?t cim:Terminal.ConnectivityNode ?node
+                    }
+                }
+<span class="nc" id="L789">                &quot;&quot;&quot;.formatted(CIM_PREFIX);</span>
+
+        // Also query for GeneratingUnit (directly connected to terminals)
+<span class="nc" id="L792">        String queryGenUnit = &quot;&quot;&quot;</span>
+                PREFIX cim: &lt;%s&gt;
+                PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
+
+                SELECT ?gen ?node ?maxP ?minP ?name
+                WHERE {
+                    ?gen rdf:type cim:GeneratingUnit .
+                    OPTIONAL { ?gen cim:IdentifiedObject.name ?name }
+                    OPTIONAL { ?gen cim:GeneratingUnit.maxOperatingP ?maxP }
+                    OPTIONAL { ?gen cim:GeneratingUnit.minOperatingP ?minP }
+                    OPTIONAL {
+                        ?t cim:Terminal.ConductingEquipment ?gen .
+                        ?t cim:Terminal.ConnectivityNode ?node
+                    }
+                }
+<span class="nc" id="L807">                &quot;&quot;&quot;.formatted(CIM_PREFIX);</span>
+
+        // Process SynchronousMachines
+<span class="nc" id="L810">        try (QueryExecution qexec = QueryExecutionFactory.create(QueryFactory.create(querySync), cimModel)) {</span>
+<span class="nc" id="L811">            ResultSet results = qexec.execSelect();</span>
+<span class="nc" id="L812">            log.debug(&quot;SynchronousMachine extraction query executed. Processing results...&quot;);</span>
+
+<span class="nc bnc" id="L814" title="All 2 branches missed.">            while (results.hasNext()) {</span>
+<span class="nc" id="L815">                QuerySolution soln = results.nextSolution();</span>
+<span class="nc" id="L816">                int[] counts = processGeneratorResult(soln, network, &quot;SynchronousMachine&quot;);</span>
+<span class="nc" id="L817">                genCount += counts[0];</span>
+<span class="nc" id="L818">                gensWithoutBus += counts[1];</span>
+<span class="nc" id="L819">                totalGenP += counts[2];</span>
+<span class="nc" id="L820">                totalGenQ += counts[3];</span>
+<span class="nc" id="L821">            }</span>
+<span class="nc" id="L822">        } catch (Exception e) {</span>
+<span class="nc" id="L823">            log.error(&quot;❌ Error extracting SynchronousMachines: {}&quot;, e.getMessage(), e);</span>
+<span class="nc" id="L824">        }</span>
+
+        // Process GeneratingUnits
+<span class="nc" id="L827">        try (QueryExecution qexec = QueryExecutionFactory.create(QueryFactory.create(queryGenUnit), cimModel)) {</span>
+<span class="nc" id="L828">            ResultSet results = qexec.execSelect();</span>
+<span class="nc" id="L829">            log.debug(&quot;GeneratingUnit extraction query executed. Processing results...&quot;);</span>
+
+<span class="nc bnc" id="L831" title="All 2 branches missed.">            while (results.hasNext()) {</span>
+<span class="nc" id="L832">                QuerySolution soln = results.nextSolution();</span>
+<span class="nc" id="L833">                String genId = soln.getResource(&quot;gen&quot;).getLocalName();</span>
+<span class="nc bnc" id="L834" title="All 2 branches missed.">                String genName = soln.contains(&quot;name&quot;) ? soln.getLiteral(&quot;name&quot;).getString() : genId;</span>
+<span class="nc bnc" id="L835" title="All 2 branches missed.">                String nodeId = soln.contains(&quot;node&quot;) ? soln.getResource(&quot;node&quot;).getLocalName() : null;</span>
+
+<span class="nc bnc" id="L837" title="All 2 branches missed.">                if (nodeId == null) {</span>
+<span class="nc" id="L838">                    log.warn(&quot;GeneratingUnit {} has no ConnectivityNode connection&quot;, genId);</span>
+<span class="nc" id="L839">                    gensWithoutBus++;</span>
+<span class="nc" id="L840">                    continue;</span>
+                }
+
+<span class="nc" id="L843">                Bus bus = findBusFlexible(network, nodeId, nodeId);</span>
+
+<span class="nc bnc" id="L845" title="All 2 branches missed.">                if (bus != null) {</span>
+                    // Use maxOperatingP as generation (e.g., 80% of max capacity)
+<span class="nc" id="L847">                    double p = 0.0;</span>
+<span class="nc bnc" id="L848" title="All 2 branches missed.">                    if (soln.contains(&quot;maxP&quot;)) {</span>
+<span class="nc" id="L849">                        double maxP = soln.getLiteral(&quot;maxP&quot;).getDouble();</span>
+<span class="nc" id="L850">                        p = maxP * 0.8; // 80% of max capacity</span>
+<span class="nc" id="L851">                        log.debug(&quot;GeneratingUnit {} using 80% of maxP: {} MW (maxP: {})&quot;, genId, p, maxP);</span>
+                    }
+
+<span class="nc" id="L854">                    bus.setGenerationMw(bus.getGenerationMw() + p);</span>
+<span class="nc" id="L855">                    totalGenP += p;</span>
+
+                    // If bus has generation, make it PV bus
+<span class="nc bnc" id="L858" title="All 4 branches missed.">                    if (p &gt; 0 &amp;&amp; bus.getType() == Bus.BusType.PQ) {</span>
+<span class="nc" id="L859">                        bus.setType(Bus.BusType.PV);</span>
+<span class="nc" id="L860">                        bus.setVoltageMagnitude(1.0);</span>
+<span class="nc" id="L861">                        log.debug(&quot;Changed bus {} to PV type due to generation&quot;, bus.getId());</span>
+                    }
+
+<span class="nc" id="L864">                    genCount++;</span>
+<span class="nc" id="L865">                    log.info(&quot;✅ Connected GeneratingUnit {} (name: {}, P={} MW) to bus {}&quot;,</span>
+<span class="nc" id="L866">                            genId, genName, p, bus.getId());</span>
+<span class="nc" id="L867">                } else {</span>
+<span class="nc" id="L868">                    log.warn(&quot;❌ Could not find bus for GeneratingUnit {} (node: {}). Available buses: {}&quot;,</span>
+<span class="nc" id="L869">                            genId, nodeId, network.getBuses().stream()</span>
+<span class="nc" id="L870">                                    .map(Bus::getId)</span>
+<span class="nc" id="L871">                                    .collect(java.util.stream.Collectors.joining(&quot;, &quot;)));</span>
+<span class="nc" id="L872">                    gensWithoutBus++;</span>
+                }
+<span class="nc" id="L874">            }</span>
+<span class="nc" id="L875">        } catch (Exception e) {</span>
+<span class="nc" id="L876">            log.error(&quot;❌ Error extracting GeneratingUnits: {}&quot;, e.getMessage(), e);</span>
+<span class="nc" id="L877">        }</span>
+
+<span class="nc" id="L879">        log.info(&quot;Generator extraction complete: {} generators connected, {} without bus connection. Total: P={} MW, Q={} MVAr&quot;,</span>
+<span class="nc" id="L880">                genCount, gensWithoutBus, totalGenP, totalGenQ);</span>
+
+<span class="nc bnc" id="L882" title="All 2 branches missed.">        if (genCount == 0) {</span>
+<span class="nc" id="L883">            log.error(&quot;⚠️ NO GENERATORS WERE EXTRACTED! This will result in zero generation values.&quot;);</span>
+<span class="nc" id="L884">            log.error(&quot;Available buses in network: {}&quot;, network.getBuses().stream()</span>
+<span class="nc" id="L885">                    .map(b -&gt; b.getId() + &quot; (type: &quot; + b.getType() + &quot;)&quot;)</span>
+<span class="nc" id="L886">                    .collect(java.util.stream.Collectors.joining(&quot;, &quot;)));</span>
+        }
+<span class="nc" id="L888">    }</span>
+
+    /**
+     * Helper method to process a single generator query result
+     */
+    private int[] processGeneratorResult(QuerySolution soln, NetworkModel network, String genType) {
+<span class="nc" id="L894">        int genCount = 0;</span>
+<span class="nc" id="L895">        int gensWithoutBus = 0;</span>
+<span class="nc" id="L896">        double totalGenP = 0.0;</span>
+<span class="nc" id="L897">        double totalGenQ = 0.0;</span>
+
+<span class="nc" id="L899">        String genId = soln.getResource(&quot;gen&quot;).getLocalName();</span>
+<span class="nc bnc" id="L900" title="All 2 branches missed.">        String genName = soln.contains(&quot;name&quot;) ? soln.getLiteral(&quot;name&quot;).getString() : genId;</span>
+<span class="nc bnc" id="L901" title="All 2 branches missed.">        String nodeId = soln.contains(&quot;node&quot;) ? soln.getResource(&quot;node&quot;).getLocalName() : null;</span>
+
+<span class="nc bnc" id="L903" title="All 2 branches missed.">        if (nodeId == null) {</span>
+<span class="nc" id="L904">            log.warn(&quot;{} {} has no ConnectivityNode connection&quot;, genType, genId);</span>
+<span class="nc" id="L905">            return new int[]{0, 1, 0, 0};</span>
+        }
+
+<span class="nc" id="L908">        Bus bus = findBusFlexible(network, nodeId, nodeId);</span>
+
+<span class="nc bnc" id="L910" title="All 2 branches missed.">        if (bus != null) {</span>
+<span class="nc" id="L911">            double p = 0.0;</span>
+<span class="nc bnc" id="L912" title="All 2 branches missed.">            if (soln.contains(&quot;p&quot;)) {</span>
+<span class="nc" id="L913">                p = soln.getLiteral(&quot;p&quot;).getDouble();</span>
+<span class="nc" id="L914">                log.debug(&quot;{} {} has explicit P value: {} MW&quot;, genType, genId, p);</span>
+<span class="nc bnc" id="L915" title="All 2 branches missed.">            } else if (soln.contains(&quot;maxP&quot;)) {</span>
+<span class="nc" id="L916">                double maxP = soln.getLiteral(&quot;maxP&quot;).getDouble();</span>
+<span class="nc" id="L917">                p = maxP * 0.8;</span>
+<span class="nc" id="L918">                log.debug(&quot;{} {} using 80% of maxP: {} MW (maxP: {})&quot;, genType, genId, p, maxP);</span>
+            }
+
+<span class="nc bnc" id="L921" title="All 2 branches missed.">            double q = soln.contains(&quot;q&quot;) ? soln.getLiteral(&quot;q&quot;).getDouble() : 0.0;</span>
+<span class="nc bnc" id="L922" title="All 2 branches missed.">            double minQ = soln.contains(&quot;minQ&quot;) ? soln.getLiteral(&quot;minQ&quot;).getDouble() : -50.0;</span>
+<span class="nc bnc" id="L923" title="All 2 branches missed.">            double maxQ = soln.contains(&quot;maxQ&quot;) ? soln.getLiteral(&quot;maxQ&quot;).getDouble() : 50.0;</span>
+
+<span class="nc" id="L925">            bus.setGenerationMw(bus.getGenerationMw() + p);</span>
+<span class="nc" id="L926">            bus.setGenerationMvar(bus.getGenerationMvar() + q);</span>
+<span class="nc" id="L927">            bus.setGenerationMinMvar(minQ);</span>
+<span class="nc" id="L928">            bus.setGenerationMaxMvar(maxQ);</span>
+<span class="nc" id="L929">            totalGenP = p;</span>
+<span class="nc" id="L930">            totalGenQ = q;</span>
+
+<span class="nc bnc" id="L932" title="All 4 branches missed.">            if (p &gt; 0 &amp;&amp; bus.getType() == Bus.BusType.PQ) {</span>
+<span class="nc" id="L933">                bus.setType(Bus.BusType.PV);</span>
+<span class="nc" id="L934">                bus.setVoltageMagnitude(1.0);</span>
+            }
+
+<span class="nc" id="L937">            genCount = 1;</span>
+<span class="nc" id="L938">            log.info(&quot;✅ Connected {} {} (name: {}, P={} MW, Q={} MVAr) to bus {}&quot;,</span>
+<span class="nc" id="L939">                    genType, genId, genName, p, q, bus.getId());</span>
+<span class="nc" id="L940">        } else {</span>
+<span class="nc" id="L941">            log.warn(&quot;❌ Could not find bus for {} {} (node: {})&quot;, genType, genId, nodeId);</span>
+<span class="nc" id="L942">            gensWithoutBus = 1;</span>
+        }
+
+<span class="nc" id="L945">        return new int[]{genCount, gensWithoutBus, (int)totalGenP, (int)totalGenQ};</span>
+    }
+
+    /**
+     * Ensure at least one slack bus exists in the network
+     */
+    private void ensureSlackBus(NetworkModel network) {
+<span class="nc bnc" id="L952" title="All 4 branches missed.">        if (network.getSlackBus() == null &amp;&amp; !network.getBuses().isEmpty()) {</span>
+            // Find bus with highest generation or first PV bus
+<span class="nc" id="L954">            Bus slackCandidate = network.getBuses().stream()</span>
+<span class="nc" id="L955">                    .filter(Bus::isPV)</span>
+<span class="nc" id="L956">                    .max((b1, b2) -&gt; Double.compare(b1.getGenerationMw(), b2.getGenerationMw()))</span>
+<span class="nc" id="L957">                    .orElse(network.getBuses().get(0));</span>
+
+<span class="nc" id="L959">            slackCandidate.setType(Bus.BusType.SLACK);</span>
+<span class="nc" id="L960">            slackCandidate.setVoltageMagnitude(1.0);</span>
+<span class="nc" id="L961">            slackCandidate.setVoltageAngle(0.0);</span>
+
+<span class="nc" id="L963">            log.info(&quot;Designated bus {} as slack bus&quot;, slackCandidate.getId());</span>
+        }
+<span class="nc" id="L965">    }</span>
+
+    /**
+     * Create default minimal network for testing
+     */
+    private void createDefaultBus(NetworkModel network) {
+<span class="nc" id="L971">        Bus defaultBus = Bus.builder()</span>
+<span class="nc" id="L972">                .id(&quot;BUS_DEFAULT&quot;)</span>
+<span class="nc" id="L973">                .name(&quot;Default Bus&quot;)</span>
+<span class="nc" id="L974">                .index(0)</span>
+<span class="nc" id="L975">                .type(Bus.BusType.SLACK)</span>
+<span class="nc" id="L976">                .baseVoltageKv(DEFAULT_BASE_VOLTAGE_KV)</span>
+<span class="nc" id="L977">                .voltageMagnitude(1.0)</span>
+<span class="nc" id="L978">                .voltageAngle(0.0)</span>
+<span class="nc" id="L979">                .voltageMin(0.95)</span>
+<span class="nc" id="L980">                .voltageMax(1.05)</span>
+<span class="nc" id="L981">                .generationMw(100.0)</span>
+<span class="nc" id="L982">                .loadMw(0.0)</span>
+<span class="nc" id="L983">                .inService(true)</span>
+<span class="nc" id="L984">                .build();</span>
+
+<span class="nc" id="L986">        network.addBus(defaultBus);</span>
+<span class="nc" id="L987">        log.info(&quot;Created default bus&quot;);</span>
+<span class="nc" id="L988">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

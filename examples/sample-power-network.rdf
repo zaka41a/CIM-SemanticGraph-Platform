@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:cim="http://iec.ch/TC57/CIM100#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+
+    <!-- ===== SUBSTATIONS ===== -->
+
+    <!-- Main Substation North -->
+    <cim:Substation rdf:ID="Substation_North_Main">
+        <cim:IdentifiedObject.name>North Main Substation</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>Primary 220kV substation serving northern region</cim:IdentifiedObject.description>
+        <cim:Substation.Region rdf:resource="#Region_North"/>
+        <cim:PowerSystemResource.Location>
+            <cim:Location rdf:ID="Location_North">
+                <cim:Location.CoordinateSystem>WGS84</cim:Location.CoordinateSystem>
+                <cim:PositionPoint.xPosition>50.8503</cim:PositionPoint.xPosition>
+                <cim:PositionPoint.yPosition>4.3517</cim:PositionPoint.yPosition>
+            </cim:Location>
+        </cim:PowerSystemResource.Location>
+    </cim:Substation>
+
+    <!-- Central Distribution Substation -->
+    <cim:Substation rdf:ID="Substation_Central_Distribution">
+        <cim:IdentifiedObject.name>Central Distribution Substation</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>110kV distribution substation for city center</cim:IdentifiedObject.description>
+        <cim:Substation.Region rdf:resource="#Region_Central"/>
+    </cim:Substation>
+
+    <!-- South Industrial Substation -->
+    <cim:Substation rdf:ID="Substation_South_Industrial">
+        <cim:IdentifiedObject.name>South Industrial Substation</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>220kV substation serving industrial zone</cim:IdentifiedObject.description>
+        <cim:Substation.Region rdf:resource="#Region_South"/>
+    </cim:Substation>
+
+    <!-- ===== VOLTAGE LEVELS ===== -->
+
+    <cim:VoltageLevel rdf:ID="VoltageLevel_220kV_North">
+        <cim:IdentifiedObject.name>220kV Level - North</cim:IdentifiedObject.name>
+        <cim:VoltageLevel.BaseVoltage rdf:resource="#BaseVoltage_220kV"/>
+        <cim:VoltageLevel.Substation rdf:resource="#Substation_North_Main"/>
+    </cim:VoltageLevel>
+
+    <cim:VoltageLevel rdf:ID="VoltageLevel_110kV_Central">
+        <cim:IdentifiedObject.name>110kV Level - Central</cim:IdentifiedObject.name>
+        <cim:VoltageLevel.BaseVoltage rdf:resource="#BaseVoltage_110kV"/>
+        <cim:VoltageLevel.Substation rdf:resource="#Substation_Central_Distribution"/>
+    </cim:VoltageLevel>
+
+    <cim:VoltageLevel rdf:ID="VoltageLevel_220kV_South">
+        <cim:IdentifiedObject.name>220kV Level - South</cim:IdentifiedObject.name>
+        <cim:VoltageLevel.BaseVoltage rdf:resource="#BaseVoltage_220kV"/>
+        <cim:VoltageLevel.Substation rdf:resource="#Substation_South_Industrial"/>
+    </cim:VoltageLevel>
+
+    <!-- ===== BASE VOLTAGES ===== -->
+
+    <cim:BaseVoltage rdf:ID="BaseVoltage_220kV">
+        <cim:IdentifiedObject.name>220kV</cim:IdentifiedObject.name>
+        <cim:BaseVoltage.nominalVoltage>220000</cim:BaseVoltage.nominalVoltage>
+    </cim:BaseVoltage>
+
+    <cim:BaseVoltage rdf:ID="BaseVoltage_110kV">
+        <cim:IdentifiedObject.name>110kV</cim:IdentifiedObject.name>
+        <cim:BaseVoltage.nominalVoltage>110000</cim:BaseVoltage.nominalVoltage>
+    </cim:BaseVoltage>
+
+    <!-- ===== GENERATORS ===== -->
+
+    <cim:GeneratingUnit rdf:ID="Generator_North_1">
+        <cim:IdentifiedObject.name>North Wind Farm Generator</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>50MW wind power generation unit</cim:IdentifiedObject.description>
+        <cim:GeneratingUnit.maxOperatingP>50.0</cim:GeneratingUnit.maxOperatingP>
+        <cim:GeneratingUnit.minOperatingP>0.0</cim:GeneratingUnit.minOperatingP>
+        <cim:GeneratingUnit.genControlSource>offAGC</cim:GeneratingUnit.genControlSource>
+        <cim:Equipment.EquipmentContainer rdf:resource="#Substation_North_Main"/>
+    </cim:GeneratingUnit>
+
+    <cim:GeneratingUnit rdf:ID="Generator_South_1">
+        <cim:IdentifiedObject.name>South Gas Turbine Generator</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>150MW gas turbine power plant</cim:IdentifiedObject.description>
+        <cim:GeneratingUnit.maxOperatingP>150.0</cim:GeneratingUnit.maxOperatingP>
+        <cim:GeneratingUnit.minOperatingP>30.0</cim:GeneratingUnit.minOperatingP>
+        <cim:GeneratingUnit.genControlSource>onAGC</cim:GeneratingUnit.genControlSource>
+        <cim:Equipment.EquipmentContainer rdf:resource="#Substation_South_Industrial"/>
+    </cim:GeneratingUnit>
+
+    <!-- ===== TRANSMISSION LINES ===== -->
+
+    <cim:ACLineSegment rdf:ID="Line_North_Central">
+        <cim:IdentifiedObject.name>Transmission Line North-Central</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>220kV overhead line connecting North to Central</cim:IdentifiedObject.description>
+        <cim:Conductor.length>45.5</cim:Conductor.length>
+        <cim:ACLineSegment.r>0.15</cim:ACLineSegment.r>
+        <cim:ACLineSegment.x>0.45</cim:ACLineSegment.x>
+        <cim:ACLineSegment.bch>3.2e-6</cim:ACLineSegment.bch>
+        <cim:ConductingEquipment.BaseVoltage rdf:resource="#BaseVoltage_220kV"/>
+    </cim:ACLineSegment>
+
+    <cim:ACLineSegment rdf:ID="Line_Central_South">
+        <cim:IdentifiedObject.name>Transmission Line Central-South</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>220kV underground cable Central to South</cim:IdentifiedObject.description>
+        <cim:Conductor.length>32.8</cim:Conductor.length>
+        <cim:ACLineSegment.r>0.12</cim:ACLineSegment.r>
+        <cim:ACLineSegment.x>0.38</cim:ACLineSegment.x>
+        <cim:ACLineSegment.bch>4.5e-6</cim:ACLineSegment.bch>
+        <cim:ConductingEquipment.BaseVoltage rdf:resource="#BaseVoltage_220kV"/>
+    </cim:ACLineSegment>
+
+    <cim:ACLineSegment rdf:ID="Line_North_South_Backup">
+        <cim:IdentifiedObject.name>Backup Line North-South</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>220kV redundant connection for reliability</cim:IdentifiedObject.description>
+        <cim:Conductor.length>78.3</cim:Conductor.length>
+        <cim:ACLineSegment.r>0.18</cim:ACLineSegment.r>
+        <cim:ACLineSegment.x>0.52</cim:ACLineSegment.x>
+        <cim:ACLineSegment.bch>2.8e-6</cim:ACLineSegment.bch>
+        <cim:ConductingEquipment.BaseVoltage rdf:resource="#BaseVoltage_220kV"/>
+    </cim:ACLineSegment>
+
+    <!-- ===== TRANSFORMERS ===== -->
+
+    <cim:PowerTransformer rdf:ID="Transformer_North_StepDown">
+        <cim:IdentifiedObject.name>North 220/110kV Transformer</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>Step-down transformer 220kV to 110kV</cim:IdentifiedObject.description>
+        <cim:PowerTransformer.isPartOfGeneratorUnit>false</cim:PowerTransformer.isPartOfGeneratorUnit>
+        <cim:Equipment.EquipmentContainer rdf:resource="#Substation_North_Main"/>
+    </cim:PowerTransformer>
+
+    <cim:PowerTransformerEnd rdf:ID="TransformerEnd_North_Primary">
+        <cim:IdentifiedObject.name>Primary Winding 220kV</cim:IdentifiedObject.name>
+        <cim:PowerTransformerEnd.PowerTransformer rdf:resource="#Transformer_North_StepDown"/>
+        <cim:PowerTransformerEnd.ratedU>220000</cim:PowerTransformerEnd.ratedU>
+        <cim:PowerTransformerEnd.ratedS>100</cim:PowerTransformerEnd.ratedS>
+        <cim:TransformerEnd.endNumber>1</cim:TransformerEnd.endNumber>
+    </cim:PowerTransformerEnd>
+
+    <cim:PowerTransformerEnd rdf:ID="TransformerEnd_North_Secondary">
+        <cim:IdentifiedObject.name>Secondary Winding 110kV</cim:IdentifiedObject.name>
+        <cim:PowerTransformerEnd.PowerTransformer rdf:resource="#Transformer_North_StepDown"/>
+        <cim:PowerTransformerEnd.ratedU>110000</cim:PowerTransformerEnd.ratedU>
+        <cim:PowerTransformerEnd.ratedS>100</cim:PowerTransformerEnd.ratedS>
+        <cim:TransformerEnd.endNumber>2</cim:TransformerEnd.endNumber>
+    </cim:PowerTransformerEnd>
+
+    <cim:PowerTransformer rdf:ID="Transformer_Central_Distribution">
+        <cim:IdentifiedObject.name>Central Distribution Transformer</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>Main distribution transformer 110kV to 20kV</cim:IdentifiedObject.description>
+        <cim:Equipment.EquipmentContainer rdf:resource="#Substation_Central_Distribution"/>
+    </cim:PowerTransformer>
+
+    <cim:PowerTransformer rdf:ID="Transformer_South_Industrial">
+        <cim:IdentifiedObject.name>South Industrial Transformer</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>Industrial supply 220kV to 33kV</cim:IdentifiedObject.description>
+        <cim:PowerTransformer.isPartOfGeneratorUnit>false</cim:PowerTransformer.isPartOfGeneratorUnit>
+        <cim:Equipment.EquipmentContainer rdf:resource="#Substation_South_Industrial"/>
+    </cim:PowerTransformer>
+
+    <!-- ===== BREAKERS ===== -->
+
+    <cim:Breaker rdf:ID="Breaker_North_Line1">
+        <cim:IdentifiedObject.name>North Main Breaker - Line 1</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>Circuit breaker protecting North-Central line</cim:IdentifiedObject.description>
+        <cim:Breaker.ratedCurrent>2000</cim:Breaker.ratedCurrent>
+        <cim:Switch.normalOpen>false</cim:Switch.normalOpen>
+        <cim:Equipment.EquipmentContainer rdf:resource="#Substation_North_Main"/>
+    </cim:Breaker>
+
+    <cim:Breaker rdf:ID="Breaker_Central_Line1">
+        <cim:IdentifiedObject.name>Central Distribution Breaker</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>Main circuit breaker for distribution</cim:IdentifiedObject.description>
+        <cim:Breaker.ratedCurrent>1500</cim:Breaker.ratedCurrent>
+        <cim:Switch.normalOpen>false</cim:Switch.normalOpen>
+        <cim:Equipment.EquipmentContainer rdf:resource="#Substation_Central_Distribution"/>
+    </cim:Breaker>
+
+    <cim:Breaker rdf:ID="Breaker_South_Generator">
+        <cim:IdentifiedObject.name>South Generator Breaker</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>Circuit breaker for gas turbine generator</cim:IdentifiedObject.description>
+        <cim:Breaker.ratedCurrent>2500</cim:Breaker.ratedCurrent>
+        <cim:Switch.normalOpen>false</cim:Switch.normalOpen>
+        <cim:Equipment.EquipmentContainer rdf:resource="#Substation_South_Industrial"/>
+    </cim:Breaker>
+
+    <!-- ===== CONNECTIVITY NODES ===== -->
+
+    <cim:ConnectivityNode rdf:ID="Node_North_220kV_Bus">
+        <cim:IdentifiedObject.name>North 220kV Bus</cim:IdentifiedObject.name>
+        <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#VoltageLevel_220kV_North"/>
+    </cim:ConnectivityNode>
+
+    <cim:ConnectivityNode rdf:ID="Node_Central_110kV_Bus">
+        <cim:IdentifiedObject.name>Central 110kV Bus</cim:IdentifiedObject.name>
+        <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#VoltageLevel_110kV_Central"/>
+    </cim:ConnectivityNode>
+
+    <cim:ConnectivityNode rdf:ID="Node_South_220kV_Bus">
+        <cim:IdentifiedObject.name>South 220kV Bus</cim:IdentifiedObject.name>
+        <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#VoltageLevel_220kV_South"/>
+    </cim:ConnectivityNode>
+
+    <!-- ===== TERMINALS (CONNECTIONS) ===== -->
+
+    <cim:Terminal rdf:ID="Terminal_Generator_North">
+        <cim:Terminal.ConductingEquipment rdf:resource="#Generator_North_1"/>
+        <cim:Terminal.ConnectivityNode rdf:resource="#Node_North_220kV_Bus"/>
+    </cim:Terminal>
+
+    <cim:Terminal rdf:ID="Terminal_Generator_South">
+        <cim:Terminal.ConductingEquipment rdf:resource="#Generator_South_1"/>
+        <cim:Terminal.ConnectivityNode rdf:resource="#Node_South_220kV_Bus"/>
+    </cim:Terminal>
+
+    <cim:Terminal rdf:ID="Terminal_Line_North_Central_Start">
+        <cim:Terminal.ConductingEquipment rdf:resource="#Line_North_Central"/>
+        <cim:Terminal.ConnectivityNode rdf:resource="#Node_North_220kV_Bus"/>
+    </cim:Terminal>
+
+    <cim:Terminal rdf:ID="Terminal_Line_North_Central_End">
+        <cim:Terminal.ConductingEquipment rdf:resource="#Line_North_Central"/>
+        <cim:Terminal.ConnectivityNode rdf:resource="#Node_Central_110kV_Bus"/>
+    </cim:Terminal>
+
+    <cim:Terminal rdf:ID="Terminal_Line_Central_South_Start">
+        <cim:Terminal.ConductingEquipment rdf:resource="#Line_Central_South"/>
+        <cim:Terminal.ConnectivityNode rdf:resource="#Node_Central_110kV_Bus"/>
+    </cim:Terminal>
+
+    <cim:Terminal rdf:ID="Terminal_Line_Central_South_End">
+        <cim:Terminal.ConductingEquipment rdf:resource="#Line_Central_South"/>
+        <cim:Terminal.ConnectivityNode rdf:resource="#Node_South_220kV_Bus"/>
+    </cim:Terminal>
+
+    <!-- ===== LOAD (CONSUMERS) ===== -->
+
+    <cim:ConformLoad rdf:ID="Load_Central_City">
+        <cim:IdentifiedObject.name>Central City Load</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>Residential and commercial load in city center</cim:IdentifiedObject.description>
+        <cim:EnergyConsumer.pfixed>85.0</cim:EnergyConsumer.pfixed>
+        <cim:EnergyConsumer.qfixed>25.0</cim:EnergyConsumer.qfixed>
+        <cim:Equipment.EquipmentContainer rdf:resource="#Substation_Central_Distribution"/>
+    </cim:ConformLoad>
+
+    <cim:ConformLoad rdf:ID="Load_South_Industrial">
+        <cim:IdentifiedObject.name>South Industrial Load</cim:IdentifiedObject.name>
+        <cim:IdentifiedObject.description>Heavy industrial consumers</cim:IdentifiedObject.description>
+        <cim:EnergyConsumer.pfixed>120.0</cim:EnergyConsumer.pfixed>
+        <cim:EnergyConsumer.qfixed>40.0</cim:EnergyConsumer.qfixed>
+        <cim:Equipment.EquipmentContainer rdf:resource="#Substation_South_Industrial"/>
+    </cim:ConformLoad>
+
+    <!-- ===== REGIONS ===== -->
+
+    <cim:SubGeographicalRegion rdf:ID="Region_North">
+        <cim:IdentifiedObject.name>Northern Region</cim:IdentifiedObject.name>
+    </cim:SubGeographicalRegion>
+
+    <cim:SubGeographicalRegion rdf:ID="Region_Central">
+        <cim:IdentifiedObject.name>Central Region</cim:IdentifiedObject.name>
+    </cim:SubGeographicalRegion>
+
+    <cim:SubGeographicalRegion rdf:ID="Region_South">
+        <cim:IdentifiedObject.name>Southern Region</cim:IdentifiedObject.name>
+    </cim:SubGeographicalRegion>
+
+</rdf:RDF>

@@ -1,0 +1,77 @@
+# Maven Build Files
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# IDE Files
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Log Files
+*.log
+logs/
+
+# Database Files
+*.db
+*.tdb
+*.tdb2
+tdb2/
+/Users/zakaria/.cim-platform/
+
+# Temporary Files
+*.tmp
+*.bak
+*.swp
+.cache/
+
+# Documentation (build locally, not in container)
+*.md
+!README.md
+docs/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Environment Files
+.env
+.env.local
+.env.*.local
+
+# Node Modules (if any)
+node_modules/
+
+# Maven Wrapper (excluded from build context, downloaded during build)
+.mvn/
+mvnw
+mvnw.cmd
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Test Files
+src/test/
+
+# Application Specific
+uploads/
+data/

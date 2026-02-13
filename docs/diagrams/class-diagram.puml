@@ -1,0 +1,504 @@
+@startuml Class Diagram - CIM-SemanticGraph-Platform Backend
+!theme vibrant
+title Class Diagram - Spr@startuml Class Diagram - CIM-SemanticGraph-Platform Backend
+                         !theme vibrant
+                         title Class Diagram - Spring Boot Backend Architecture
+
+                         ' Configuration Classes
+                         package "Configuration" <<Cloud>> {
+                           class JenaConfig {
+                             - tdbLocation: String
+                             - reasoningEnabled: boolean
+                             - reasonerType: String
+                             + dataset(): Dataset
+                             + ontModel(): OntModel
+                             + reasoner(): Reasoner
+                           }
+
+                           class WebConfig {
+                             - allowedOrigins: List<String>
+                             + corsFilter(): CorsFilter
+                           }
+
+                           class SecurityConfig {
+                             - jwtSecret: String
+                             + securityFilterChain(): SecurityFilterChain
+                           }
+                         }
+
+                         ' Controller Layer
+                         package "Controller Layer" <<Rectangle>> {
+                           class CimController {
+                             - cimTransformerService: CimTransformerService
+                             + importCimData(file: MultipartFile): ResponseEntity
+                             + exportKnowledgeGraph(): ResponseEntity
+                             + getGraphStatistics(): ResponseEntity
+                           }
+
+                           class SparqlController {
+                             - jenaService: JenaService
+                             + executeSparqlQuery(query: String): ResponseEntity
+                             + getSampleQueries(): ResponseEntity
+                           }
+
+                           class GraphRAGController {
+                             - graphRagService: GraphRAGService
+                             + askQuestion(question: String): ResponseEntity
+                             + analyzeImpact(equipmentId: String): ResponseEntity
+                             + verifyConsistency(): ResponseEntity
+                           }
+
+                           class VisualizationController {
+                             - jenaService: JenaService
+                             + getNetworkTopology(): ResponseEntity
+                             + getSubgraph(resourceUri: String): ResponseEntity
+                           }
+                         }
+
+                         ' Service Layer
+                         package "Service Layer" <<Rectangle>> {
+                           class JenaService {
+                             - dataset: Dataset
+                             - ontModel: OntModel
+                             - queryTimeout: long
+                             + executeSparqlSelect(query: String): List<Map>
+                             + executeSparqlConstruct(query: String): Model
+                             + executeSparqlAsk(query: String): boolean
+                             + importRdfData(input: InputStream, format: String): void
+                             + exportRdfData(format: String): String
+                             + getTripleCount(): long
+                             + getGraphStatistics(): Map<String, Object>
+                           }
+
+                           class CimTransformerService {
+                             - jenaService: JenaService
+                             - cimBaseUri: String
+                             + transformCimXmlToRdf(xml: InputStream): Model
+                             + validateCimSchema(model: Model): ValidationResult
+                             + enrichWithInferences(model: Model): Model
+                           }
+
+                           class GraphRAGService {
+                             - jenaService: JenaService
+                             - claudeService: ClaudeService
+                             - embeddingService: EmbeddingService
+                             - topK: int
+                             - maxDepth: int
+                             + processQuery(question: String): GraphRAGResponse
+                             + retrieveRelevantContext(query: String): String
+                             + buildContextFromGraph(entities: List): String
+                           }
+
+                           class ClaudeService {
+                             - claudeBaseUrl: String
+                             - claudeApiKey: String
+                             - claudeModel: String
+                             - maxTokens: int
+                             + queryWithContext(question: String, context: String): String
+                             + simpleQuery(question: String): String
+                             + explainSparqlResults(query: String, results: String): String
+                             + generateSparqlFromNL(nlQuery: String): String
+                             + analyzeImpact(equipmentId: String, connections: String): String
+                           }
+
+                           class EmbeddingService {
+                             - embeddingModel: String
+                             - dimension: int
+                             - cache: Map<String, float[]>
+                             + generateEmbedding(text: String): float[]
+                             + cosineSimilarity(vec1: float[], vec2: float[]): double
+                             + findSimilarEntities(query: float[], topK: int): List
+                           }
+
+                           class SparqlQueryService {
+                             - jenaService: JenaService
+                             + findEquipmentByType(type: String): List<Equipment>
+                             + getConnectedEquipment(equipmentId: String): List<Connection>
+                             + tracePowerFlowPath(from: String, to: String): List<Path>
+                             + findIsolatedEquipment(): List<Equipment>
+                             + detectConfigurationIssues(): List<Issue>
+                           }
+                         }
+
+                         ' Model/DTO Layer
+                         package "Model & DTO" <<Rectangle>> {
+                           class GraphRAGResponse {
+                             - answer: String
+                             - context: String
+                             - sources: List<String>
+                             - confidence: double
+                           }
+
+                           class Equipment {
+                             - id: String
+                             - name: String
+                             - type: String
+                             - voltage: double
+                           }
+
+                           class ValidationResult {
+                             - valid: boolean
+                             - errors: List<String>
+                             - warnings: List<String>
+                           }
+
+                           class SparqlQueryRequest {
+                             - query: String
+                             - timeout: Long
+                             - maxResults: Integer
+                           }
+                         }
+
+                         ' GraphRAG Package
+                         package "GraphRAG Algorithms" <<Cloud>> {
+                           class GraphTraverser {
+                             - strategy: TraversalStrategy
+                             - maxHops: int
+                             + traverse(startNode: String, depth: int): Graph
+                             + bidirectionalSearch(start: String, end: String): Path
+                           }
+
+                           class ContextBuilder {
+                             - maxTriples: int
+                             - includeInference: boolean
+                             + buildContext(subgraph: Graph): String
+                             + formatForLLM(triples: List): String
+                           }
+
+                           class RelevanceScorer {
+                             + scoreEntity(entity: String, query: String): double
+                             + rankResults(results: List, query: String): List
+                           }
+                         }
+
+                         ' Exception Handling
+                         package "Exception" <<Rectangle>> {
+                           class GlobalExceptionHandler {
+                             + handleSparqlException(): ResponseEntity
+                             + handleValidationException(): ResponseEntity
+                             + handleClaudeApiException(): ResponseEntity
+                           }
+
+                           class SparqlExecutionException {
+                             - query: String
+                             - cause: Throwable
+                           }
+
+                           class CimValidationException {
+                             - errors: List<String>
+                           }
+                         }
+
+                         ' Relationships - Controllers to Services
+                         CimController --> CimTransformerService
+                         CimController --> JenaService
+                         SparqlController --> JenaService
+                         SparqlController --> SparqlQueryService
+                         GraphRAGController --> GraphRAGService
+                         VisualizationController --> JenaService
+
+                         ' Relationships - Service Dependencies
+                         CimTransformerService --> JenaService
+                         GraphRAGService --> JenaService
+                         GraphRAGService --> ClaudeService
+                         GraphRAGService --> EmbeddingService
+                         GraphRAGService --> GraphTraverser
+                         GraphRAGService --> ContextBuilder
+                         SparqlQueryService --> JenaService
+
+                         ' Relationships - GraphRAG Components
+                         GraphRAGService --> RelevanceScorer
+                         ContextBuilder --> GraphTraverser
+
+                         ' Relationships - Configuration
+                         JenaService ..> JenaConfig : <<uses>>
+                         CimController ..> SecurityConfig : <<protected by>>
+                         SparqlController ..> SecurityConfig : <<protected by>>
+                         GraphRAGController ..> SecurityConfig : <<protected by>>
+
+                         ' Relationships - DTOs
+                         GraphRAGController ..> GraphRAGResponse
+                         CimController ..> ValidationResult
+                         SparqlController ..> SparqlQueryRequest
+                         SparqlQueryService ..> Equipment
+
+                         ' Relationships - Exception Handling
+                         CimController ..> GlobalExceptionHandler
+                         SparqlController ..> GlobalExceptionHandler
+                         GraphRAGController ..> GlobalExceptionHandler
+
+                         ' Notes
+                         note top of GraphRAGService
+                           Core service implementing GraphRAG:
+                           1. Retrieve relevant subgraph
+                           2. Build context for LLM
+                           3. Query Claude with context
+                           4. Return enriched answer
+                         end note
+
+                         note top of JenaService
+                           Main service for Apache Jena operations:
+                           - SPARQL query execution
+                           - RDF data import/export
+                           - Triple store management
+                           - OWL reasoning
+                         end note
+
+                         note top of ClaudeService
+                           Integration with Anthropic Claude API:
+                           - Natural language understanding
+                           - Context-aware reasoning
+                           - Explanation generation
+                         end note
+
+                         @enduml
+ing Boot Backend Architecture
+
+' Configuration Classes
+package "Configuration" <<Cloud>> {
+  class JenaConfig {
+    - tdbLocation: String
+    - reasoningEnabled: boolean
+    - reasonerType: String
+    + dataset(): Dataset
+    + ontModel(): OntModel
+    + reasoner(): Reasoner
+  }
+
+  class WebConfig {
+    - allowedOrigins: List<String>
+    + corsFilter(): CorsFilter
+  }
+
+  class SecurityConfig {
+    - jwtSecret: String
+    + securityFilterChain(): SecurityFilterChain
+  }
+}
+
+' Controller Layer
+package "Controller Layer" <<Rectangle>> {
+  class CimController {
+    - cimTransformerService: CimTransformerService
+    + importCimData(file: MultipartFile): ResponseEntity
+    + exportKnowledgeGraph(): ResponseEntity
+    + getGraphStatistics(): ResponseEntity
+  }
+
+  class SparqlController {
+    - jenaService: JenaService
+    + executeSparqlQuery(query: String): ResponseEntity
+    + getSampleQueries(): ResponseEntity
+  }
+
+  class GraphRAGController {
+    - graphRagService: GraphRAGService
+    + askQuestion(question: String): ResponseEntity
+    + analyzeImpact(equipmentId: String): ResponseEntity
+    + verifyConsistency(): ResponseEntity
+  }
+
+  class VisualizationController {
+    - jenaService: JenaService
+    + getNetworkTopology(): ResponseEntity
+    + getSubgraph(resourceUri: String): ResponseEntity
+  }
+}
+
+' Service Layer
+package "Service Layer" <<Rectangle>> {
+  class JenaService {
+    - dataset: Dataset
+    - ontModel: OntModel
+    - queryTimeout: long
+    + executeSparqlSelect(query: String): List<Map>
+    + executeSparqlConstruct(query: String): Model
+    + executeSparqlAsk(query: String): boolean
+    + importRdfData(input: InputStream, format: String): void
+    + exportRdfData(format: String): String
+    + getTripleCount(): long
+    + getGraphStatistics(): Map<String, Object>
+  }
+
+  class CimTransformerService {
+    - jenaService: JenaService
+    - cimBaseUri: String
+    + transformCimXmlToRdf(xml: InputStream): Model
+    + validateCimSchema(model: Model): ValidationResult
+    + enrichWithInferences(model: Model): Model
+  }
+
+  class GraphRAGService {
+    - jenaService: JenaService
+    - claudeService: ClaudeService
+    - embeddingService: EmbeddingService
+    - topK: int
+    - maxDepth: int
+    + processQuery(question: String): GraphRAGResponse
+    + retrieveRelevantContext(query: String): String
+    + buildContextFromGraph(entities: List): String
+  }
+
+  class ClaudeService {
+    - claudeBaseUrl: String
+    - claudeApiKey: String
+    - claudeModel: String
+    - maxTokens: int
+    + queryWithContext(question: String, context: String): String
+    + simpleQuery(question: String): String
+    + explainSparqlResults(query: String, results: String): String
+    + generateSparqlFromNL(nlQuery: String): String
+    + analyzeImpact(equipmentId: String, connections: String): String
+  }
+
+  class EmbeddingService {
+    - embeddingModel: String
+    - dimension: int
+    - cache: Map<String, float[]>
+    + generateEmbedding(text: String): float[]
+    + cosineSimilarity(vec1: float[], vec2: float[]): double
+    + findSimilarEntities(query: float[], topK: int): List
+  }
+
+  class SparqlQueryService {
+    - jenaService: JenaService
+    + findEquipmentByType(type: String): List<Equipment>
+    + getConnectedEquipment(equipmentId: String): List<Connection>
+    + tracePowerFlowPath(from: String, to: String): List<Path>
+    + findIsolatedEquipment(): List<Equipment>
+    + detectConfigurationIssues(): List<Issue>
+  }
+}
+
+' Model/DTO Layer
+package "Model & DTO" <<Rectangle>> {
+  class GraphRAGResponse {
+    - answer: String
+    - context: String
+    - sources: List<String>
+    - confidence: double
+  }
+
+  class Equipment {
+    - id: String
+    - name: String
+    - type: String
+    - voltage: double
+  }
+
+  class ValidationResult {
+    - valid: boolean
+    - errors: List<String>
+    - warnings: List<String>
+  }
+
+  class SparqlQueryRequest {
+    - query: String
+    - timeout: Long
+    - maxResults: Integer
+  }
+}
+
+' GraphRAG Package
+package "GraphRAG Algorithms" <<Cloud>> {
+  class GraphTraverser {
+    - strategy: TraversalStrategy
+    - maxHops: int
+    + traverse(startNode: String, depth: int): Graph
+    + bidirectionalSearch(start: String, end: String): Path
+  }
+
+  class ContextBuilder {
+    - maxTriples: int
+    - includeInference: boolean
+    + buildContext(subgraph: Graph): String
+    + formatForLLM(triples: List): String
+  }
+
+  class RelevanceScorer {
+    + scoreEntity(entity: String, query: String): double
+    + rankResults(results: List, query: String): List
+  }
+}
+
+' Exception Handling
+package "Exception" <<Rectangle>> {
+  class GlobalExceptionHandler {
+    + handleSparqlException(): ResponseEntity
+    + handleValidationException(): ResponseEntity
+    + handleClaudeApiException(): ResponseEntity
+  }
+
+  class SparqlExecutionException {
+    - query: String
+    - cause: Throwable
+  }
+
+  class CimValidationException {
+    - errors: List<String>
+  }
+}
+
+' Relationships - Controllers to Services
+CimController --> CimTransformerService
+CimController --> JenaService
+SparqlController --> JenaService
+SparqlController --> SparqlQueryService
+GraphRAGController --> GraphRAGService
+VisualizationController --> JenaService
+
+' Relationships - Service Dependencies
+CimTransformerService --> JenaService
+GraphRAGService --> JenaService
+GraphRAGService --> ClaudeService
+GraphRAGService --> EmbeddingService
+GraphRAGService --> GraphTraverser
+GraphRAGService --> ContextBuilder
+SparqlQueryService --> JenaService
+
+' Relationships - GraphRAG Components
+GraphRAGService --> RelevanceScorer
+ContextBuilder --> GraphTraverser
+
+' Relationships - Configuration
+JenaService ..> JenaConfig : <<uses>>
+CimController ..> SecurityConfig : <<protected by>>
+SparqlController ..> SecurityConfig : <<protected by>>
+GraphRAGController ..> SecurityConfig : <<protected by>>
+
+' Relationships - DTOs
+GraphRAGController ..> GraphRAGResponse
+CimController ..> ValidationResult
+SparqlController ..> SparqlQueryRequest
+SparqlQueryService ..> Equipment
+
+' Relationships - Exception Handling
+CimController ..> GlobalExceptionHandler
+SparqlController ..> GlobalExceptionHandler
+GraphRAGController ..> GlobalExceptionHandler
+
+' Notes
+note top of GraphRAGService
+  Core service implementing GraphRAG:
+  1. Retrieve relevant subgraph
+  2. Build context for LLM
+  3. Query Claude with context
+  4. Return enriched answer
+end note
+
+note top of JenaService
+  Main service for Apache Jena operations:
+  - SPARQL query execution
+  - RDF data import/export
+  - Triple store management
+  - OWL reasoning
+end note
+
+note top of ClaudeService
+  Integration with Anthropic Claude API:
+  - Natural language understanding
+  - Context-aware reasoning
+  - Explanation generation
+end note
+
+@enduml

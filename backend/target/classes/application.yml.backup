@@ -1,0 +1,270 @@
+spring:
+  application:
+    name: CIM-SemanticGraph-Platform
+
+  # Profile Configuration
+  profiles:
+    active: dev
+
+  # Web Configuration
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: true
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+  # Cache Configuration
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterAccess=30m
+
+  # Security Configuration
+  security:
+    user:
+      name: admin
+      password: admin123  # Change in production!
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    include-exception: false
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+
+# Apache Jena Configuration
+jena:
+  # TDB2 Dataset Location
+  tdb:
+    location: ${user.home}/.cim-platform/tdb2
+
+  # Fuseki Server Configuration (embedded)
+  fuseki:
+    enabled: true
+    port: 3030
+    dataset-name: cim-knowledge-graph
+
+  # Reasoning Configuration
+  reasoning:
+    enabled: true
+    reasoner-type: OWL_MEM_RULE_INF  # Options: OWL_MEM_RULE_INF, RDFS_INF, OWL_DL_MEM
+
+  # Query Configuration
+  query:
+    timeout: 60000  # 60 seconds
+    max-results: 10000
+
+# CIM Configuration
+cim:
+  # CIM Schema Configuration
+  schema:
+    base-uri: http://iec.ch/TC57/CIM100#
+    version: IEC61970CIM17v40
+    ontology-path: classpath:cim-schema/IEC61970-CIM17v40.rdf
+
+  # CIM Import Configuration
+  import:
+    validate: true
+    max-file-size: 100MB
+    supported-formats:
+      - CIM/XML
+      - CIM/RDF
+      - RDF/XML
+      - TURTLE
+
+  # CIM Namespaces
+  namespaces:
+    cim: http://iec.ch/TC57/CIM100#
+    rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
+    rdfs: http://www.w3.org/2000/01/rdf-schema#
+    owl: http://www.w3.org/2002/07/owl#
+
+# GraphRAG Configuration
+graphrag:
+  # Embedding Configuration
+  embedding:
+    model: text-embedding-ada-002
+    dimension: 1536
+    cache-enabled: true
+
+  # Retrieval Configuration
+  retrieval:
+    top-k: 5  # Number of relevant subgraphs to retrieve
+    max-depth: 3  # Maximum traversal depth in knowledge graph
+    similarity-threshold: 0.7
+
+  # Context Building
+  context:
+    max-triples: 500  # Maximum triples in context
+    include-inference: true
+    include-labels: true
+
+  # Graph Traversal Strategies
+  traversal:
+    strategy: BIDIRECTIONAL  # Options: FORWARD, BACKWARD, BIDIRECTIONAL
+    max-hops: 3
+    filter-by-type: true
+
+# Claude AI Configuration
+claude:
+  api:
+    base-url: https://api.anthropic.com/v1
+    key: ${CLAUDE_API_KEY:your-api-key-here}  # Set via environment variable
+    model: claude-3-5-sonnet-20241022  # Latest model
+    version: 2023-06-01
+
+  # Request Configuration
+  request:
+    max-tokens: 4096
+    temperature: 0.7
+    timeout: 120000  # 2 minutes
+
+  # Prompt Configuration
+  prompt:
+    system-message: |
+      You are an expert assistant for power grid analysis using a CIM-based Knowledge Graph.
+      You have access to a semantic knowledge graph containing information about electrical equipment,
+      substations, transmission lines, and their relationships.
+
+      When answering questions:
+      1. Use the provided graph context to give accurate, specific answers
+      2. Reference specific equipment IDs and names when available
+      3. Explain relationships and dependencies clearly
+      4. Highlight potential issues or risks
+      5. Provide actionable recommendations when appropriate
+
+      Always base your answers on the knowledge graph data provided.
+
+    max-context-length: 8000
+    include-graph-schema: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.cim.semanticgraph: DEBUG
+    org.apache.jena: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${user.home}/.cim-platform/logs/application.log
+    max-size: 10MB
+    max-history: 30
+
+# Management & Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: true
+
+# Application Custom Configuration
+app:
+  name: CIM-SemanticGraph-Platform
+  version: 1.0.0
+  description: Platform for CIM Semantic Knowledge Graphs with GraphRAG and LLM Integration
+
+  # CORS Configuration
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+      - http://localhost:5173
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+    max-age: 3600
+
+  # Security
+  security:
+    jwt:
+      secret: ${JWT_SECRET:your-secret-key-change-in-production-minimum-256-bits}
+      expiration: 86400000  # 24 hours in milliseconds
+
+  # Performance
+  performance:
+    query-cache-enabled: true
+    query-cache-size: 1000
+    embedding-cache-enabled: true
+    embedding-cache-size: 5000
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    com.cim.semanticgraph: DEBUG
+    org.apache.jena: DEBUG
+
+server:
+  port: 8080
+
+jena:
+  tdb:
+    location: ./data/tdb2-dev
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    com.cim.semanticgraph: INFO
+    org.apache.jena: WARN
+
+server:
+  port: 8080
+
+jena:
+  tdb:
+    location: /var/lib/cim-platform/tdb2

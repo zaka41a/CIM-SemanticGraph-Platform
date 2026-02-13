@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GraphTraverser.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.graphrag</a> &gt; <span class="el_source">GraphTraverser.java</span></div><h1>GraphTraverser.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.graphrag;
+
+import com.cim.semanticgraph.service.JenaService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ * Graph Traverser for GraphRAG
+ *
+ * Traverses the knowledge graph to retrieve relevant subgraphs
+ * around specific entities
+ */
+<span class="nc" id="L20">@Slf4j</span>
+@Component
+<span class="nc" id="L22">@RequiredArgsConstructor</span>
+public class GraphTraverser {
+
+    private final JenaService jenaService;
+
+    @Value(&quot;${graphrag.traversal.max-hops}&quot;)
+    private int maxHops;
+
+    @Value(&quot;${graphrag.traversal.strategy}&quot;)
+    private String strategy;
+
+    /**
+     * Traverse graph from a starting node
+     *
+     * @param startNode Starting node URI
+     * @param depth     Maximum depth to traverse
+     * @return Subgraph model
+     */
+    public Model traverse(String startNode, int depth) {
+<span class="nc" id="L41">        log.debug(&quot;Traversing graph from node: {}, depth: {}&quot;, startNode, depth);</span>
+
+<span class="nc" id="L43">        Model result = ModelFactory.createDefaultModel();</span>
+<span class="nc" id="L44">        Set&lt;String&gt; visited = new HashSet&lt;&gt;();</span>
+
+        try {
+<span class="nc" id="L47">            traverseRecursive(startNode, depth, result, visited);</span>
+<span class="nc" id="L48">            log.info(&quot;Graph traversal completed. Retrieved {} triples&quot;, result.size());</span>
+<span class="nc" id="L49">            return result;</span>
+<span class="nc" id="L50">        } catch (Exception e) {</span>
+<span class="nc" id="L51">            log.error(&quot;Error during graph traversal&quot;, e);</span>
+<span class="nc" id="L52">            return result;</span>
+        }
+    }
+
+    /**
+     * Recursive traversal implementation
+     */
+    private void traverseRecursive(String node, int remainingDepth, Model result, Set&lt;String&gt; visited) {
+<span class="nc bnc" id="L60" title="All 4 branches missed.">        if (remainingDepth &lt;= 0 || visited.contains(node)) {</span>
+<span class="nc" id="L61">            return;</span>
+        }
+
+<span class="nc" id="L64">        visited.add(node);</span>
+
+        // Get all triples where node is subject
+<span class="nc" id="L67">        String constructQuery = &quot;&quot;&quot;</span>
+            CONSTRUCT { ?s ?p ?o }
+            WHERE {
+                ?s ?p ?o .
+                FILTER(?s = &lt;%s&gt;)
+            }
+<span class="nc" id="L73">            &quot;&quot;&quot;.formatted(node);</span>
+
+        try {
+<span class="nc" id="L76">            Model nodeTriples = jenaService.executeSparqlConstruct(constructQuery);</span>
+<span class="nc" id="L77">            result.add(nodeTriples);</span>
+
+            // Get connected nodes for next level
+<span class="nc bnc" id="L80" title="All 2 branches missed.">            if (remainingDepth &gt; 1) {</span>
+<span class="nc" id="L81">                String selectQuery = &quot;&quot;&quot;</span>
+                    SELECT DISTINCT ?connected WHERE {
+                        {
+                            &lt;%s&gt; ?p ?connected .
+                            FILTER(isURI(?connected))
+                        } UNION {
+                            ?connected ?p &lt;%s&gt; .
+                        }
+                    }
+                    LIMIT 10
+<span class="nc" id="L91">                    &quot;&quot;&quot;.formatted(node, node);</span>
+
+<span class="nc" id="L93">                var connectedNodes = jenaService.executeSparqlSelect(selectQuery);</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">                for (var row : connectedNodes) {</span>
+<span class="nc" id="L95">                    String connectedNode = row.get(&quot;connected&quot;);</span>
+<span class="nc bnc" id="L96" title="All 4 branches missed.">                    if (connectedNode != null &amp;&amp; !visited.contains(connectedNode)) {</span>
+<span class="nc" id="L97">                        traverseRecursive(connectedNode, remainingDepth - 1, result, visited);</span>
+                    }
+<span class="nc" id="L99">                }</span>
+            }
+<span class="nc" id="L101">        } catch (Exception e) {</span>
+<span class="nc" id="L102">            log.warn(&quot;Error traversing node {}: {}&quot;, node, e.getMessage());</span>
+<span class="nc" id="L103">        }</span>
+<span class="nc" id="L104">    }</span>
+
+    /**
+     * Bidirectional search between two nodes
+     *
+     * @param startNode Start node URI
+     * @param endNode   End node URI
+     * @return Subgraph containing path
+     */
+    public Model bidirectionalSearch(String startNode, String endNode) {
+<span class="nc" id="L114">        log.debug(&quot;Bidirectional search from {} to {}&quot;, startNode, endNode);</span>
+
+<span class="nc" id="L116">        String constructQuery = &quot;&quot;&quot;</span>
+            CONSTRUCT { ?s ?p ?o }
+            WHERE {
+                ?s ?p ?o .
+                {
+                    &lt;%s&gt; ?p* ?s .
+                    ?s ?p* &lt;%s&gt; .
+                }
+            }
+            LIMIT 500
+<span class="nc" id="L126">            &quot;&quot;&quot;.formatted(startNode, endNode);</span>
+
+        try {
+<span class="nc" id="L129">            Model path = jenaService.executeSparqlConstruct(constructQuery);</span>
+<span class="nc" id="L130">            log.info(&quot;Found path with {} triples&quot;, path.size());</span>
+<span class="nc" id="L131">            return path;</span>
+<span class="nc" id="L132">        } catch (Exception e) {</span>
+<span class="nc" id="L133">            log.error(&quot;Error in bidirectional search&quot;, e);</span>
+<span class="nc" id="L134">            return ModelFactory.createDefaultModel();</span>
+        }
+    }
+
+    /**
+     * Get immediate neighborhood of a node
+     *
+     * @param node Node URI
+     * @return Subgraph of immediate neighbors
+     */
+    public Model getNeighborhood(String node) {
+<span class="nc" id="L145">        log.debug(&quot;Getting neighborhood for node: {}&quot;, node);</span>
+
+<span class="nc" id="L147">        String constructQuery = &quot;&quot;&quot;</span>
+            CONSTRUCT { ?s ?p ?o }
+            WHERE {
+                {
+                    &lt;%s&gt; ?p ?o .
+                    BIND(&lt;%s&gt; as ?s)
+                } UNION {
+                    ?s ?p &lt;%s&gt; .
+                    BIND(&lt;%s&gt; as ?o)
+                }
+            }
+<span class="nc" id="L158">            &quot;&quot;&quot;.formatted(node, node, node, node);</span>
+
+        try {
+<span class="nc" id="L161">            Model neighborhood = jenaService.executeSparqlConstruct(constructQuery);</span>
+<span class="nc" id="L162">            log.info(&quot;Neighborhood contains {} triples&quot;, neighborhood.size());</span>
+<span class="nc" id="L163">            return neighborhood;</span>
+<span class="nc" id="L164">        } catch (Exception e) {</span>
+<span class="nc" id="L165">            log.error(&quot;Error getting neighborhood&quot;, e);</span>
+<span class="nc" id="L166">            return ModelFactory.createDefaultModel();</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

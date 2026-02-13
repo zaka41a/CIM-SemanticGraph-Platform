@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ContextBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.graphrag</a> &gt; <span class="el_source">ContextBuilder.java</span></div><h1>ContextBuilder.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.graphrag;
+
+import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.rdf.model.*;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.util.*;
+
+/**
+ * Context Builder for GraphRAG
+ *
+ * Builds human-readable context from RDF subgraph
+ * for consumption by LLM
+ */
+<span class="nc" id="L18">@Slf4j</span>
+@Component
+<span class="nc" id="L20">public class ContextBuilder {</span>
+
+    @Value(&quot;${graphrag.context.include-labels}&quot;)
+    private boolean includeLabels;
+
+    @Value(&quot;${graphrag.context.include-inference}&quot;)
+    private boolean includeInference;
+
+    /**
+     * Build context from RDF model
+     *
+     * @param model      RDF model (subgraph)
+     * @param maxTriples Maximum triples to include
+     * @return Formatted context string for LLM
+     */
+    public String buildContext(Model model, int maxTriples) {
+<span class="nc" id="L36">        log.debug(&quot;Building context from model with {} triples&quot;, model.size());</span>
+
+<span class="nc bnc" id="L38" title="All 2 branches missed.">        if (model.size() == 0) {</span>
+<span class="nc" id="L39">            return &quot;No relevant data found in knowledge graph.&quot;;</span>
+        }
+
+<span class="nc" id="L42">        StringBuilder context = new StringBuilder();</span>
+<span class="nc" id="L43">        context.append(&quot;=== Knowledge Graph Context ===\n\n&quot;);</span>
+
+        // Group triples by subject
+<span class="nc" id="L46">        Map&lt;Resource, List&lt;Statement&gt;&gt; triplesBySubject = groupTriplesBySubject(model);</span>
+
+        // Build context for each entity
+<span class="nc" id="L49">        int triplesIncluded = 0;</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">        for (Map.Entry&lt;Resource, List&lt;Statement&gt;&gt; entry : triplesBySubject.entrySet()) {</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">            if (triplesIncluded &gt;= maxTriples) {</span>
+<span class="nc" id="L52">                break;</span>
+            }
+
+<span class="nc" id="L55">            Resource subject = entry.getKey();</span>
+<span class="nc" id="L56">            List&lt;Statement&gt; statements = entry.getValue();</span>
+
+<span class="nc" id="L58">            context.append(formatEntity(subject, statements));</span>
+<span class="nc" id="L59">            context.append(&quot;\n&quot;);</span>
+
+<span class="nc" id="L61">            triplesIncluded += statements.size();</span>
+<span class="nc" id="L62">        }</span>
+
+<span class="nc" id="L64">        context.append(&quot;\n=== End of Context ===&quot;);</span>
+
+<span class="nc" id="L66">        String result = context.toString();</span>
+<span class="nc" id="L67">        log.info(&quot;Context built: {} characters, {} triples&quot;, result.length(), triplesIncluded);</span>
+
+<span class="nc" id="L69">        return result;</span>
+    }
+
+    /**
+     * Group triples by subject resource
+     */
+    private Map&lt;Resource, List&lt;Statement&gt;&gt; groupTriplesBySubject(Model model) {
+<span class="nc" id="L76">        Map&lt;Resource, List&lt;Statement&gt;&gt; grouped = new LinkedHashMap&lt;&gt;();</span>
+
+<span class="nc" id="L78">        StmtIterator iter = model.listStatements();</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        while (iter.hasNext()) {</span>
+<span class="nc" id="L80">            Statement stmt = iter.nextStatement();</span>
+<span class="nc" id="L81">            Resource subject = stmt.getSubject();</span>
+
+<span class="nc" id="L83">            grouped.computeIfAbsent(subject, k -&gt; new ArrayList&lt;&gt;()).add(stmt);</span>
+<span class="nc" id="L84">        }</span>
+
+<span class="nc" id="L86">        return grouped;</span>
+    }
+
+    /**
+     * Format entity with its properties
+     */
+    private String formatEntity(Resource subject, List&lt;Statement&gt; statements) {
+<span class="nc" id="L93">        StringBuilder entity = new StringBuilder();</span>
+
+        // Get entity type
+<span class="nc" id="L96">        String type = getType(statements);</span>
+<span class="nc" id="L97">        String label = getLabel(subject, statements);</span>
+
+        // Entity header
+<span class="nc bnc" id="L100" title="All 2 branches missed.">        entity.append(&quot;## &quot;).append(label != null ? label : &quot;Entity&quot;).append(&quot;\n&quot;);</span>
+<span class="nc" id="L101">        entity.append(&quot;URI: &quot;).append(subject.getURI()).append(&quot;\n&quot;);</span>
+
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        if (type != null) {</span>
+<span class="nc" id="L104">            entity.append(&quot;Type: &quot;).append(simplifyUri(type)).append(&quot;\n&quot;);</span>
+        }
+
+        // Properties
+<span class="nc" id="L108">        entity.append(&quot;\nProperties:\n&quot;);</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">        for (Statement stmt : statements) {</span>
+<span class="nc" id="L110">            Property predicate = stmt.getPredicate();</span>
+<span class="nc" id="L111">            RDFNode object = stmt.getObject();</span>
+
+            // Skip certain properties
+<span class="nc bnc" id="L114" title="All 2 branches missed.">            if (shouldSkipProperty(predicate)) {</span>
+<span class="nc" id="L115">                continue;</span>
+            }
+
+<span class="nc" id="L118">            String propertyName = simplifyUri(predicate.getURI());</span>
+<span class="nc" id="L119">            String value = formatValue(object);</span>
+
+<span class="nc" id="L121">            entity.append(&quot;  - &quot;).append(propertyName).append(&quot;: &quot;).append(value).append(&quot;\n&quot;);</span>
+<span class="nc" id="L122">        }</span>
+
+<span class="nc" id="L124">        return entity.toString();</span>
+    }
+
+    /**
+     * Get RDF type of resource
+     */
+    private String getType(List&lt;Statement&gt; statements) {
+<span class="nc bnc" id="L131" title="All 2 branches missed.">        for (Statement stmt : statements) {</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">            if (stmt.getPredicate().equals(RDF.type)) {</span>
+<span class="nc" id="L133">                return stmt.getObject().toString();</span>
+            }
+<span class="nc" id="L135">        }</span>
+<span class="nc" id="L136">        return null;</span>
+    }
+
+    /**
+     * Get label of resource
+     */
+    private String getLabel(Resource subject, List&lt;Statement&gt; statements) {
+        // Try rdfs:label
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        for (Statement stmt : statements) {</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">            if (stmt.getPredicate().equals(RDFS.label)) {</span>
+<span class="nc" id="L146">                return stmt.getObject().toString();</span>
+            }
+<span class="nc" id="L148">        }</span>
+
+        // Try common name properties
+<span class="nc" id="L151">        String[] namePredicates = {&quot;name&quot;, &quot;IdentifiedObject.name&quot;, &quot;label&quot;, &quot;title&quot;};</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        for (Statement stmt : statements) {</span>
+<span class="nc" id="L153">            String predUri = stmt.getPredicate().getURI();</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">            for (String namePred : namePredicates) {</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">                if (predUri.contains(namePred)) {</span>
+<span class="nc" id="L156">                    return stmt.getObject().toString();</span>
+                }
+            }
+<span class="nc" id="L159">        }</span>
+
+        // Fallback to URI fragment
+<span class="nc bnc" id="L162" title="All 2 branches missed.">        if (subject.getURI() != null) {</span>
+<span class="nc" id="L163">            String uri = subject.getURI();</span>
+<span class="nc" id="L164">            int lastSlash = Math.max(uri.lastIndexOf('/'), uri.lastIndexOf('#'));</span>
+<span class="nc bnc" id="L165" title="All 4 branches missed.">            if (lastSlash &gt;= 0 &amp;&amp; lastSlash &lt; uri.length() - 1) {</span>
+<span class="nc" id="L166">                return uri.substring(lastSlash + 1);</span>
+            }
+        }
+
+<span class="nc" id="L170">        return null;</span>
+    }
+
+    /**
+     * Check if property should be skipped
+     */
+    private boolean shouldSkipProperty(Property predicate) {
+<span class="nc" id="L177">        String uri = predicate.getURI();</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">        return uri.equals(RDF.type.getURI()) ||</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">               uri.equals(RDFS.label.getURI()) ||</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">               uri.contains(&quot;System&quot;);</span>
+    }
+
+    /**
+     * Format RDF value for display
+     */
+    private String formatValue(RDFNode node) {
+<span class="nc bnc" id="L187" title="All 2 branches missed.">        if (node.isLiteral()) {</span>
+<span class="nc" id="L188">            Literal literal = node.asLiteral();</span>
+<span class="nc" id="L189">            String value = literal.getString();</span>
+
+            // Add datatype if available and not xsd:string
+<span class="nc bnc" id="L192" title="All 2 branches missed.">            if (literal.getDatatypeURI() != null &amp;&amp;</span>
+<span class="nc bnc" id="L193" title="All 2 branches missed.">                !literal.getDatatypeURI().endsWith(&quot;#string&quot;)) {</span>
+<span class="nc" id="L194">                value += &quot; (&quot; + simplifyUri(literal.getDatatypeURI()) + &quot;)&quot;;</span>
+            }
+
+<span class="nc" id="L197">            return value;</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">        } else if (node.isResource()) {</span>
+<span class="nc" id="L199">            Resource resource = node.asResource();</span>
+<span class="nc bnc" id="L200" title="All 2 branches missed.">            if (resource.getURI() != null) {</span>
+<span class="nc" id="L201">                return simplifyUri(resource.getURI());</span>
+            } else {
+<span class="nc" id="L203">                return &quot;[Blank Node]&quot;;</span>
+            }
+        }
+
+<span class="nc" id="L207">        return node.toString();</span>
+    }
+
+    /**
+     * Simplify URI to local name
+     */
+    private String simplifyUri(String uri) {
+<span class="nc bnc" id="L214" title="All 2 branches missed.">        if (uri == null) {</span>
+<span class="nc" id="L215">            return &quot;unknown&quot;;</span>
+        }
+
+        // Get local name after # or /
+<span class="nc" id="L219">        int lastHash = uri.lastIndexOf('#');</span>
+<span class="nc" id="L220">        int lastSlash = uri.lastIndexOf('/');</span>
+<span class="nc" id="L221">        int split = Math.max(lastHash, lastSlash);</span>
+
+<span class="nc bnc" id="L223" title="All 4 branches missed.">        if (split &gt;= 0 &amp;&amp; split &lt; uri.length() - 1) {</span>
+<span class="nc" id="L224">            return uri.substring(split + 1);</span>
+        }
+
+<span class="nc" id="L227">        return uri;</span>
+    }
+
+    /**
+     * Format list of triples as simple text
+     *
+     * @param statements List of RDF statements
+     * @return Formatted text
+     */
+    public String formatTriples(List&lt;Statement&gt; statements) {
+<span class="nc" id="L237">        StringBuilder formatted = new StringBuilder();</span>
+
+<span class="nc bnc" id="L239" title="All 2 branches missed.">        for (Statement stmt : statements) {</span>
+<span class="nc" id="L240">            formatted.append(simplifyUri(stmt.getSubject().toString()))</span>
+<span class="nc" id="L241">                    .append(&quot; -&gt; &quot;)</span>
+<span class="nc" id="L242">                    .append(simplifyUri(stmt.getPredicate().getURI()))</span>
+<span class="nc" id="L243">                    .append(&quot; -&gt; &quot;)</span>
+<span class="nc" id="L244">                    .append(formatValue(stmt.getObject()))</span>
+<span class="nc" id="L245">                    .append(&quot;\n&quot;);</span>
+<span class="nc" id="L246">        }</span>
+
+<span class="nc" id="L248">        return formatted.toString();</span>
+    }
+
+    /**
+     * Build summary statistics of the context
+     *
+     * @param model RDF model
+     * @return Summary string
+     */
+    public String buildContextSummary(Model model) {
+<span class="nc" id="L258">        long tripleCount = model.size();</span>
+
+<span class="nc" id="L260">        Set&lt;Resource&gt; subjects = new HashSet&lt;&gt;();</span>
+<span class="nc" id="L261">        Set&lt;Resource&gt; types = new HashSet&lt;&gt;();</span>
+
+<span class="nc" id="L263">        StmtIterator iter = model.listStatements();</span>
+<span class="nc bnc" id="L264" title="All 2 branches missed.">        while (iter.hasNext()) {</span>
+<span class="nc" id="L265">            Statement stmt = iter.nextStatement();</span>
+<span class="nc" id="L266">            subjects.add(stmt.getSubject());</span>
+
+<span class="nc bnc" id="L268" title="All 2 branches missed.">            if (stmt.getPredicate().equals(RDF.type)) {</span>
+<span class="nc bnc" id="L269" title="All 2 branches missed.">                if (stmt.getObject().isResource()) {</span>
+<span class="nc" id="L270">                    types.add(stmt.getObject().asResource());</span>
+                }
+            }
+<span class="nc" id="L273">        }</span>
+
+<span class="nc" id="L275">        return String.format(</span>
+            &quot;Context Summary: %d triples, %d entities, %d types&quot;,
+<span class="nc" id="L277">            tripleCount, subjects.size(), types.size()</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

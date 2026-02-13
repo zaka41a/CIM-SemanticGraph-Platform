@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReportService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.service</a> &gt; <span class="el_source">ReportService.java</span></div><h1>ReportService.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.service;
+
+import com.cim.semanticgraph.dto.LoadFlowResponse;
+import com.itextpdf.kernel.colors.ColorConstants;
+import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.*;
+import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
+
+<span class="nc" id="L22">@Slf4j</span>
+@Service
+<span class="nc" id="L24">@RequiredArgsConstructor</span>
+public class ReportService {
+
+    private final LoadFlowService loadFlowService;
+    private final JenaService jenaService;
+
+<span class="nc" id="L30">    private static final DeviceRgb PRIMARY_COLOR = new DeviceRgb(59, 130, 246);</span>
+<span class="nc" id="L31">    private static final DeviceRgb SUCCESS_COLOR = new DeviceRgb(34, 197, 94);</span>
+<span class="nc" id="L32">    private static final DeviceRgb WARNING_COLOR = new DeviceRgb(251, 146, 60);</span>
+<span class="nc" id="L33">    private static final DeviceRgb ERROR_COLOR = new DeviceRgb(239, 68, 68);</span>
+
+    public byte[] generateLoadFlowReport() {
+<span class="nc" id="L36">        log.info(&quot;Generating Load Flow report...&quot;);</span>
+
+        try {
+<span class="nc" id="L39">            ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="nc" id="L40">            PdfWriter writer = new PdfWriter(baos);</span>
+<span class="nc" id="L41">            PdfDocument pdf = new PdfDocument(writer);</span>
+<span class="nc" id="L42">            Document document = new Document(pdf);</span>
+
+<span class="nc" id="L44">            LoadFlowResponse loadFlowResult = loadFlowService.calculateLoadFlow();</span>
+<span class="nc" id="L45">            LoadFlowResponse.SystemStatistics stats = loadFlowResult.getStatistics();</span>
+
+<span class="nc" id="L47">            addReportHeader(document, &quot;Load Flow Analysis Report&quot;);</span>
+
+<span class="nc" id="L49">            addSection(document, &quot;Report Information&quot;);</span>
+<span class="nc" id="L50">            addKeyValue(document, &quot;Generated on&quot;, LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;dd/MM/yyyy HH:mm:ss&quot;)));</span>
+<span class="nc" id="L51">            addKeyValue(document, &quot;Calculation Time&quot;, loadFlowResult.getExecutionTimeMs() + &quot; ms&quot;);</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">            addKeyValue(document, &quot;Convergence Status&quot;, loadFlowResult.isConverged() ? &quot;Converged&quot; : &quot;Failed&quot;);</span>
+<span class="nc" id="L53">            addKeyValue(document, &quot;Iterations&quot;, String.valueOf(loadFlowResult.getIterations()));</span>
+
+<span class="nc" id="L55">            addSection(document, &quot;System Overview&quot;);</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">            if (stats != null) {</span>
+<span class="nc" id="L57">                addKeyValue(document, &quot;Total Buses&quot;, String.valueOf(stats.getTotalBuses()));</span>
+<span class="nc" id="L58">                addKeyValue(document, &quot;Total Branches&quot;, String.valueOf(stats.getTotalBranches()));</span>
+<span class="nc" id="L59">                addKeyValue(document, &quot;Total Generation&quot;, String.format(&quot;%.2f MW / %.2f MVAr&quot;,</span>
+<span class="nc" id="L60">                    stats.getTotalGenerationMw(), stats.getTotalGenerationMvar()));</span>
+<span class="nc" id="L61">                addKeyValue(document, &quot;Total Load&quot;, String.format(&quot;%.2f MW / %.2f MVAr&quot;,</span>
+<span class="nc" id="L62">                    stats.getTotalLoadMw(), stats.getTotalLoadMvar()));</span>
+<span class="nc" id="L63">                addKeyValue(document, &quot;Total Losses&quot;, String.format(&quot;%.2f MW (%.2f%%)&quot;,</span>
+<span class="nc" id="L64">                    stats.getTotalLossesMw(), stats.getLossPercentage()));</span>
+<span class="nc" id="L65">                addKeyValue(document, &quot;Voltage Range&quot;, String.format(&quot;%.3f to %.3f pu&quot;,</span>
+<span class="nc" id="L66">                    stats.getMinVoltagePu(), stats.getMaxVoltagePu()));</span>
+            }
+
+<span class="nc bnc" id="L69" title="All 4 branches missed.">            if (loadFlowResult.getViolations() != null &amp;&amp; !loadFlowResult.getViolations().isEmpty()) {</span>
+<span class="nc" id="L70">                addSection(document, &quot;Violations Detected&quot;);</span>
+<span class="nc" id="L71">                Table violationTable = createViolationTable(loadFlowResult.getViolations());</span>
+<span class="nc" id="L72">                document.add(violationTable);</span>
+<span class="nc" id="L73">            } else {</span>
+<span class="nc" id="L74">                addSection(document, &quot;Violations&quot;);</span>
+<span class="nc" id="L75">                document.add(new Paragraph(&quot;No violations detected&quot;).setFontColor(SUCCESS_COLOR));</span>
+            }
+
+<span class="nc bnc" id="L78" title="All 4 branches missed.">            if (loadFlowResult.getBusResults() != null &amp;&amp; !loadFlowResult.getBusResults().isEmpty()) {</span>
+<span class="nc" id="L79">                addSection(document, &quot;Bus Voltages (Top 10)&quot;);</span>
+<span class="nc" id="L80">                Table busTable = createBusVoltageTable(loadFlowResult.getBusResults());</span>
+<span class="nc" id="L81">                document.add(busTable);</span>
+            }
+
+<span class="nc" id="L84">            addFooter(document);</span>
+
+<span class="nc" id="L86">            document.close();</span>
+<span class="nc" id="L87">            log.info(&quot;Load Flow report generated successfully&quot;);</span>
+<span class="nc" id="L88">            return baos.toByteArray();</span>
+
+<span class="nc" id="L90">        } catch (Exception e) {</span>
+<span class="nc" id="L91">            log.error(&quot;Error generating Load Flow report&quot;, e);</span>
+<span class="nc" id="L92">            throw new RuntimeException(&quot;Failed to generate Load Flow report: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    public byte[] generateDataQualityReport(List&lt;Map&lt;String, Object&gt;&gt; issues) {
+<span class="nc" id="L97">        log.info(&quot;Generating Data Quality report...&quot;);</span>
+
+        try {
+<span class="nc" id="L100">            ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="nc" id="L101">            PdfWriter writer = new PdfWriter(baos);</span>
+<span class="nc" id="L102">            PdfDocument pdf = new PdfDocument(writer);</span>
+<span class="nc" id="L103">            Document document = new Document(pdf);</span>
+
+<span class="nc" id="L105">            addReportHeader(document, &quot;Data Quality Report&quot;);</span>
+
+<span class="nc" id="L107">            addSection(document, &quot;Report Information&quot;);</span>
+<span class="nc" id="L108">            addKeyValue(document, &quot;Generated on&quot;, LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;dd/MM/yyyy HH:mm:ss&quot;)));</span>
+<span class="nc" id="L109">            addKeyValue(document, &quot;Total Issues Found&quot;, String.valueOf(issues.size()));</span>
+
+<span class="nc" id="L111">            long errors = issues.stream().filter(i -&gt; &quot;ERROR&quot;.equals(i.get(&quot;severity&quot;))).count();</span>
+<span class="nc" id="L112">            long warnings = issues.stream().filter(i -&gt; &quot;WARNING&quot;.equals(i.get(&quot;severity&quot;))).count();</span>
+
+<span class="nc" id="L114">            addSection(document, &quot;Issues Summary&quot;);</span>
+<span class="nc" id="L115">            addKeyValue(document, &quot;Errors&quot;, String.valueOf(errors));</span>
+<span class="nc" id="L116">            addKeyValue(document, &quot;Warnings&quot;, String.valueOf(warnings));</span>
+
+<span class="nc" id="L118">            addSection(document, &quot;Detailed Issues&quot;);</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">            for (Map&lt;String, Object&gt; issue : issues) {</span>
+<span class="nc" id="L120">                Table issueTable = new Table(UnitValue.createPercentArray(new float[]{1, 3}));</span>
+<span class="nc" id="L121">                issueTable.setWidth(UnitValue.createPercentValue(100));</span>
+
+<span class="nc" id="L123">                String severity = (String) issue.get(&quot;severity&quot;);</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">                DeviceRgb color = &quot;ERROR&quot;.equals(severity) ? ERROR_COLOR : WARNING_COLOR;</span>
+
+<span class="nc" id="L126">                issueTable.addCell(new Cell().add(new Paragraph(&quot;Category&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L127">                issueTable.addCell(new Cell().add(new Paragraph((String) issue.get(&quot;category&quot;))));</span>
+
+<span class="nc" id="L129">                issueTable.addCell(new Cell().add(new Paragraph(&quot;Severity&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L130">                issueTable.addCell(new Cell().add(new Paragraph(severity)));</span>
+
+<span class="nc" id="L132">                issueTable.addCell(new Cell().add(new Paragraph(&quot;Message&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L133">                issueTable.addCell(new Cell().add(new Paragraph((String) issue.get(&quot;message&quot;))));</span>
+
+<span class="nc" id="L135">                issueTable.addCell(new Cell().add(new Paragraph(&quot;Affected Items&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L136">                issueTable.addCell(new Cell().add(new Paragraph(String.valueOf(issue.get(&quot;count&quot;)))));</span>
+
+<span class="nc" id="L138">                document.add(issueTable);</span>
+<span class="nc" id="L139">                document.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L140">            }</span>
+
+<span class="nc" id="L142">            addFooter(document);</span>
+
+<span class="nc" id="L144">            document.close();</span>
+<span class="nc" id="L145">            log.info(&quot;Data Quality report generated successfully&quot;);</span>
+<span class="nc" id="L146">            return baos.toByteArray();</span>
+
+<span class="nc" id="L148">        } catch (Exception e) {</span>
+<span class="nc" id="L149">            log.error(&quot;Error generating Data Quality report&quot;, e);</span>
+<span class="nc" id="L150">            throw new RuntimeException(&quot;Failed to generate Data Quality report: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    public byte[] generateNetworkStatisticsReport() {
+<span class="nc" id="L155">        log.info(&quot;Generating Network Statistics report...&quot;);</span>
+
+        try {
+<span class="nc" id="L158">            ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="nc" id="L159">            PdfWriter writer = new PdfWriter(baos);</span>
+<span class="nc" id="L160">            PdfDocument pdf = new PdfDocument(writer);</span>
+<span class="nc" id="L161">            Document document = new Document(pdf);</span>
+
+<span class="nc" id="L163">            addReportHeader(document, &quot;Network Statistics Report&quot;);</span>
+
+<span class="nc" id="L165">            addSection(document, &quot;Report Information&quot;);</span>
+<span class="nc" id="L166">            addKeyValue(document, &quot;Generated on&quot;, LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;dd/MM/yyyy HH:mm:ss&quot;)));</span>
+
+<span class="nc" id="L168">            Map&lt;String, Object&gt; stats = jenaService.getGraphStatistics();</span>
+
+<span class="nc" id="L170">            addSection(document, &quot;Knowledge Graph Statistics&quot;);</span>
+<span class="nc" id="L171">            addKeyValue(document, &quot;Total Triples&quot;, String.valueOf(stats.get(&quot;totalTriples&quot;)));</span>
+<span class="nc" id="L172">            addKeyValue(document, &quot;Total Subjects&quot;, String.valueOf(stats.get(&quot;totalSubjects&quot;)));</span>
+<span class="nc" id="L173">            addKeyValue(document, &quot;Total Predicates&quot;, String.valueOf(stats.get(&quot;totalPredicates&quot;)));</span>
+<span class="nc" id="L174">            addKeyValue(document, &quot;Total Classes&quot;, String.valueOf(stats.get(&quot;totalClasses&quot;)));</span>
+
+<span class="nc" id="L176">            addSection(document, &quot;CIM Equipment Statistics&quot;);</span>
+<span class="nc" id="L177">            addKeyValue(document, &quot;Substations&quot;, String.valueOf(stats.get(&quot;substations&quot;)));</span>
+<span class="nc" id="L178">            addKeyValue(document, &quot;Generators&quot;, String.valueOf(stats.get(&quot;generators&quot;)));</span>
+<span class="nc" id="L179">            addKeyValue(document, &quot;Transmission Lines&quot;, String.valueOf(stats.get(&quot;transmissionLines&quot;)));</span>
+
+<span class="nc" id="L181">            addFooter(document);</span>
+
+<span class="nc" id="L183">            document.close();</span>
+<span class="nc" id="L184">            log.info(&quot;Network Statistics report generated successfully&quot;);</span>
+<span class="nc" id="L185">            return baos.toByteArray();</span>
+
+<span class="nc" id="L187">        } catch (Exception e) {</span>
+<span class="nc" id="L188">            log.error(&quot;Error generating Network Statistics report&quot;, e);</span>
+<span class="nc" id="L189">            throw new RuntimeException(&quot;Failed to generate Network Statistics report: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    private void addReportHeader(Document document, String title) {
+<span class="nc" id="L194">        Paragraph header = new Paragraph(title)</span>
+<span class="nc" id="L195">            .setFontSize(24)</span>
+<span class="nc" id="L196">            .setBold()</span>
+<span class="nc" id="L197">            .setFontColor(PRIMARY_COLOR)</span>
+<span class="nc" id="L198">            .setTextAlignment(TextAlignment.CENTER);</span>
+<span class="nc" id="L199">        document.add(header);</span>
+
+<span class="nc" id="L201">        Paragraph subtitle = new Paragraph(&quot;CIM-SemanticGraph-Platform&quot;)</span>
+<span class="nc" id="L202">            .setFontSize(12)</span>
+<span class="nc" id="L203">            .setFontColor(ColorConstants.GRAY)</span>
+<span class="nc" id="L204">            .setTextAlignment(TextAlignment.CENTER);</span>
+<span class="nc" id="L205">        document.add(subtitle);</span>
+
+<span class="nc" id="L207">        document.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L208">    }</span>
+
+    private void addSection(Document document, String sectionTitle) {
+<span class="nc" id="L211">        document.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L212">        Paragraph section = new Paragraph(sectionTitle)</span>
+<span class="nc" id="L213">            .setFontSize(16)</span>
+<span class="nc" id="L214">            .setBold()</span>
+<span class="nc" id="L215">            .setFontColor(PRIMARY_COLOR);</span>
+<span class="nc" id="L216">        document.add(section);</span>
+<span class="nc" id="L217">        document.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L218">    }</span>
+
+    private void addKeyValue(Document document, String key, String value) {
+<span class="nc" id="L221">        Table table = new Table(UnitValue.createPercentArray(new float[]{2, 3}));</span>
+<span class="nc" id="L222">        table.setWidth(UnitValue.createPercentValue(100));</span>
+
+<span class="nc" id="L224">        table.addCell(new Cell().add(new Paragraph(key).setBold()));</span>
+<span class="nc" id="L225">        table.addCell(new Cell().add(new Paragraph(value)));</span>
+
+<span class="nc" id="L227">        document.add(table);</span>
+<span class="nc" id="L228">    }</span>
+
+    private Table createViolationTable(List&lt;LoadFlowResponse.Violation&gt; violations) {
+<span class="nc" id="L231">        Table table = new Table(UnitValue.createPercentArray(new float[]{2, 3, 2, 2}));</span>
+<span class="nc" id="L232">        table.setWidth(UnitValue.createPercentValue(100));</span>
+
+<span class="nc" id="L234">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Type&quot;).setBold()).setBackgroundColor(ERROR_COLOR).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L235">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Description&quot;).setBold()).setBackgroundColor(ERROR_COLOR).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L236">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Severity&quot;).setBold()).setBackgroundColor(ERROR_COLOR).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L237">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Value&quot;).setBold()).setBackgroundColor(ERROR_COLOR).setFontColor(ColorConstants.WHITE));</span>
+
+<span class="nc bnc" id="L239" title="All 2 branches missed.">        for (LoadFlowResponse.Violation v : violations) {</span>
+<span class="nc bnc" id="L240" title="All 2 branches missed.">            table.addCell(new Cell().add(new Paragraph(v.getType() != null ? v.getType() : &quot;N/A&quot;)));</span>
+<span class="nc bnc" id="L241" title="All 2 branches missed.">            table.addCell(new Cell().add(new Paragraph(v.getDescription() != null ? v.getDescription() : &quot;N/A&quot;)));</span>
+<span class="nc bnc" id="L242" title="All 2 branches missed.">            table.addCell(new Cell().add(new Paragraph(v.getSeverity() != null ? v.getSeverity() : &quot;N/A&quot;)).setFontColor(</span>
+<span class="nc bnc" id="L243" title="All 2 branches missed.">                &quot;CRITICAL&quot;.equals(v.getSeverity()) ? ERROR_COLOR : WARNING_COLOR));</span>
+<span class="nc" id="L244">            table.addCell(new Cell().add(new Paragraph(String.format(&quot;%.2f%%&quot;, v.getViolationPercentage()))));</span>
+<span class="nc" id="L245">        }</span>
+
+<span class="nc" id="L247">        return table;</span>
+    }
+
+    private Table createBusVoltageTable(List&lt;LoadFlowResponse.BusResult&gt; busResults) {
+<span class="nc" id="L251">        Table table = new Table(UnitValue.createPercentArray(new float[]{3, 2, 2, 2}));</span>
+<span class="nc" id="L252">        table.setWidth(UnitValue.createPercentValue(100));</span>
+
+<span class="nc" id="L254">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Bus Name&quot;).setBold()).setBackgroundColor(PRIMARY_COLOR).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L255">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Voltage (pu)&quot;).setBold()).setBackgroundColor(PRIMARY_COLOR).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L256">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Angle (deg)&quot;).setBold()).setBackgroundColor(PRIMARY_COLOR).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L257">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Status&quot;).setBold()).setBackgroundColor(PRIMARY_COLOR).setFontColor(ColorConstants.WHITE));</span>
+
+<span class="nc" id="L259">        int count = 0;</span>
+<span class="nc bnc" id="L260" title="All 2 branches missed.">        for (LoadFlowResponse.BusResult bv : busResults) {</span>
+<span class="nc bnc" id="L261" title="All 2 branches missed.">            if (count++ &gt;= 10) break;</span>
+
+<span class="nc bnc" id="L263" title="All 2 branches missed.">            table.addCell(new Cell().add(new Paragraph(bv.getBusName() != null ? bv.getBusName() : bv.getBusId())));</span>
+<span class="nc" id="L264">            table.addCell(new Cell().add(new Paragraph(String.format(&quot;%.3f&quot;, bv.getVoltageMagnitude()))));</span>
+<span class="nc" id="L265">            table.addCell(new Cell().add(new Paragraph(String.format(&quot;%.2f&quot;, bv.getVoltageAngle()))));</span>
+<span class="nc bnc" id="L266" title="All 2 branches missed.">            table.addCell(new Cell().add(new Paragraph(bv.isWithinLimits() ? &quot;OK&quot; : &quot;Violation&quot;))</span>
+<span class="nc bnc" id="L267" title="All 2 branches missed.">                .setFontColor(bv.isWithinLimits() ? SUCCESS_COLOR : ERROR_COLOR));</span>
+<span class="nc" id="L268">        }</span>
+
+<span class="nc" id="L270">        return table;</span>
+    }
+
+    private void addFooter(Document document) {
+<span class="nc" id="L274">        document.add(new Paragraph(&quot;\n\n&quot;));</span>
+<span class="nc" id="L275">        Paragraph footer = new Paragraph(&quot;Generated by CIM-SemanticGraph-Platform&quot;)</span>
+<span class="nc" id="L276">            .setFontSize(10)</span>
+<span class="nc" id="L277">            .setFontColor(ColorConstants.GRAY)</span>
+<span class="nc" id="L278">            .setTextAlignment(TextAlignment.CENTER);</span>
+<span class="nc" id="L279">        document.add(footer);</span>
+
+<span class="nc" id="L281">        Paragraph timestamp = new Paragraph(LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;dd/MM/yyyy HH:mm:ss&quot;)))</span>
+<span class="nc" id="L282">            .setFontSize(8)</span>
+<span class="nc" id="L283">            .setFontColor(ColorConstants.LIGHT_GRAY)</span>
+<span class="nc" id="L284">            .setTextAlignment(TextAlignment.CENTER);</span>
+<span class="nc" id="L285">        document.add(timestamp);</span>
+<span class="nc" id="L286">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

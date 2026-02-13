@@ -1,0 +1,266 @@
+spring:
+  application:
+    name: CIM-SemanticGraph-Platform
+  profiles:
+    active: default
+  mvc:
+    throw-exception-if-no-handler-found: true
+  web:
+    resources:
+      add-mappings: false
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      indent-output: true
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterAccess=30m
+  security:
+    user:
+      name: admin
+      password: admin123  # Change in production!
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    include-exception: false
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+
+jena:
+  storage-mode: ${JENA_STORAGE_MODE:remote}
+  fuseki:
+    remote-url: ${JENA_FUSEKI_REMOTE_URL:http://localhost:3030}
+    dataset-name: ${JENA_FUSEKI_DATASET:cim}
+  reasoning:
+    enabled: true
+    reasoner-type: OWL_MEM_RULE_INF
+  query:
+    timeout: 60000
+    max-results: 10000
+
+cim:
+  schema:
+    base-uri: http://iec.ch/TC57/CIM100#
+    version: IEC61970CIM17v40
+    ontology-path: classpath:cim-schema/IEC61970-CIM17v40.rdf
+  import:
+    validate: true
+    max-file-size: 100MB
+    supported-formats:
+      - CIM/XML
+      - CIM/RDF
+      - RDF/XML
+      - TURTLE
+  namespaces:
+    cim: http://iec.ch/TC57/CIM100#
+    rdf: http://www.w3.org/1999/02/22-rdf-syntax-ns#
+    rdfs: http://www.w3.org/2000/01/rdf-schema#
+    owl: http://www.w3.org/2002/07/owl#
+
+graphrag:
+  embedding:
+    model: text-embedding-ada-002
+    dimension: 1536
+    cache-enabled: true
+  retrieval:
+    top-k: 5
+    max-depth: 3
+    similarity-threshold: 0.7
+  context:
+    max-triples: 500
+    include-inference: true
+    include-labels: true
+  traversal:
+    strategy: BIDIRECTIONAL
+    max-hops: 3
+    filter-by-type: true
+
+groq:
+  api:
+    base-url: https://api.groq.com/openai/v1
+    key: ${GROQ_API_KEY:}
+    model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+  request:
+    temperature: 0.7
+    max-tokens: 4096
+    timeout: 60000
+  prompt:
+    system-message: |
+      You are an expert assistant for power grid analysis using a CIM-based Knowledge Graph.
+      You have access to a semantic knowledge graph containing information about electrical equipment,
+      substations, transmission lines, and their relationships.
+
+      When answering questions:
+      1. Use the provided graph context to give accurate, specific answers
+      2. Reference specific equipment IDs and names when available
+      3. Explain relationships and dependencies clearly
+      4. Highlight potential issues or risks
+      5. Provide actionable recommendations when appropriate
+
+      Always base your answers on the knowledge graph data provided.
+      Format your responses in clean markdown.
+
+ollama:
+  api:
+    base-url: ${OLLAMA_API_URL:http://localhost:11434}
+    model: ${OLLAMA_MODEL:mistral:latest}
+  request:
+    temperature: 0.7
+    timeout: 300000
+
+shacl:
+  shapes-path: classpath:shacl/cim-shapes.ttl
+
+powerflow:
+  service:
+    url: ${POWERFLOW_SERVICE_URL:http://localhost:8000}
+    timeout: 120000
+
+logging:
+  level:
+    root: INFO
+    com.cim.semanticgraph: DEBUG
+    org.apache.jena: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${user.home}/.cim-platform/logs/application.log
+    max-size: 10MB
+    max-history: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,env,loggers,httptrace
+      base-path: /actuator
+      cors:
+        allowed-origins: "*"
+        allowed-methods: GET,POST
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+    info:
+      enabled: true
+    metrics:
+      enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        "[http.server.requests]": true
+      percentiles:
+        "[http.server.requests]": 0.5, 0.9, 0.95, 0.99
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
+
+springdoc:
+  api-docs:
+    path: /api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: true
+
+app:
+  name: CIM-SemanticGraph-Platform
+  version: 1.0.0
+  description: Platform for CIM Semantic Knowledge Graphs with GraphRAG and LLM Integration
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+      - http://localhost:5173
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+    max-age: 3600
+  security:
+    jwt:
+      secret: ${JWT_SECRET:your-secret-key-change-in-production-minimum-256-bits}
+      expiration: 86400000
+  performance:
+    query-cache-enabled: true
+    query-cache-size: 1000
+    embedding-cache-enabled: true
+    embedding-cache-size: 5000
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    com.cim.semanticgraph: DEBUG
+    org.apache.jena: DEBUG
+
+server:
+  port: 8080
+
+jena:
+  tdb:
+    location: ./data/tdb2-dev
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+logging:
+  level:
+    com.cim.semanticgraph: INFO
+    org.apache.jena: WARN
+
+server:
+  port: 8080
+
+jena:
+  storage-mode: ${JENA_STORAGE_MODE:fuseki}
+  tdb:
+    location: /app/data/tdb2
+  fuseki:
+    remote-url: ${FUSEKI_URL:http://fuseki:3030}
+
+powerflow:
+  service:
+    url: ${POWERFLOW_SERVICE_URL:http://powerflow:8000}

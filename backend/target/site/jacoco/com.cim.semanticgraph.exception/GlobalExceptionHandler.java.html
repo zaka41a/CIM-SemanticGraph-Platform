@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GlobalExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.exception</a> &gt; <span class="el_source">GlobalExceptionHandler.java</span></div><h1>GlobalExceptionHandler.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.exception;
+
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+<span class="fc" id="L22">@Slf4j</span>
+@RestControllerAdvice
+<span class="fc" id="L24">public class GlobalExceptionHandler {</span>
+
+    @ExceptionHandler(CimException.class)
+    public ResponseEntity&lt;ErrorResponse&gt; handleCimException(CimException ex) {
+<span class="fc" id="L28">        log.error(&quot;CIM Exception: {} - {}&quot;, ex.getErrorCode(), ex.getMessage(), ex);</span>
+<span class="fc" id="L29">        HttpStatus status = determineHttpStatus(ex);</span>
+<span class="fc" id="L30">        ErrorResponse error = ErrorResponse.builder()</span>
+<span class="fc" id="L31">                .timestamp(LocalDateTime.now())</span>
+<span class="fc" id="L32">                .status(status.value())</span>
+<span class="fc" id="L33">                .error(status.getReasonPhrase())</span>
+<span class="fc" id="L34">                .errorCode(ex.getErrorCode())</span>
+<span class="fc" id="L35">                .message(ex.getMessage())</span>
+<span class="fc" id="L36">                .path(getRequestPath())</span>
+<span class="fc" id="L37">                .build();</span>
+<span class="fc" id="L38">        return ResponseEntity.status(status).body(error);</span>
+    }
+
+    @ExceptionHandler(SparqlException.class)
+    public ResponseEntity&lt;ErrorResponse&gt; handleSparqlException(SparqlException ex) {
+<span class="fc" id="L43">        log.error(&quot;SPARQL Exception: Query execution failed - {}&quot;, ex.getMessage(), ex);</span>
+<span class="fc" id="L44">        ErrorResponse error = ErrorResponse.builder()</span>
+<span class="fc" id="L45">                .timestamp(LocalDateTime.now())</span>
+<span class="fc" id="L46">                .status(HttpStatus.BAD_REQUEST.value())</span>
+<span class="fc" id="L47">                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())</span>
+<span class="fc" id="L48">                .errorCode(ex.getErrorCode())</span>
+<span class="fc" id="L49">                .message(ex.getMessage())</span>
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">                .details(Map.of(&quot;query&quot;, ex.getQuery() != null ? ex.getQuery() : &quot;N/A&quot;))</span>
+<span class="fc" id="L51">                .path(getRequestPath())</span>
+<span class="fc" id="L52">                .build();</span>
+<span class="fc" id="L53">        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);</span>
+    }
+
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity&lt;ErrorResponse&gt; handleValidationException(ValidationException ex) {
+<span class="fc" id="L58">        log.error(&quot;Validation Exception: {}&quot;, ex.getMessage(), ex);</span>
+<span class="fc" id="L59">        ErrorResponse error = ErrorResponse.builder()</span>
+<span class="fc" id="L60">                .timestamp(LocalDateTime.now())</span>
+<span class="fc" id="L61">                .status(HttpStatus.BAD_REQUEST.value())</span>
+<span class="fc" id="L62">                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())</span>
+<span class="fc" id="L63">                .errorCode(ex.getErrorCode())</span>
+<span class="fc" id="L64">                .message(ex.getMessage())</span>
+<span class="fc" id="L65">                .details(Map.of(&quot;validationErrors&quot;, ex.getValidationErrors()))</span>
+<span class="fc" id="L66">                .path(getRequestPath())</span>
+<span class="fc" id="L67">                .build();</span>
+<span class="fc" id="L68">        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);</span>
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity&lt;ErrorResponse&gt; handleResourceNotFoundException(ResourceNotFoundException ex) {
+<span class="fc" id="L73">        log.warn(&quot;Resource not found: {} - {}&quot;, ex.getResourceType(), ex.getResourceId());</span>
+<span class="fc" id="L74">        ErrorResponse error = ErrorResponse.builder()</span>
+<span class="fc" id="L75">                .timestamp(LocalDateTime.now())</span>
+<span class="fc" id="L76">                .status(HttpStatus.NOT_FOUND.value())</span>
+<span class="fc" id="L77">                .error(HttpStatus.NOT_FOUND.getReasonPhrase())</span>
+<span class="fc" id="L78">                .errorCode(ex.getErrorCode())</span>
+<span class="fc" id="L79">                .message(ex.getMessage())</span>
+<span class="fc" id="L80">                .details(Map.of(</span>
+<span class="fc" id="L81">                        &quot;resourceType&quot;, ex.getResourceType(),</span>
+<span class="fc" id="L82">                        &quot;resourceId&quot;, ex.getResourceId()</span>
+                ))
+<span class="fc" id="L84">                .path(getRequestPath())</span>
+<span class="fc" id="L85">                .build();</span>
+<span class="fc" id="L86">        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);</span>
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity&lt;ErrorResponse&gt; handleValidationErrors(MethodArgumentNotValidException ex) {
+<span class="nc" id="L91">        log.warn(&quot;Validation errors: {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L92">        Map&lt;String, List&lt;String&gt;&gt; fieldErrors = ex.getBindingResult()</span>
+<span class="nc" id="L93">                .getFieldErrors()</span>
+<span class="nc" id="L94">                .stream()</span>
+<span class="nc" id="L95">                .collect(Collectors.groupingBy(</span>
+                        FieldError::getField,
+<span class="nc" id="L97">                        Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList())</span>
+                ));
+<span class="nc" id="L99">        ErrorResponse error = ErrorResponse.builder()</span>
+<span class="nc" id="L100">                .timestamp(LocalDateTime.now())</span>
+<span class="nc" id="L101">                .status(HttpStatus.BAD_REQUEST.value())</span>
+<span class="nc" id="L102">                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())</span>
+<span class="nc" id="L103">                .errorCode(&quot;VALIDATION_ERROR&quot;)</span>
+<span class="nc" id="L104">                .message(&quot;Validation failed for request parameters&quot;)</span>
+<span class="nc" id="L105">                .details(Map.of(&quot;fieldErrors&quot;, fieldErrors))</span>
+<span class="nc" id="L106">                .path(getRequestPath())</span>
+<span class="nc" id="L107">                .build();</span>
+<span class="nc" id="L108">        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);</span>
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity&lt;ErrorResponse&gt; handleMaxUploadSizeExceeded(MaxUploadSizeExceededException ex) {
+<span class="nc" id="L113">        log.warn(&quot;File upload size exceeded: {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L114">        ErrorResponse error = ErrorResponse.builder()</span>
+<span class="nc" id="L115">                .timestamp(LocalDateTime.now())</span>
+<span class="nc" id="L116">                .status(HttpStatus.PAYLOAD_TOO_LARGE.value())</span>
+<span class="nc" id="L117">                .error(HttpStatus.PAYLOAD_TOO_LARGE.getReasonPhrase())</span>
+<span class="nc" id="L118">                .errorCode(&quot;FILE_TOO_LARGE&quot;)</span>
+<span class="nc" id="L119">                .message(&quot;File size exceeds maximum allowed size&quot;)</span>
+<span class="nc" id="L120">                .path(getRequestPath())</span>
+<span class="nc" id="L121">                .build();</span>
+<span class="nc" id="L122">        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(error);</span>
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity&lt;ErrorResponse&gt; handleNoHandlerFound(NoHandlerFoundException ex) {
+<span class="nc" id="L127">        log.warn(&quot;No handler found: {} {}&quot;, ex.getHttpMethod(), ex.getRequestURL());</span>
+<span class="nc" id="L128">        ErrorResponse error = ErrorResponse.builder()</span>
+<span class="nc" id="L129">                .timestamp(LocalDateTime.now())</span>
+<span class="nc" id="L130">                .status(HttpStatus.NOT_FOUND.value())</span>
+<span class="nc" id="L131">                .error(HttpStatus.NOT_FOUND.getReasonPhrase())</span>
+<span class="nc" id="L132">                .errorCode(&quot;ENDPOINT_NOT_FOUND&quot;)</span>
+<span class="nc" id="L133">                .message(String.format(&quot;Endpoint %s %s not found&quot;, ex.getHttpMethod(), ex.getRequestURL()))</span>
+<span class="nc" id="L134">                .path(ex.getRequestURL())</span>
+<span class="nc" id="L135">                .build();</span>
+<span class="nc" id="L136">        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);</span>
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity&lt;ErrorResponse&gt; handleGenericException(Exception ex) {
+<span class="fc" id="L141">        log.error(&quot;Unexpected error occurred&quot;, ex);</span>
+<span class="fc" id="L142">        ErrorResponse error = ErrorResponse.builder()</span>
+<span class="fc" id="L143">                .timestamp(LocalDateTime.now())</span>
+<span class="fc" id="L144">                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())</span>
+<span class="fc" id="L145">                .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())</span>
+<span class="fc" id="L146">                .errorCode(&quot;INTERNAL_ERROR&quot;)</span>
+<span class="fc" id="L147">                .message(&quot;An unexpected error occurred. Please contact support.&quot;)</span>
+<span class="fc" id="L148">                .path(getRequestPath())</span>
+<span class="fc" id="L149">                .build();</span>
+<span class="fc" id="L150">        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);</span>
+    }
+
+    private HttpStatus determineHttpStatus(CimException ex) {
+<span class="pc bpc" id="L154" title="1 of 2 branches missed.">        if (ex instanceof ResourceNotFoundException) {</span>
+<span class="nc" id="L155">            return HttpStatus.NOT_FOUND;</span>
+<span class="pc bpc" id="L156" title="2 of 4 branches missed.">        } else if (ex instanceof ValidationException || ex instanceof SparqlException) {</span>
+<span class="nc" id="L157">            return HttpStatus.BAD_REQUEST;</span>
+        } else {
+<span class="fc" id="L159">            return HttpStatus.INTERNAL_SERVER_ERROR;</span>
+        }
+    }
+
+    private String getRequestPath() {
+        try {
+            ServletRequestAttributes attributes =
+<span class="fc" id="L166">                (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();</span>
+<span class="pc bpc" id="L167" title="1 of 2 branches missed.">            if (attributes != null) {</span>
+<span class="nc" id="L168">                HttpServletRequest request = attributes.getRequest();</span>
+<span class="nc" id="L169">                return request.getRequestURI();</span>
+            }
+<span class="nc" id="L171">        } catch (Exception e) {</span>
+<span class="nc" id="L172">            log.debug(&quot;Could not get request path: {}&quot;, e.getMessage());</span>
+<span class="fc" id="L173">        }</span>
+<span class="fc" id="L174">        return &quot;N/A&quot;;</span>
+    }
+
+<span class="nc bnc" id="L177" title="All 56 branches missed.">    @lombok.Data</span>
+<span class="pc" id="L178">    @lombok.Builder</span>
+<span class="nc" id="L179">    @lombok.NoArgsConstructor</span>
+<span class="fc" id="L180">    @lombok.AllArgsConstructor</span>
+    public static class ErrorResponse {
+<span class="nc" id="L182">        private LocalDateTime timestamp;</span>
+<span class="nc" id="L183">        private int status;</span>
+<span class="nc" id="L184">        private String error;</span>
+<span class="fc" id="L185">        private String errorCode;</span>
+<span class="fc" id="L186">        private String message;</span>
+<span class="nc" id="L187">        private String path;</span>
+<span class="fc" id="L188">        private Map&lt;String, Object&gt; details;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

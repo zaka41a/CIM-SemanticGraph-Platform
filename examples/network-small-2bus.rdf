@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:cim="http://iec.ch/TC57/CIM100#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+
+    <cim:BaseVoltage rdf:ID="BaseVoltage_220kV">
+        <cim:IdentifiedObject.name>220kV</cim:IdentifiedObject.name>
+        <cim:BaseVoltage.nominalVoltage>220000</cim:BaseVoltage.nominalVoltage>
+    </cim:BaseVoltage>
+
+    <cim:Substation rdf:ID="SUB_A">
+        <cim:IdentifiedObject.name>Substation A</cim:IdentifiedObject.name>
+    </cim:Substation>
+
+    <cim:Substation rdf:ID="SUB_B">
+        <cim:IdentifiedObject.name>Substation B</cim:IdentifiedObject.name>
+    </cim:Substation>
+
+    <cim:VoltageLevel rdf:ID="VL_220_A">
+        <cim:IdentifiedObject.name>220kV A</cim:IdentifiedObject.name>
+        <cim:VoltageLevel.BaseVoltage rdf:resource="#BaseVoltage_220kV"/>
+        <cim:VoltageLevel.Substation rdf:resource="#SUB_A"/>
+    </cim:VoltageLevel>
+
+    <cim:VoltageLevel rdf:ID="VL_220_B">
+        <cim:IdentifiedObject.name>220kV B</cim:IdentifiedObject.name>
+        <cim:VoltageLevel.BaseVoltage rdf:resource="#BaseVoltage_220kV"/>
+        <cim:VoltageLevel.Substation rdf:resource="#SUB_B"/>
+    </cim:VoltageLevel>
+
+    <cim:ConnectivityNode rdf:ID="BUS_A_220">
+        <cim:IdentifiedObject.name>Bus A 220kV</cim:IdentifiedObject.name>
+        <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#VL_220_A"/>
+    </cim:ConnectivityNode>
+
+    <cim:ConnectivityNode rdf:ID="BUS_B_220">
+        <cim:IdentifiedObject.name>Bus B 220kV</cim:IdentifiedObject.name>
+        <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#VL_220_B"/>
+    </cim:ConnectivityNode>
+
+    <cim:GeneratingUnit rdf:ID="GEN_A">
+        <cim:IdentifiedObject.name>Generator A</cim:IdentifiedObject.name>
+        <cim:GeneratingUnit.maxOperatingP>500</cim:GeneratingUnit.maxOperatingP>
+        <cim:GeneratingUnit.minOperatingP>0</cim:GeneratingUnit.minOperatingP>
+        <cim:Equipment.EquipmentContainer rdf:resource="#SUB_A"/>
+    </cim:GeneratingUnit>
+
+    <cim:EnergyConsumer rdf:ID="LOAD_B">
+        <cim:IdentifiedObject.name>Load B</cim:IdentifiedObject.name>
+        <cim:EnergyConsumer.p>280</cim:EnergyConsumer.p>
+        <cim:EnergyConsumer.q>80</cim:EnergyConsumer.q>
+        <cim:Equipment.EquipmentContainer rdf:resource="#SUB_B"/>
+    </cim:EnergyConsumer>
+
+    <cim:ACLineSegment rdf:ID="LINE_AB">
+        <cim:IdentifiedObject.name>Line A-B</cim:IdentifiedObject.name>
+        <cim:Conductor.length>50.0</cim:Conductor.length>
+        <cim:ACLineSegment.r>0.05</cim:ACLineSegment.r>
+        <cim:ACLineSegment.x>0.15</cim:ACLineSegment.x>
+        <cim:ConductingEquipment.BaseVoltage rdf:resource="#BaseVoltage_220kV"/>
+    </cim:ACLineSegment>
+
+    <cim:Terminal rdf:ID="T_GEN_A">
+        <cim:Terminal.ConductingEquipment rdf:resource="#GEN_A"/>
+        <cim:Terminal.ConnectivityNode rdf:resource="#BUS_A_220"/>
+    </cim:Terminal>
+
+    <cim:Terminal rdf:ID="T_LOAD_B">
+        <cim:Terminal.ConductingEquipment rdf:resource="#LOAD_B"/>
+        <cim:Terminal.ConnectivityNode rdf:resource="#BUS_B_220"/>
+    </cim:Terminal>
+
+    <cim:Terminal rdf:ID="T_LINE_AB_1">
+        <cim:Terminal.ConductingEquipment rdf:resource="#LINE_AB"/>
+        <cim:Terminal.ConnectivityNode rdf:resource="#BUS_A_220"/>
+    </cim:Terminal>
+
+    <cim:Terminal rdf:ID="T_LINE_AB_2">
+        <cim:Terminal.ConductingEquipment rdf:resource="#LINE_AB"/>
+        <cim:Terminal.ConnectivityNode rdf:resource="#BUS_B_220"/>
+    </cim:Terminal>
+
+</rdf:RDF>

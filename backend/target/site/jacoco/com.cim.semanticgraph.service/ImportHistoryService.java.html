@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ImportHistoryService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.service</a> &gt; <span class="el_source">ImportHistoryService.java</span></div><h1>ImportHistoryService.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.service;
+
+import com.cim.semanticgraph.model.ImportHistory;
+import com.cim.semanticgraph.model.ImportHistory.ImportStatus;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+/**
+ * Import History Service
+ * Manages the history of CIM file imports
+ */
+<span class="nc" id="L17">@Slf4j</span>
+@Service
+<span class="nc" id="L19">public class ImportHistoryService {</span>
+
+    // In-memory storage (in production, use a database)
+<span class="nc" id="L22">    private final Map&lt;String, ImportHistory&gt; historyStore = new ConcurrentHashMap&lt;&gt;();</span>
+
+    /**
+     * Add a new import record
+     */
+    public ImportHistory addImportRecord(String fileName, long fileSize, String format) {
+<span class="nc" id="L28">        String id = UUID.randomUUID().toString();</span>
+
+<span class="nc" id="L30">        ImportHistory record = ImportHistory.builder()</span>
+<span class="nc" id="L31">                .id(id)</span>
+<span class="nc" id="L32">                .fileName(fileName)</span>
+<span class="nc" id="L33">                .fileSize(fileSize)</span>
+<span class="nc" id="L34">                .importDate(LocalDateTime.now())</span>
+<span class="nc" id="L35">                .status(ImportStatus.PROCESSING)</span>
+<span class="nc" id="L36">                .format(format)</span>
+<span class="nc" id="L37">                .build();</span>
+
+<span class="nc" id="L39">        historyStore.put(id, record);</span>
+<span class="nc" id="L40">        log.info(&quot;Created import history record: {}&quot;, id);</span>
+
+<span class="nc" id="L42">        return record;</span>
+    }
+
+    /**
+     * Update import record on success
+     */
+    public void updateImportSuccess(String id, long triplesCount, double duration) {
+<span class="nc" id="L49">        ImportHistory record = historyStore.get(id);</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">        if (record != null) {</span>
+<span class="nc" id="L51">            record.setStatus(ImportStatus.SUCCESS);</span>
+<span class="nc" id="L52">            record.setTriplesCount(triplesCount);</span>
+<span class="nc" id="L53">            record.setDuration(duration);</span>
+<span class="nc" id="L54">            log.info(&quot;Updated import history {} to SUCCESS&quot;, id);</span>
+        }
+<span class="nc" id="L56">    }</span>
+
+    /**
+     * Update import record on failure
+     */
+    public void updateImportFailure(String id, String errorMessage) {
+<span class="nc" id="L62">        ImportHistory record = historyStore.get(id);</span>
+<span class="nc bnc" id="L63" title="All 2 branches missed.">        if (record != null) {</span>
+<span class="nc" id="L64">            record.setStatus(ImportStatus.FAILED);</span>
+<span class="nc" id="L65">            record.setErrorMessage(errorMessage);</span>
+<span class="nc" id="L66">            log.info(&quot;Updated import history {} to FAILED&quot;, id);</span>
+        }
+<span class="nc" id="L68">    }</span>
+
+    /**
+     * Get all import history records
+     */
+    public List&lt;ImportHistory&gt; getAllHistory() {
+<span class="nc" id="L74">        return historyStore.values().stream()</span>
+<span class="nc" id="L75">                .sorted(Comparator.comparing(ImportHistory::getImportDate).reversed())</span>
+<span class="nc" id="L76">                .collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Get import history by ID
+     */
+    public Optional&lt;ImportHistory&gt; getHistoryById(String id) {
+<span class="nc" id="L83">        return Optional.ofNullable(historyStore.get(id));</span>
+    }
+
+    /**
+     * Delete import history record
+     */
+    public boolean deleteHistory(String id) {
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        if (historyStore.containsKey(id)) {</span>
+<span class="nc" id="L91">            historyStore.remove(id);</span>
+<span class="nc" id="L92">            log.info(&quot;Deleted import history: {}&quot;, id);</span>
+<span class="nc" id="L93">            return true;</span>
+        }
+<span class="nc" id="L95">        return false;</span>
+    }
+
+    /**
+     * Get statistics about imports
+     */
+    public Map&lt;String, Object&gt; getImportStatistics() {
+<span class="nc" id="L102">        List&lt;ImportHistory&gt; allHistory = getAllHistory();</span>
+
+<span class="nc" id="L104">        long totalImports = allHistory.size();</span>
+<span class="nc" id="L105">        long successfulImports = allHistory.stream()</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">                .filter(h -&gt; h.getStatus() == ImportStatus.SUCCESS)</span>
+<span class="nc" id="L107">                .count();</span>
+<span class="nc" id="L108">        long failedImports = allHistory.stream()</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">                .filter(h -&gt; h.getStatus() == ImportStatus.FAILED)</span>
+<span class="nc" id="L110">                .count();</span>
+<span class="nc" id="L111">        long totalTriples = allHistory.stream()</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">                .filter(h -&gt; h.getTriplesCount() != null)</span>
+<span class="nc" id="L113">                .mapToLong(ImportHistory::getTriplesCount)</span>
+<span class="nc" id="L114">                .sum();</span>
+
+<span class="nc" id="L116">        Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L117">        stats.put(&quot;total&quot;, totalImports);</span>
+<span class="nc" id="L118">        stats.put(&quot;success&quot;, successfulImports);</span>
+<span class="nc" id="L119">        stats.put(&quot;failed&quot;, failedImports);</span>
+<span class="nc" id="L120">        stats.put(&quot;totalTriples&quot;, totalTriples);</span>
+
+<span class="nc" id="L122">        return stats;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

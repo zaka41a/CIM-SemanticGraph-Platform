@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CimController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.controller</a> &gt; <span class="el_source">CimController.java</span></div><h1>CimController.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.controller;
+
+import com.cim.semanticgraph.dto.ValidationResult;
+import com.cim.semanticgraph.model.ImportHistory;
+import com.cim.semanticgraph.service.CimTransformerService;
+import com.cim.semanticgraph.service.ImportHistoryService;
+import com.cim.semanticgraph.service.JenaService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.HashMap;
+import java.util.Map;
+
+<span class="nc" id="L21">@Slf4j</span>
+@RestController
+@RequestMapping(&quot;/cim&quot;)
+<span class="nc" id="L24">@RequiredArgsConstructor</span>
+@Tag(name = &quot;CIM Management&quot;, description = &quot;CIM data import, export, and validation&quot;)
+public class CimController {
+
+    private final CimTransformerService cimTransformerService;
+    private final JenaService jenaService;
+    private final ImportHistoryService importHistoryService;
+
+    @PostMapping(value = &quot;/import&quot;, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = &quot;Import CIM data&quot;, description = &quot;Import CIM data from XML or RDF file&quot;)
+    public ResponseEntity&lt;?&gt; importCimData(
+            @RequestParam(&quot;file&quot;) MultipartFile file,
+            @RequestParam(value = &quot;format&quot;, required = false, defaultValue = &quot;CIM/XML&quot;) String format) {
+
+<span class="nc" id="L38">        log.info(&quot;Import request received. Filename: {}, Size: {} bytes, Format: {}&quot;,</span>
+<span class="nc" id="L39">                file.getOriginalFilename(), file.getSize(), format);</span>
+
+<span class="nc" id="L41">        ImportHistory historyRecord = importHistoryService.addImportRecord(</span>
+<span class="nc" id="L42">                file.getOriginalFilename(),</span>
+<span class="nc" id="L43">                file.getSize(),</span>
+                format
+        );
+
+<span class="nc" id="L47">        long startTime = System.currentTimeMillis();</span>
+
+        try {
+<span class="nc bnc" id="L50" title="All 2 branches missed.">            if (file.isEmpty()) {</span>
+<span class="nc" id="L51">                importHistoryService.updateImportFailure(historyRecord.getId(), &quot;File is empty&quot;);</span>
+<span class="nc" id="L52">                return ResponseEntity.badRequest()</span>
+<span class="nc" id="L53">                        .body(Map.of(&quot;error&quot;, &quot;File is empty&quot;));</span>
+            }
+
+<span class="nc" id="L56">            long maxSize = 100 * 1024 * 1024;</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">            if (file.getSize() &gt; maxSize) {</span>
+<span class="nc" id="L58">                importHistoryService.updateImportFailure(historyRecord.getId(),</span>
+                        &quot;File too large. Maximum size: 100MB&quot;);
+<span class="nc" id="L60">                return ResponseEntity.badRequest()</span>
+<span class="nc" id="L61">                        .body(Map.of(&quot;error&quot;, &quot;File too large. Maximum size: 100MB&quot;));</span>
+            }
+
+<span class="nc" id="L64">            Map&lt;String, Object&gt; stats = cimTransformerService.importCimData(</span>
+<span class="nc" id="L65">                    file.getInputStream(), format);</span>
+
+<span class="nc" id="L67">            long endTime = System.currentTimeMillis();</span>
+<span class="nc" id="L68">            double duration = (endTime - startTime) / 1000.0;</span>
+
+<span class="nc" id="L70">            long triplesCount = 0;</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">            if (stats.containsKey(&quot;totalTriples&quot;)) {</span>
+<span class="nc" id="L72">                triplesCount = ((Number) stats.get(&quot;totalTriples&quot;)).longValue();</span>
+            }
+
+<span class="nc" id="L75">            importHistoryService.updateImportSuccess(historyRecord.getId(), triplesCount, duration);</span>
+
+<span class="nc" id="L77">            log.info(&quot;Import successful. Stats: {}&quot;, stats);</span>
+
+<span class="nc" id="L79">            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L80">            response.put(&quot;status&quot;, &quot;success&quot;);</span>
+<span class="nc" id="L81">            response.put(&quot;message&quot;, &quot;CIM data imported successfully&quot;);</span>
+<span class="nc" id="L82">            response.put(&quot;filename&quot;, file.getOriginalFilename());</span>
+<span class="nc" id="L83">            response.put(&quot;statistics&quot;, stats);</span>
+<span class="nc" id="L84">            response.put(&quot;historyId&quot;, historyRecord.getId());</span>
+
+<span class="nc" id="L86">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L88">        } catch (Exception e) {</span>
+<span class="nc" id="L89">            long endTime = System.currentTimeMillis();</span>
+<span class="nc" id="L90">            double duration = (endTime - startTime) / 1000.0;</span>
+
+<span class="nc" id="L92">            importHistoryService.updateImportFailure(historyRecord.getId(), e.getMessage());</span>
+
+<span class="nc" id="L94">            log.error(&quot;Error importing CIM data&quot;, e);</span>
+<span class="nc" id="L95">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L96">                    .body(Map.of(</span>
+                            &quot;status&quot;, &quot;error&quot;,
+<span class="nc" id="L98">                            &quot;message&quot;, &quot;Import failed: &quot; + e.getMessage()</span>
+                    ));
+        }
+    }
+
+    @GetMapping(&quot;/export&quot;)
+    @Operation(summary = &quot;Export knowledge graph&quot;, description = &quot;Export entire knowledge graph in specified format&quot;)
+    public ResponseEntity&lt;?&gt; exportKnowledgeGraph(
+            @RequestParam(value = &quot;format&quot;, required = false, defaultValue = &quot;RDF/XML&quot;) String format) {
+
+<span class="nc" id="L108">        log.info(&quot;Export request received. Format: {}&quot;, format);</span>
+
+        try {
+<span class="nc" id="L111">            String rdfData = jenaService.exportRdfData(format);</span>
+
+<span class="nc" id="L113">            return ResponseEntity.ok()</span>
+<span class="nc" id="L114">                    .contentType(MediaType.APPLICATION_XML)</span>
+<span class="nc" id="L115">                    .body(rdfData);</span>
+
+<span class="nc" id="L117">        } catch (Exception e) {</span>
+<span class="nc" id="L118">            log.error(&quot;Error exporting knowledge graph&quot;, e);</span>
+<span class="nc" id="L119">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L120">                    .body(Map.of(&quot;error&quot;, &quot;Export failed: &quot; + e.getMessage()));</span>
+        }
+    }
+
+    @GetMapping(&quot;/statistics&quot;)
+    @Operation(summary = &quot;Get graph statistics&quot;, description = &quot;Get statistics about the knowledge graph&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getStatistics() {
+<span class="nc" id="L127">        log.info(&quot;Statistics request received&quot;);</span>
+
+        try {
+<span class="nc" id="L130">            Map&lt;String, Object&gt; stats = jenaService.getGraphStatistics();</span>
+
+<span class="nc" id="L132">            return ResponseEntity.ok(stats);</span>
+
+<span class="nc" id="L134">        } catch (Exception e) {</span>
+<span class="nc" id="L135">            log.error(&quot;Error getting statistics&quot;, e);</span>
+<span class="nc" id="L136">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L137">                    .body(Map.of(&quot;error&quot;, &quot;Failed to get statistics: &quot; + e.getMessage()));</span>
+        }
+    }
+
+    @PostMapping(value = &quot;/validate&quot;, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = &quot;Validate CIM data&quot;, description = &quot;Validate CIM data without importing&quot;)
+    public ResponseEntity&lt;?&gt; validateCimData(
+            @RequestParam(&quot;file&quot;) MultipartFile file,
+            @RequestParam(value = &quot;format&quot;, required = false, defaultValue = &quot;CIM/XML&quot;) String format) {
+
+<span class="nc" id="L147">        log.info(&quot;Validation request received. Filename: {}&quot;, file.getOriginalFilename());</span>
+
+        try {
+            org.apache.jena.rdf.model.Model model;
+<span class="nc bnc" id="L151" title="All 2 branches missed.">            if (&quot;CIM/XML&quot;.equalsIgnoreCase(format)) {</span>
+<span class="nc" id="L152">                model = cimTransformerService.transformCimXmlToRdf(file.getInputStream());</span>
+            } else {
+<span class="nc" id="L154">                model = cimTransformerService.transformCimRdfToModel(</span>
+<span class="nc" id="L155">                        file.getInputStream(), format);</span>
+            }
+
+<span class="nc" id="L158">            ValidationResult validation = cimTransformerService.validateCimSchema(model);</span>
+
+<span class="nc" id="L160">            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L161">            response.put(&quot;valid&quot;, validation.isValid());</span>
+<span class="nc" id="L162">            response.put(&quot;errors&quot;, validation.getErrors());</span>
+<span class="nc" id="L163">            response.put(&quot;warnings&quot;, validation.getWarnings());</span>
+<span class="nc" id="L164">            response.put(&quot;summary&quot;, validation.getSummary());</span>
+<span class="nc" id="L165">            response.put(&quot;tripleCount&quot;, model.size());</span>
+
+<span class="nc" id="L167">            return ResponseEntity.ok(response);</span>
+
+<span class="nc" id="L169">        } catch (Exception e) {</span>
+<span class="nc" id="L170">            log.error(&quot;Error validating CIM data&quot;, e);</span>
+<span class="nc" id="L171">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L172">                    .body(Map.of(&quot;error&quot;, &quot;Validation failed: &quot; + e.getMessage()));</span>
+        }
+    }
+
+    @DeleteMapping(&quot;/clear&quot;)
+    @Operation(summary = &quot;Clear knowledge graph&quot;, description = &quot;Remove all data from knowledge graph&quot;)
+    public ResponseEntity&lt;Map&lt;String, String&gt;&gt; clearKnowledgeGraph() {
+<span class="nc" id="L179">        log.warn(&quot;Clear knowledge graph request received&quot;);</span>
+
+        try {
+<span class="nc" id="L182">            jenaService.clearKnowledgeGraph();</span>
+
+<span class="nc" id="L184">            return ResponseEntity.ok(Map.of(</span>
+                    &quot;status&quot;, &quot;success&quot;,
+                    &quot;message&quot;, &quot;Knowledge graph cleared successfully&quot;
+            ));
+
+<span class="nc" id="L189">        } catch (Exception e) {</span>
+<span class="nc" id="L190">            log.error(&quot;Error clearing knowledge graph&quot;, e);</span>
+<span class="nc" id="L191">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L192">                    .body(Map.of(&quot;error&quot;, &quot;Clear failed: &quot; + e.getMessage()));</span>
+        }
+    }
+
+    @GetMapping(&quot;/formats&quot;)
+    @Operation(summary = &quot;Get supported formats&quot;, description = &quot;List supported CIM data formats&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getSupportedFormats() {
+<span class="nc" id="L199">        Map&lt;String, Object&gt; formats = new HashMap&lt;&gt;();</span>
+
+<span class="nc" id="L201">        formats.put(&quot;import&quot;, new String[]{</span>
+                &quot;CIM/XML&quot;,
+                &quot;RDF/XML&quot;,
+                &quot;TURTLE&quot;,
+                &quot;N-TRIPLES&quot;,
+                &quot;JSON-LD&quot;
+        });
+
+<span class="nc" id="L209">        formats.put(&quot;export&quot;, new String[]{</span>
+                &quot;RDF/XML&quot;,
+                &quot;TURTLE&quot;,
+                &quot;N-TRIPLES&quot;,
+                &quot;JSON-LD&quot;,
+                &quot;RDF/JSON&quot;
+        });
+
+<span class="nc" id="L217">        return ResponseEntity.ok(formats);</span>
+    }
+
+    @GetMapping(&quot;/health&quot;)
+    @Operation(summary = &quot;Health check&quot;, description = &quot;Check if CIM service is operational&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; healthCheck() {
+<span class="nc" id="L223">        Map&lt;String, Object&gt; health = new HashMap&lt;&gt;();</span>
+
+        try {
+<span class="nc" id="L226">            long tripleCount = jenaService.getTripleCount();</span>
+
+<span class="nc" id="L228">            health.put(&quot;status&quot;, &quot;UP&quot;);</span>
+<span class="nc" id="L229">            health.put(&quot;tripleCount&quot;, tripleCount);</span>
+<span class="nc" id="L230">            health.put(&quot;service&quot;, &quot;CIM Management&quot;);</span>
+
+<span class="nc" id="L232">            return ResponseEntity.ok(health);</span>
+
+<span class="nc" id="L234">        } catch (Exception e) {</span>
+<span class="nc" id="L235">            health.put(&quot;status&quot;, &quot;DOWN&quot;);</span>
+<span class="nc" id="L236">            health.put(&quot;error&quot;, e.getMessage());</span>
+
+<span class="nc" id="L238">            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)</span>
+<span class="nc" id="L239">                    .body(health);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

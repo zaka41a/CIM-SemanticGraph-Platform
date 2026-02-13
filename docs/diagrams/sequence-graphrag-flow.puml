@@ -1,0 +1,142 @@
+@startuml Sequence Diagram - GraphRAG Query Flow
+!theme vibrant
+title Sequence Diagram - GraphRAG
+
+actor "Engineer" as User
+participant "Frontend\n(React)" as Frontend
+participant "GraphRAGController" as Controller
+participant "GraphRAGService" as GraphRAG
+participant "EmbeddingService" as Embedding
+participant "GraphTraverser" as Traverser
+participant "JenaService" as Jena
+participant "ContextBuilder" as Context
+participant "ClaudeService" as Claude
+participant "Claude API\n(Anthropic)" as ClaudeAPI
+database "Knowledge Graph\n(Apache Jena TDB2)" as KG
+
+User -> Frontend: Ask question\n"What equipment is affected\nif Substation_123 fails?"
+
+Frontend -> Controller: POST /api/graphrag/ask\n{question: "..."}
+activate Controller
+
+Controller -> GraphRAG: processQuery(question)
+activate GraphRAG
+
+== Step 1: Generate Query Embedding ==
+GraphRAG -> Embedding: generateEmbedding(question)
+activate Embedding
+Embedding --> GraphRAG: queryEmbedding[]
+deactivate Embedding
+
+== Step 2: Find Relevant Entities ==
+GraphRAG -> Jena: executeSparqlSelect(\n"SELECT ?s WHERE {...}")
+activate Jena
+Jena -> KG: Query entities\nmatching "Substation_123"
+KG --> Jena: Entity URIs
+Jena --> GraphRAG: List<Entity>
+deactivate Jena
+
+== Step 3: Retrieve Subgraph Context ==
+GraphRAG -> Traverser: traverse(\nstartNode="Substation_123",\ndepth=3)
+activate Traverser
+
+loop For each hop (max 3)
+  Traverser -> Jena: executeSparqlConstruct(\n"CONSTRUCT {...}")
+  activate Jena
+  Jena -> KG: Get connected triples
+  KG --> Jena: RDF triples
+  Jena --> Traverser: Subgraph model
+  deactivate Jena
+end
+
+Traverser --> GraphRAG: relevantSubgraph
+deactivate Traverser
+
+== Step 4: Build LLM Context ==
+GraphRAG -> Context: buildContext(subgraph)
+activate Context
+
+Context -> Context: formatForLLM(triples)
+note right
+  Formats RDF triples into
+  readable text for Claude:
+
+  "Substation_123 (110kV):
+   - Connected to: Line_456
+   - Powers: 3 transformers
+   - Serves: 2500 consumers
+   - Critical equipment: Yes"
+end note
+
+Context --> GraphRAG: formattedContext
+deactivate Context
+
+== Step 5: Query Claude AI ==
+GraphRAG -> Claude: queryWithContext(\nquestion, context)
+activate Claude
+
+Claude -> Claude: buildPromptWithContext()
+note right
+  Prompt structure:
+
+  System: "You are a power grid expert..."
+
+  Context: "[Graph data here]"
+
+  Question: "What equipment affected..."
+end note
+
+Claude -> ClaudeAPI: POST /v1/messages\n{model, messages, context}
+activate ClaudeAPI
+
+ClaudeAPI -> ClaudeAPI: Process with Claude 3.5 Sonnet
+note right
+  Claude analyzes:
+  - Graph relationships
+  - Dependencies
+  - Critical equipment
+  - Impact severity
+end note
+
+ClaudeAPI --> Claude: LLM Response
+deactivate ClaudeAPI
+
+Claude --> GraphRAG: Enhanced Answer
+deactivate Claude
+
+== Step 6: Build Response ==
+GraphRAG -> GraphRAG: buildGraphRAGResponse(\nanswer, context, sources)
+
+GraphRAG --> Controller: GraphRAGResponse {\n answer,\n context,\n sources,\n confidence\n}
+deactivate GraphRAG
+
+Controller --> Frontend: HTTP 200 OK\n{JSON response}
+deactivate Controller
+
+Frontend -> Frontend: Display answer\n+ visualization
+Frontend --> User: Show result with\ngraph visualization
+
+== Alternative Flow: Error Handling ==
+alt SPARQL Query Fails
+  Jena --> GraphRAG: SparqlExecutionException
+  GraphRAG --> Controller: Error response
+  Controller --> Frontend: HTTP 500
+  Frontend --> User: "Error executing query"
+else Claude API Fails
+  ClaudeAPI --> Claude: API Error (429, 500)
+  Claude --> GraphRAG: ClaudeApiException
+  GraphRAG --> Controller: Fallback response\n(without LLM)
+  Controller --> Frontend: HTTP 200 (partial)
+  Frontend --> User: "Graph data only\n(LLM unavailable)"
+end
+
+note over User, KG
+  **Total Flow Time: ~2-5 seconds**
+  - Embedding: 100ms
+  - Graph retrieval: 500-1000ms
+  - Context building: 200ms
+  - Claude API: 1-3s
+  - Response formatting: 100ms
+end note
+
+@enduml

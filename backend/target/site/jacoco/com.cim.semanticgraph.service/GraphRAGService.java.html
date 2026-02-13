@@ -1,0 +1,739 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GraphRAGService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.service</a> &gt; <span class="el_source">GraphRAGService.java</span></div><h1>GraphRAGService.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.service;
+
+import com.cim.semanticgraph.dto.GraphRAGResponse;
+import com.cim.semanticgraph.graphrag.ContextBuilder;
+import com.cim.semanticgraph.graphrag.GraphTraverser;
+import com.cim.semanticgraph.model.ChatHistory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.rdf.model.Model;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+<span class="nc" id="L18">@Slf4j</span>
+@Service
+<span class="nc" id="L20">@RequiredArgsConstructor</span>
+public class GraphRAGService {
+
+    private final JenaService jenaService;
+    private final OllamaService ollamaService;
+    private final GroqService groqService;
+    private final EmbeddingService embeddingService;
+    private final GraphTraverser graphTraverser;
+    private final ContextBuilder contextBuilder;
+    private final ChatHistoryService chatHistoryService;
+    private final LoadFlowService loadFlowService;
+
+    @Value(&quot;${graphrag.retrieval.top-k}&quot;)
+    private int topK;
+
+    @Value(&quot;${graphrag.retrieval.max-depth}&quot;)
+    private int maxDepth;
+
+    @Value(&quot;${graphrag.context.max-triples}&quot;)
+    private int maxTriples;
+
+    @Value(&quot;${groq.api.model:${ollama.api.model:unknown}}&quot;)
+    private String llmModel;
+
+    @Value(&quot;${cim.namespaces.cim:http://iec.ch/TC57/CIM100#}&quot;)
+    private String cimNamespace;
+
+    public GraphRAGResponse processQuery(String question, String sessionId) {
+<span class="nc" id="L48">        log.info(&quot;Processing GraphRAG query: {} for session: {}&quot;, question, sessionId);</span>
+<span class="nc" id="L49">        long startTime = System.currentTimeMillis();</span>
+
+        try {
+<span class="nc bnc" id="L52" title="All 2 branches missed.">            if (isLoadFlowRequest(question)) {</span>
+<span class="nc" id="L53">                log.info(&quot;Detected load flow calculation request&quot;);</span>
+<span class="nc" id="L54">                return handleLoadFlowRequest(question, sessionId, startTime);</span>
+            }
+
+<span class="nc" id="L57">            log.debug(&quot;Step 1: Retrieving relevant entities&quot;);</span>
+<span class="nc" id="L58">            List&lt;String&gt; relevantEntities = findRelevantEntities(question);</span>
+
+            GraphRAGResponse response;
+<span class="nc bnc" id="L61" title="All 2 branches missed.">            if (relevantEntities.isEmpty()) {</span>
+<span class="nc" id="L62">                log.warn(&quot;No relevant entities found for query&quot;);</span>
+<span class="nc" id="L63">                response = buildFallbackResponse(question, startTime);</span>
+            } else {
+<span class="nc" id="L65">                log.debug(&quot;Step 2: Retrieving subgraph. Entities: {}, Depth: {}&quot;,</span>
+<span class="nc" id="L66">                         relevantEntities.size(), maxDepth);</span>
+<span class="nc" id="L67">                Model subgraph = retrieveSubgraph(relevantEntities);</span>
+
+<span class="nc" id="L69">                log.debug(&quot;Step 3: Building LLM context&quot;);</span>
+<span class="nc" id="L70">                String graphContext = contextBuilder.buildContext(subgraph, maxTriples);</span>
+
+<span class="nc" id="L72">                log.debug(&quot;Step 4: Querying LLM&quot;);</span>
+                String answer;
+<span class="nc bnc" id="L74" title="All 2 branches missed.">                if (groqService.isConfigured()) {</span>
+<span class="nc" id="L75">                    log.info(&quot;Using Groq API for LLM query&quot;);</span>
+<span class="nc" id="L76">                    answer = groqService.queryWithContext(question, graphContext);</span>
+                } else {
+<span class="nc" id="L78">                    log.info(&quot;Using Ollama for LLM query (Groq not configured)&quot;);</span>
+<span class="nc" id="L79">                    answer = ollamaService.queryWithContext(question, graphContext);</span>
+                }
+
+<span class="nc" id="L82">                long executionTime = System.currentTimeMillis() - startTime;</span>
+<span class="nc" id="L83">                log.info(&quot;GraphRAG query completed in {}ms&quot;, executionTime);</span>
+
+<span class="nc" id="L85">                response = GraphRAGResponse.builder()</span>
+<span class="nc" id="L86">                        .answer(answer)</span>
+<span class="nc" id="L87">                        .question(question)</span>
+<span class="nc" id="L88">                        .graphContext(graphContext)</span>
+<span class="nc" id="L89">                        .sources(relevantEntities)</span>
+<span class="nc" id="L90">                        .triplesRetrieved((int) subgraph.size())</span>
+<span class="nc" id="L91">                        .executionTimeMs(executionTime)</span>
+<span class="nc" id="L92">                        .llmModel(llmModel)</span>
+<span class="nc" id="L93">                        .inferenceUsed(true)</span>
+<span class="nc" id="L94">                        .confidence(calculateConfidence(relevantEntities.size(), subgraph.size()))</span>
+<span class="nc" id="L95">                        .timestamp(LocalDateTime.now())</span>
+<span class="nc" id="L96">                        .build();</span>
+            }
+
+<span class="nc" id="L99">            saveChatHistory(sessionId, response);</span>
+
+<span class="nc" id="L101">            return response;</span>
+
+<span class="nc" id="L103">        } catch (Exception e) {</span>
+<span class="nc" id="L104">            log.error(&quot;Error processing GraphRAG query&quot;, e);</span>
+<span class="nc" id="L105">            throw new RuntimeException(&quot;GraphRAG processing failed: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    private void saveChatHistory(String sessionId, GraphRAGResponse response) {
+        try {
+<span class="nc" id="L111">            ChatHistory chatHistory = ChatHistory.create(</span>
+                    sessionId,
+<span class="nc" id="L113">                    response.getQuestion(),</span>
+<span class="nc" id="L114">                    response.getAnswer(),</span>
+<span class="nc" id="L115">                    response.getSources(),</span>
+<span class="nc" id="L116">                    response.getConfidence(),</span>
+<span class="nc" id="L117">                    response.getTriplesRetrieved(),</span>
+<span class="nc" id="L118">                    response.getExecutionTimeMs(),</span>
+<span class="nc" id="L119">                    response.getLlmModel()</span>
+            );
+<span class="nc" id="L121">            chatHistoryService.saveChatHistory(chatHistory);</span>
+<span class="nc" id="L122">            log.debug(&quot;Chat history saved for session: {}&quot;, sessionId);</span>
+<span class="nc" id="L123">        } catch (Exception e) {</span>
+            // Don't fail the request if history save fails
+<span class="nc" id="L125">            log.error(&quot;Failed to save chat history&quot;, e);</span>
+<span class="nc" id="L126">        }</span>
+<span class="nc" id="L127">    }</span>
+
+    public GraphRAGResponse analyzeEquipmentImpact(String equipmentId) {
+<span class="nc" id="L130">        log.info(&quot;Analyzing impact for equipment: {}&quot;, equipmentId);</span>
+<span class="nc" id="L131">        long startTime = System.currentTimeMillis();</span>
+
+        try {
+<span class="nc" id="L134">            String sparql = &quot;&quot;&quot;</span>
+                SELECT ?eq ?name ?type WHERE {
+                    ?eq a cim:Equipment .
+                    ?eq cim:IdentifiedObject.name ?name .
+                    ?eq a ?type .
+                    FILTER(CONTAINS(STR(?eq), &quot;%s&quot;) || CONTAINS(?name, &quot;%s&quot;))
+                }
+                LIMIT 1
+<span class="nc" id="L142">                &quot;&quot;&quot;.formatted(equipmentId, equipmentId);</span>
+
+<span class="nc" id="L144">            List&lt;Map&lt;String, String&gt;&gt; results = jenaService.executeSparqlSelect(sparql);</span>
+
+<span class="nc bnc" id="L146" title="All 2 branches missed.">            if (results.isEmpty()) {</span>
+<span class="nc" id="L147">                throw new RuntimeException(&quot;Equipment not found: &quot; + equipmentId);</span>
+            }
+
+<span class="nc" id="L150">            String equipmentUri = results.get(0).get(&quot;eq&quot;);</span>
+
+<span class="nc" id="L152">            Model subgraph = graphTraverser.traverse(equipmentUri, maxDepth);</span>
+<span class="nc" id="L153">            String context = contextBuilder.buildContext(subgraph, maxTriples);</span>
+
+<span class="nc bnc" id="L155" title="All 2 branches missed.">            String answer = groqService.isConfigured()</span>
+<span class="nc" id="L156">                    ? groqService.analyzeImpact(equipmentId, context)</span>
+<span class="nc" id="L157">                    : ollamaService.analyzeImpact(equipmentId, context);</span>
+
+<span class="nc" id="L159">            long executionTime = System.currentTimeMillis() - startTime;</span>
+
+<span class="nc" id="L161">            return GraphRAGResponse.builder()</span>
+<span class="nc" id="L162">                    .answer(answer)</span>
+<span class="nc" id="L163">                    .question(&quot;Analyze impact of &quot; + equipmentId + &quot; failure&quot;)</span>
+<span class="nc" id="L164">                    .graphContext(context)</span>
+<span class="nc" id="L165">                    .sources(List.of(equipmentUri))</span>
+<span class="nc" id="L166">                    .triplesRetrieved((int) subgraph.size())</span>
+<span class="nc" id="L167">                    .executionTimeMs(executionTime)</span>
+<span class="nc" id="L168">                    .llmModel(llmModel)</span>
+<span class="nc" id="L169">                    .build();</span>
+
+<span class="nc" id="L171">        } catch (Exception e) {</span>
+<span class="nc" id="L172">            log.error(&quot;Error analyzing equipment impact&quot;, e);</span>
+<span class="nc" id="L173">            throw new RuntimeException(&quot;Impact analysis failed: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    public GraphRAGResponse verifyNetworkConsistency() {
+<span class="nc" id="L178">        log.info(&quot;Verifying network consistency&quot;);</span>
+<span class="nc" id="L179">        long startTime = System.currentTimeMillis();</span>
+
+        try {
+<span class="nc" id="L182">            String sparql = &quot;&quot;&quot;</span>
+                SELECT ?s ?p ?o WHERE {
+                    ?s ?p ?o .
+                    ?s a cim:Equipment .
+                }
+                LIMIT 1000
+                &quot;&quot;&quot;;
+
+<span class="nc" id="L190">            List&lt;Map&lt;String, String&gt;&gt; results = jenaService.executeSparqlSelect(sparql);</span>
+
+<span class="nc" id="L192">            StringBuilder context = new StringBuilder();</span>
+<span class="nc" id="L193">            context.append(&quot;Network Configuration:\n&quot;);</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">            for (Map&lt;String, String&gt; row : results) {</span>
+<span class="nc" id="L195">                context.append(String.format(&quot;- %s %s %s\n&quot;,</span>
+<span class="nc" id="L196">                    row.get(&quot;s&quot;), row.get(&quot;p&quot;), row.get(&quot;o&quot;)));</span>
+<span class="nc" id="L197">            }</span>
+
+<span class="nc bnc" id="L199" title="All 2 branches missed.">            String answer = groqService.isConfigured()</span>
+<span class="nc" id="L200">                    ? groqService.verifyConsistency(context.toString())</span>
+<span class="nc" id="L201">                    : ollamaService.verifyConsistency(context.toString());</span>
+
+<span class="nc" id="L203">            long executionTime = System.currentTimeMillis() - startTime;</span>
+
+<span class="nc" id="L205">            return GraphRAGResponse.builder()</span>
+<span class="nc" id="L206">                    .answer(answer)</span>
+<span class="nc" id="L207">                    .question(&quot;Verify network consistency&quot;)</span>
+<span class="nc" id="L208">                    .graphContext(context.toString())</span>
+<span class="nc" id="L209">                    .triplesRetrieved(results.size())</span>
+<span class="nc" id="L210">                    .executionTimeMs(executionTime)</span>
+<span class="nc" id="L211">                    .llmModel(llmModel)</span>
+<span class="nc" id="L212">                    .build();</span>
+
+<span class="nc" id="L214">        } catch (Exception e) {</span>
+<span class="nc" id="L215">            log.error(&quot;Error verifying network consistency&quot;, e);</span>
+<span class="nc" id="L216">            throw new RuntimeException(&quot;Consistency verification failed: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    private List&lt;String&gt; findRelevantEntities(String question) {
+<span class="nc" id="L221">        log.debug(&quot;Finding relevant entities for: {}&quot;, question);</span>
+
+<span class="nc" id="L223">        String[] keywords = extractKeywords(question);</span>
+<span class="nc" id="L224">        List&lt;String&gt; entities = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L226" title="All 2 branches missed.">        for (String keyword : keywords) {</span>
+<span class="nc" id="L227">            String sparql = &quot;&quot;&quot;</span>
+                SELECT DISTINCT ?s WHERE {
+                    ?s ?p ?o .
+                    FILTER(
+                        CONTAINS(LCASE(STR(?s)), LCASE(&quot;%s&quot;)) ||
+                        CONTAINS(LCASE(STR(?o)), LCASE(&quot;%s&quot;))
+                    )
+                }
+                LIMIT %d
+<span class="nc" id="L236">                &quot;&quot;&quot;.formatted(keyword, keyword, topK);</span>
+
+            try {
+<span class="nc" id="L239">                List&lt;Map&lt;String, String&gt;&gt; results = jenaService.executeSparqlSelect(sparql);</span>
+<span class="nc bnc" id="L240" title="All 2 branches missed.">                for (Map&lt;String, String&gt; row : results) {</span>
+<span class="nc" id="L241">                    String entity = row.get(&quot;s&quot;);</span>
+<span class="nc bnc" id="L242" title="All 4 branches missed.">                    if (entity != null &amp;&amp; !entities.contains(entity)) {</span>
+<span class="nc" id="L243">                        entities.add(entity);</span>
+                    }
+<span class="nc" id="L245">                }</span>
+<span class="nc" id="L246">            } catch (Exception e) {</span>
+<span class="nc" id="L247">                log.warn(&quot;Error searching for keyword '{}': {}&quot;, keyword, e.getMessage());</span>
+<span class="nc" id="L248">            }</span>
+        }
+
+<span class="nc" id="L251">        log.info(&quot;Found {} relevant entities&quot;, entities.size());</span>
+<span class="nc" id="L252">        return entities;</span>
+    }
+
+    private Model retrieveSubgraph(List&lt;String&gt; entityUris) {
+<span class="nc" id="L256">        log.debug(&quot;Retrieving subgraph for {} entities&quot;, entityUris.size());</span>
+
+<span class="nc" id="L258">        StringBuilder constructQuery = new StringBuilder();</span>
+<span class="nc" id="L259">        constructQuery.append(&quot;CONSTRUCT { ?s ?p ?o } WHERE {\n&quot;);</span>
+<span class="nc" id="L260">        constructQuery.append(&quot;  ?s ?p ?o .\n&quot;);</span>
+<span class="nc" id="L261">        constructQuery.append(&quot;  FILTER (\n&quot;);</span>
+
+<span class="nc bnc" id="L263" title="All 2 branches missed.">        for (int i = 0; i &lt; entityUris.size(); i++) {</span>
+<span class="nc bnc" id="L264" title="All 2 branches missed.">            if (i &gt; 0) constructQuery.append(&quot; || &quot;);</span>
+<span class="nc" id="L265">            constructQuery.append(String.format(&quot;?s = &lt;%s&gt;&quot;, entityUris.get(i)));</span>
+        }
+
+<span class="nc" id="L268">        constructQuery.append(&quot;\n  )\n}&quot;);</span>
+
+<span class="nc" id="L270">        Model subgraph = jenaService.executeSparqlConstruct(constructQuery.toString());</span>
+<span class="nc" id="L271">        log.info(&quot;Retrieved subgraph with {} triples&quot;, subgraph.size());</span>
+
+<span class="nc" id="L273">        return subgraph;</span>
+    }
+
+    private String[] extractKeywords(String question) {
+<span class="nc" id="L277">        String[] stopWords = {&quot;what&quot;, &quot;is&quot;, &quot;the&quot;, &quot;a&quot;, &quot;an&quot;, &quot;in&quot;, &quot;on&quot;, &quot;at&quot;, &quot;to&quot;, &quot;for&quot;,</span>
+                              &quot;of&quot;, &quot;with&quot;, &quot;from&quot;, &quot;by&quot;, &quot;if&quot;, &quot;when&quot;, &quot;where&quot;, &quot;how&quot;, &quot;why&quot;};
+
+<span class="nc" id="L280">        String normalized = question.toLowerCase()</span>
+<span class="nc" id="L281">                .replaceAll(&quot;[^a-z0-9\\s]&quot;, &quot; &quot;)</span>
+<span class="nc" id="L282">                .trim();</span>
+
+<span class="nc" id="L284">        List&lt;String&gt; keywords = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L285" title="All 2 branches missed.">        for (String word : normalized.split(&quot;\\s+&quot;)) {</span>
+<span class="nc bnc" id="L286" title="All 4 branches missed.">            if (word.length() &gt; 2 &amp;&amp; !isStopWord(word, stopWords)) {</span>
+<span class="nc" id="L287">                keywords.add(word);</span>
+            }
+        }
+
+<span class="nc" id="L291">        return keywords.toArray(new String[0]);</span>
+    }
+
+    private boolean isStopWord(String word, String[] stopWords) {
+<span class="nc bnc" id="L295" title="All 2 branches missed.">        for (String stopWord : stopWords) {</span>
+<span class="nc bnc" id="L296" title="All 2 branches missed.">            if (word.equals(stopWord)) {</span>
+<span class="nc" id="L297">                return true;</span>
+            }
+        }
+<span class="nc" id="L300">        return false;</span>
+    }
+
+    private Double calculateConfidence(int entitiesFound, long triplesRetrieved) {
+<span class="nc bnc" id="L304" title="All 4 branches missed.">        if (entitiesFound == 0 || triplesRetrieved == 0) {</span>
+<span class="nc" id="L305">            return 0.0;</span>
+        }
+
+<span class="nc" id="L308">        double entityScore = Math.min(1.0, entitiesFound / (double) topK);</span>
+<span class="nc" id="L309">        double tripleScore = Math.min(1.0, triplesRetrieved / (double) maxTriples);</span>
+
+<span class="nc" id="L311">        return (entityScore + tripleScore) / 2.0;</span>
+    }
+
+    private GraphRAGResponse buildFallbackResponse(String question, long startTime) {
+<span class="nc bnc" id="L315" title="All 2 branches missed.">        String fallbackAnswer = groqService.isConfigured()</span>
+<span class="nc" id="L316">                ? groqService.simpleQuery(question)</span>
+<span class="nc" id="L317">                : ollamaService.simpleQuery(question);</span>
+
+<span class="nc" id="L319">        return GraphRAGResponse.builder()</span>
+<span class="nc" id="L320">                .answer(fallbackAnswer)</span>
+<span class="nc" id="L321">                .question(question)</span>
+<span class="nc" id="L322">                .graphContext(&quot;No relevant data found in knowledge graph&quot;)</span>
+<span class="nc" id="L323">                .sources(List.of())</span>
+<span class="nc" id="L324">                .triplesRetrieved(0)</span>
+<span class="nc" id="L325">                .executionTimeMs(System.currentTimeMillis() - startTime)</span>
+<span class="nc" id="L326">                .llmModel(llmModel)</span>
+<span class="nc" id="L327">                .confidence(0.3)</span>
+<span class="nc" id="L328">                .build();</span>
+    }
+
+    private boolean isLoadFlowRequest(String question) {
+<span class="nc" id="L332">        String lowerQuestion = question.toLowerCase();</span>
+<span class="nc bnc" id="L333" title="All 2 branches missed.">        return lowerQuestion.contains(&quot;load flow&quot;) ||</span>
+<span class="nc bnc" id="L334" title="All 2 branches missed.">               lowerQuestion.contains(&quot;loadflow&quot;) ||</span>
+<span class="nc bnc" id="L335" title="All 2 branches missed.">               lowerQuestion.contains(&quot;power flow&quot;) ||</span>
+<span class="nc bnc" id="L336" title="All 2 branches missed.">               lowerQuestion.contains(&quot;powerflow&quot;) ||</span>
+<span class="nc bnc" id="L337" title="All 4 branches missed.">               (lowerQuestion.contains(&quot;calculate&quot;) &amp;&amp; lowerQuestion.contains(&quot;flow&quot;)) ||</span>
+<span class="nc bnc" id="L338" title="All 4 branches missed.">               (lowerQuestion.contains(&quot;calcul&quot;) &amp;&amp; lowerQuestion.contains(&quot;flux&quot;)) ||</span>
+<span class="nc bnc" id="L339" title="All 2 branches missed.">               lowerQuestion.contains(&quot;voltage at&quot;) ||</span>
+<span class="nc bnc" id="L340" title="All 2 branches missed.">               lowerQuestion.contains(&quot;tension à&quot;) ||</span>
+<span class="nc bnc" id="L341" title="All 2 branches missed.">               lowerQuestion.contains(&quot;tension au&quot;) ||</span>
+<span class="nc bnc" id="L342" title="All 6 branches missed.">               (lowerQuestion.contains(&quot;bus&quot;) &amp;&amp; (lowerQuestion.contains(&quot;voltage&quot;) || lowerQuestion.contains(&quot;tension&quot;))) ||</span>
+<span class="nc bnc" id="L343" title="All 4 branches missed.">               (lowerQuestion.contains(&quot;voltage&quot;) &amp;&amp; lowerQuestion.contains(&quot;bus&quot;)) ||</span>
+<span class="nc bnc" id="L344" title="All 6 branches missed.">               (lowerQuestion.contains(&quot;tension&quot;) &amp;&amp; (lowerQuestion.contains(&quot;bus&quot;) || lowerQuestion.contains(&quot;noeud&quot;)));</span>
+    }
+
+    private String extractTargetBus(String question) {
+<span class="nc" id="L348">        String lowerQuestion = question.toLowerCase();</span>
+<span class="nc" id="L349">        String extractedBus = null;</span>
+
+        // Priority 1: Standalone bus ID (e.g., &quot;BUS_CENTRAL_400&quot;, &quot;BUS_1&quot;, &quot;BUS_2_CN&quot;)
+<span class="nc" id="L352">        java.util.regex.Pattern pattern3b = java.util.regex.Pattern.compile(</span>
+            &quot;\\b(BUS_[\\w_\\-]+(?:_CN)?)\\b&quot;,
+            java.util.regex.Pattern.CASE_INSENSITIVE
+        );
+<span class="nc" id="L356">        java.util.regex.Matcher matcher3b = pattern3b.matcher(question);</span>
+<span class="nc bnc" id="L357" title="All 2 branches missed.">        if (matcher3b.find()) {</span>
+<span class="nc" id="L358">            extractedBus = matcher3b.group(1).trim();</span>
+<span class="nc" id="L359">            log.debug(&quot;Extracted bus from pattern 3b (explicit BUS_ID): {}&quot;, extractedBus);</span>
+        }
+
+        // Priority 2: &quot;busBUS_X&quot; pattern (no space between keyword and ID)
+<span class="nc bnc" id="L363" title="All 2 branches missed.">        if (extractedBus == null) {</span>
+<span class="nc" id="L364">            java.util.regex.Pattern pattern3a = java.util.regex.Pattern.compile(</span>
+                &quot;(?:bus|noeud|node)(BUS_[\\w_\\-]+(?:_CN)?)&quot;,
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+<span class="nc" id="L368">            java.util.regex.Matcher matcher3a = pattern3a.matcher(question);</span>
+<span class="nc bnc" id="L369" title="All 2 branches missed.">            if (matcher3a.find()) {</span>
+<span class="nc" id="L370">                extractedBus = matcher3a.group(1).trim();</span>
+<span class="nc" id="L371">                log.debug(&quot;Extracted bus from pattern 3a (no space): {}&quot;, extractedBus);</span>
+            }
+        }
+
+<span class="nc bnc" id="L375" title="All 2 branches missed.">        if (extractedBus == null) {</span>
+<span class="nc" id="L376">            java.util.regex.Pattern pattern1 = java.util.regex.Pattern.compile(</span>
+                &quot;(?:at|au)\\s+(?:bus|noeud|node)?\\s*[\&quot;']?([\\w_\\-]+)[\&quot;']?&quot;,
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+<span class="nc" id="L380">            java.util.regex.Matcher matcher1 = pattern1.matcher(question);</span>
+<span class="nc bnc" id="L381" title="All 2 branches missed.">            if (matcher1.find()) {</span>
+<span class="nc" id="L382">                String candidate = matcher1.group(1).trim();</span>
+<span class="nc bnc" id="L383" title="All 2 branches missed.">                if (!isCommonWord(candidate)) {</span>
+<span class="nc" id="L384">                    extractedBus = candidate;</span>
+<span class="nc" id="L385">                    log.debug(&quot;Extracted bus from pattern 1: {}&quot;, extractedBus);</span>
+                }
+            }
+        }
+
+<span class="nc bnc" id="L390" title="All 2 branches missed.">        if (extractedBus == null) {</span>
+<span class="nc" id="L391">            java.util.regex.Pattern pattern1b = java.util.regex.Pattern.compile(</span>
+                &quot;(?:at|au)\\s+(?:bus|noeud|node)([\\w_\\-]+)&quot;,
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+<span class="nc" id="L395">            java.util.regex.Matcher matcher1b = pattern1b.matcher(question);</span>
+<span class="nc bnc" id="L396" title="All 2 branches missed.">            if (matcher1b.find()) {</span>
+<span class="nc" id="L397">                String candidate = matcher1b.group(1).trim();</span>
+<span class="nc bnc" id="L398" title="All 2 branches missed.">                if (!isCommonWord(candidate)) {</span>
+<span class="nc" id="L399">                    extractedBus = candidate;</span>
+<span class="nc" id="L400">                    log.debug(&quot;Extracted bus from pattern 1b (no space): {}&quot;, extractedBus);</span>
+                }
+            }
+        }
+
+<span class="nc bnc" id="L405" title="All 2 branches missed.">        if (extractedBus == null) {</span>
+<span class="nc" id="L406">            java.util.regex.Pattern pattern2 = java.util.regex.Pattern.compile(</span>
+                &quot;(?:voltage|tension)\\s+(?:at|à|au|of|de)?\\s*(?:bus|noeud|node)?\\s*[\&quot;']?([\\w_\\-]+(?:\\s+\\d+kV)?)[\&quot;']?&quot;,
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+<span class="nc" id="L410">            java.util.regex.Matcher matcher2 = pattern2.matcher(question);</span>
+<span class="nc bnc" id="L411" title="All 2 branches missed.">            if (matcher2.find()) {</span>
+<span class="nc" id="L412">                extractedBus = matcher2.group(1).trim();</span>
+<span class="nc" id="L413">                log.debug(&quot;Extracted bus from pattern 2: {}&quot;, extractedBus);</span>
+            }
+        }
+
+<span class="nc bnc" id="L417" title="All 2 branches missed.">        if (extractedBus == null) {</span>
+<span class="nc" id="L418">            java.util.regex.Pattern pattern2b = java.util.regex.Pattern.compile(</span>
+                &quot;(?:voltage|tension)\\s+(?:at|à|au|of|de)?\\s+(?:bus|noeud|node)(?:\\s+)?([\\w_\\-]+)&quot;,
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+<span class="nc" id="L422">            java.util.regex.Matcher matcher2b = pattern2b.matcher(question);</span>
+<span class="nc bnc" id="L423" title="All 2 branches missed.">            if (matcher2b.find()) {</span>
+<span class="nc" id="L424">                extractedBus = matcher2b.group(1).trim();</span>
+<span class="nc" id="L425">                log.debug(&quot;Extracted bus from pattern 2b: {}&quot;, extractedBus);</span>
+            }
+        }
+
+<span class="nc bnc" id="L429" title="All 2 branches missed.">        if (extractedBus == null) {</span>
+<span class="nc" id="L430">            java.util.regex.Pattern pattern4 = java.util.regex.Pattern.compile(</span>
+                &quot;bus\\s+(\\d+)&quot;,
+                java.util.regex.Pattern.CASE_INSENSITIVE
+            );
+<span class="nc" id="L434">            java.util.regex.Matcher matcher4 = pattern4.matcher(question);</span>
+<span class="nc bnc" id="L435" title="All 2 branches missed.">            if (matcher4.find()) {</span>
+<span class="nc" id="L436">                extractedBus = &quot;BUS_&quot; + matcher4.group(1);</span>
+<span class="nc" id="L437">                log.debug(&quot;Extracted bus from pattern 4: {}&quot;, extractedBus);</span>
+            }
+        }
+
+<span class="nc bnc" id="L441" title="All 4 branches missed.">        if (extractedBus != null &amp;&amp; !extractedBus.isEmpty()) {</span>
+<span class="nc bnc" id="L442" title="All 2 branches missed.">            if (isCommonWord(extractedBus)) {</span>
+<span class="nc" id="L443">                log.debug(&quot;Ignoring common word '{}' as bus ID&quot;, extractedBus);</span>
+<span class="nc" id="L444">                extractedBus = null;</span>
+            } else {
+<span class="nc" id="L446">                String foundBusId = findBusInGraph(extractedBus);</span>
+<span class="nc bnc" id="L447" title="All 2 branches missed.">                if (foundBusId != null) {</span>
+<span class="nc" id="L448">                    log.info(&quot;Found bus in graph: {} (extracted: {})&quot;, foundBusId, extractedBus);</span>
+<span class="nc" id="L449">                    return foundBusId;</span>
+                } else {
+<span class="nc" id="L451">                    log.warn(&quot;Bus '{}' not found in graph, will try with original ID&quot;, extractedBus);</span>
+<span class="nc" id="L452">                    return normalizeBusId(extractedBus);</span>
+                }
+            }
+        }
+
+        // Fallback: try matching known NRW city names to construct bus IDs
+<span class="nc" id="L458">        String[] nrwCities = {&quot;düsseldorf&quot;, &quot;dusseldorf&quot;, &quot;koln&quot;, &quot;köln&quot;, &quot;cologne&quot;, &quot;essen&quot;,</span>
+                              &quot;dortmund&quot;, &quot;duisburg&quot;, &quot;bonn&quot;, &quot;aachen&quot;, &quot;münster&quot;, &quot;munster&quot;,
+                              &quot;bielefeld&quot;, &quot;paderborn&quot;, &quot;wuppertal&quot;, &quot;hamm&quot;, &quot;neuss&quot;, &quot;wesel&quot;,
+                              &quot;brauweiler&quot;, &quot;neurath&quot;, &quot;niederaussem&quot;, &quot;weisweiler&quot;};
+<span class="nc bnc" id="L462" title="All 2 branches missed.">        for (String city : nrwCities) {</span>
+<span class="nc bnc" id="L463" title="All 2 branches missed.">            if (lowerQuestion.contains(city)) {</span>
+                String cityBusId;
+<span class="nc bnc" id="L465" title="All 2 branches missed.">                if (lowerQuestion.contains(&quot;380&quot;)) {</span>
+<span class="nc" id="L466">                    cityBusId = &quot;BUS_&quot; + city.toUpperCase().replace(&quot;Ü&quot;, &quot;U&quot;).replace(&quot;Ö&quot;, &quot;O&quot;) + &quot;_380&quot;;</span>
+<span class="nc bnc" id="L467" title="All 2 branches missed.">                } else if (lowerQuestion.contains(&quot;220&quot;)) {</span>
+<span class="nc" id="L468">                    cityBusId = &quot;BUS_&quot; + city.toUpperCase().replace(&quot;Ü&quot;, &quot;U&quot;).replace(&quot;Ö&quot;, &quot;O&quot;) + &quot;_220&quot;;</span>
+<span class="nc bnc" id="L469" title="All 2 branches missed.">                } else if (lowerQuestion.contains(&quot;110&quot;)) {</span>
+<span class="nc" id="L470">                    cityBusId = &quot;BUS_&quot; + city.toUpperCase().replace(&quot;Ü&quot;, &quot;U&quot;).replace(&quot;Ö&quot;, &quot;O&quot;) + &quot;_110&quot;;</span>
+                } else {
+<span class="nc" id="L472">                    cityBusId = &quot;BUS_&quot; + city.toUpperCase().replace(&quot;Ü&quot;, &quot;U&quot;).replace(&quot;Ö&quot;, &quot;O&quot;) + &quot;_220&quot;;</span>
+                }
+
+<span class="nc" id="L475">                String foundBusId = findBusInGraph(cityBusId);</span>
+<span class="nc bnc" id="L476" title="All 2 branches missed.">                if (foundBusId != null) {</span>
+<span class="nc" id="L477">                    return foundBusId;</span>
+                }
+<span class="nc" id="L479">                return cityBusId;</span>
+            }
+        }
+
+<span class="nc" id="L483">        return null;</span>
+    }
+
+    private String findBusInGraph(String busIdentifier) {
+        try {
+<span class="nc" id="L488">            String normalizedId = normalizeBusId(busIdentifier);</span>
+
+<span class="nc" id="L490">            String query = &quot;&quot;&quot;</span>
+                PREFIX cim: &lt;%s&gt;
+                PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
+
+                SELECT DISTINCT ?node ?name
+                WHERE {
+                    { ?node rdf:type cim:TopologicalNode }
+                    UNION
+                    { ?node rdf:type cim:ConnectivityNode }
+                    UNION
+                    { ?node rdf:type cim:BusbarSection }
+                    OPTIONAL { ?node cim:IdentifiedObject.name ?name }
+                }
+<span class="nc" id="L503">                &quot;&quot;&quot;.formatted(cimNamespace);</span>
+
+<span class="nc" id="L505">            List&lt;Map&lt;String, String&gt;&gt; results = jenaService.executeSparqlSelect(query);</span>
+
+<span class="nc bnc" id="L507" title="All 2 branches missed.">            for (Map&lt;String, String&gt; result : results) {</span>
+<span class="nc" id="L508">                String nodeUri = result.get(&quot;node&quot;);</span>
+<span class="nc" id="L509">                String name = result.get(&quot;name&quot;);</span>
+
+<span class="nc bnc" id="L511" title="All 2 branches missed.">                if (nodeUri != null) {</span>
+<span class="nc" id="L512">                    String localName = nodeUri.substring(nodeUri.lastIndexOf(&quot;/&quot;) + 1);</span>
+<span class="nc" id="L513">                    String busId = normalizeBusId(localName);</span>
+
+<span class="nc bnc" id="L515" title="All 2 branches missed.">                    if (busId.equalsIgnoreCase(normalizedId)) {</span>
+<span class="nc" id="L516">                        log.debug(&quot;Found exact bus match: {}&quot;, busId);</span>
+<span class="nc" id="L517">                        return busId;</span>
+                    }
+
+<span class="nc bnc" id="L520" title="All 2 branches missed.">                    if (busId.toLowerCase().contains(normalizedId.toLowerCase()) ||</span>
+<span class="nc bnc" id="L521" title="All 2 branches missed.">                        normalizedId.toLowerCase().contains(busId.toLowerCase())) {</span>
+<span class="nc" id="L522">                        log.debug(&quot;Found partial bus match: {} (searched: {})&quot;, busId, normalizedId);</span>
+<span class="nc" id="L523">                        return busId;</span>
+                    }
+
+<span class="nc bnc" id="L526" title="All 4 branches missed.">                    if (name != null &amp;&amp; (name.toLowerCase().contains(normalizedId.toLowerCase()) ||</span>
+<span class="nc bnc" id="L527" title="All 2 branches missed.">                        normalizedId.toLowerCase().contains(name.toLowerCase()))) {</span>
+<span class="nc" id="L528">                        log.debug(&quot;Found bus by name match: {} (name: {}, searched: {})&quot;, busId, name, normalizedId);</span>
+<span class="nc" id="L529">                        return busId;</span>
+                    }
+                }
+<span class="nc" id="L532">            }</span>
+
+<span class="nc" id="L534">            log.debug(&quot;Bus '{}' not found in graph&quot;, busIdentifier);</span>
+<span class="nc" id="L535">            return null;</span>
+
+<span class="nc" id="L537">        } catch (Exception e) {</span>
+<span class="nc" id="L538">            log.warn(&quot;Error searching for bus in graph: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L539">            return null;</span>
+        }
+    }
+
+    private boolean isCommonWord(String word) {
+<span class="nc bnc" id="L544" title="All 4 branches missed.">        if (word == null || word.isEmpty()) {</span>
+<span class="nc" id="L545">            return true;</span>
+        }
+
+<span class="nc" id="L548">        String lower = word.toLowerCase();</span>
+<span class="nc" id="L549">        String[] commonWords = {</span>
+            &quot;the&quot;, &quot;network&quot;, &quot;entire&quot;, &quot;whole&quot;, &quot;all&quot;, &quot;this&quot;, &quot;that&quot;, &quot;these&quot;, &quot;those&quot;,
+            &quot;a&quot;, &quot;an&quot;, &quot;for&quot;, &quot;of&quot;, &quot;to&quot;, &quot;in&quot;, &quot;on&quot;, &quot;at&quot;, &quot;by&quot;, &quot;with&quot;, &quot;from&quot;,
+            &quot;le&quot;, &quot;la&quot;, &quot;les&quot;, &quot;un&quot;, &quot;une&quot;, &quot;des&quot;, &quot;du&quot;, &quot;de&quot;, &quot;pour&quot;, &quot;avec&quot;
+        };
+
+<span class="nc bnc" id="L555" title="All 2 branches missed.">        for (String common : commonWords) {</span>
+<span class="nc bnc" id="L556" title="All 2 branches missed.">            if (lower.equals(common)) {</span>
+<span class="nc" id="L557">                return true;</span>
+            }
+        }
+
+        // Too short and doesn't look like a bus ID
+<span class="nc bnc" id="L562" title="All 4 branches missed.">        if (word.length() &lt; 3 &amp;&amp; !word.toUpperCase().startsWith(&quot;BUS_&quot;)) {</span>
+<span class="nc" id="L563">            return true;</span>
+        }
+
+<span class="nc" id="L566">        return false;</span>
+    }
+
+    private String normalizeBusId(String busId) {
+<span class="nc bnc" id="L570" title="All 4 branches missed.">        if (busId == null || busId.isEmpty()) {</span>
+<span class="nc" id="L571">            return busId;</span>
+        }
+
+<span class="nc bnc" id="L574" title="All 2 branches missed.">        String normalized = busId.endsWith(&quot;_CN&quot;) ? busId.substring(0, busId.length() - 3) : busId;</span>
+
+<span class="nc bnc" id="L576" title="All 2 branches missed.">        if (!normalized.toUpperCase().startsWith(&quot;BUS_&quot;)) {</span>
+<span class="nc bnc" id="L577" title="All 2 branches missed.">            if (normalized.matches(&quot;\\d+&quot;)) {</span>
+<span class="nc" id="L578">                normalized = &quot;BUS_&quot; + normalized;</span>
+            }
+        }
+
+<span class="nc" id="L582">        return normalized.toUpperCase();</span>
+    }
+
+    private GraphRAGResponse handleLoadFlowRequest(String question, String sessionId, long startTime) {
+        try {
+<span class="nc" id="L587">            String targetBusId = extractTargetBus(question);</span>
+
+<span class="nc bnc" id="L589" title="All 2 branches missed.">            if (targetBusId != null) {</span>
+<span class="nc" id="L590">                log.info(&quot;Executing load flow calculation for bus: {} (extracted from question: '{}')&quot;, targetBusId, question);</span>
+            } else {
+<span class="nc" id="L592">                log.info(&quot;Executing load flow calculation for entire network (no specific bus found in: '{}')&quot;, question);</span>
+            }
+
+<span class="nc bnc" id="L595" title="All 2 branches missed.">            com.cim.semanticgraph.dto.LoadFlowResponse lfResult = targetBusId != null</span>
+<span class="nc" id="L596">                    ? loadFlowService.calculateLoadFlow(targetBusId)</span>
+<span class="nc" id="L597">                    : loadFlowService.calculateLoadFlow();</span>
+
+<span class="nc" id="L599">            StringBuilder answer = new StringBuilder();</span>
+
+<span class="nc bnc" id="L601" title="All 2 branches missed.">            if (targetBusId != null) {</span>
+<span class="nc" id="L602">                answer.append(&quot;## Load Flow Results for Bus: &quot;).append(targetBusId).append(&quot;\n\n&quot;);</span>
+            } else {
+<span class="nc" id="L604">                answer.append(&quot;## Load Flow Calculation Results\n\n&quot;);</span>
+            }
+
+<span class="nc bnc" id="L607" title="All 2 branches missed.">            if (!lfResult.isConverged()) {</span>
+<span class="nc" id="L608">                answer.append(&quot;⚠️ **Warning**: Load flow calculation did not converge.\n\n&quot;);</span>
+            } else {
+<span class="nc" id="L610">                answer.append(&quot;✅ **Converged** in &quot;).append(lfResult.getIterations())</span>
+<span class="nc" id="L611">                      .append(&quot; iterations (&quot;).append(lfResult.getExecutionTimeMs()).append(&quot; ms)\n\n&quot;);</span>
+            }
+
+<span class="nc bnc" id="L614" title="All 4 branches missed.">            if (targetBusId != null &amp;&amp; lfResult.getBusResults() != null) {</span>
+<span class="nc" id="L615">                String normalizedTargetId = targetBusId.toUpperCase().replace(&quot;_CN&quot;, &quot;&quot;);</span>
+<span class="nc" id="L616">                log.debug(&quot;Searching for target bus: {} (normalized: {})&quot;, targetBusId, normalizedTargetId);</span>
+
+<span class="nc" id="L618">                var targetBus = lfResult.getBusResults().stream()</span>
+<span class="nc" id="L619">                        .filter(b -&gt; {</span>
+<span class="nc bnc" id="L620" title="All 2 branches missed.">                            String busId = b.getBusId() != null ? b.getBusId().toUpperCase().replace(&quot;_CN&quot;, &quot;&quot;) : &quot;&quot;;</span>
+<span class="nc bnc" id="L621" title="All 2 branches missed.">                            String busName = b.getBusName() != null ? b.getBusName().toUpperCase() : &quot;&quot;;</span>
+<span class="nc bnc" id="L622" title="All 2 branches missed.">                            boolean matches = busId.equals(normalizedTargetId) ||</span>
+<span class="nc bnc" id="L623" title="All 2 branches missed.">                                   busId.contains(normalizedTargetId) ||</span>
+<span class="nc bnc" id="L624" title="All 2 branches missed.">                                   normalizedTargetId.contains(busId) ||</span>
+<span class="nc bnc" id="L625" title="All 2 branches missed.">                                   busName.contains(normalizedTargetId) ||</span>
+<span class="nc bnc" id="L626" title="All 2 branches missed.">                                   normalizedTargetId.contains(busName);</span>
+<span class="nc bnc" id="L627" title="All 2 branches missed.">                            if (matches) {</span>
+<span class="nc" id="L628">                                log.debug(&quot;Found matching bus: {} (ID: {}, Name: {})&quot;, targetBusId, busId, busName);</span>
+                            }
+<span class="nc" id="L630">                            return matches;</span>
+                        })
+<span class="nc" id="L632">                        .findFirst();</span>
+
+<span class="nc bnc" id="L634" title="All 2 branches missed.">                if (targetBus.isPresent()) {</span>
+<span class="nc" id="L635">                    var bus = targetBus.get();</span>
+<span class="nc bnc" id="L636" title="All 2 branches missed.">                    answer.append(&quot;### 🎯 Target Bus Details: &quot;).append(bus.getBusName() != null ? bus.getBusName() : bus.getBusId()).append(&quot;\n\n&quot;);</span>
+<span class="nc" id="L637">                    answer.append(&quot;| Property | Value |\n&quot;);</span>
+<span class="nc" id="L638">                    answer.append(&quot;|----------|-------|\n&quot;);</span>
+<span class="nc" id="L639">                    answer.append(&quot;| **Bus ID** | &quot;).append(bus.getBusId()).append(&quot; |\n&quot;);</span>
+<span class="nc bnc" id="L640" title="All 2 branches missed.">                    answer.append(&quot;| **Name** | &quot;).append(bus.getBusName() != null ? bus.getBusName() : &quot;N/A&quot;).append(&quot; |\n&quot;);</span>
+<span class="nc" id="L641">                    answer.append(&quot;| **Type** | &quot;).append(bus.getBusType()).append(&quot; |\n&quot;);</span>
+<span class="nc" id="L642">                    answer.append(&quot;| **Voltage** | &quot;).append(String.format(&quot;%.4f pu&quot;, bus.getVoltageMagnitude()))</span>
+<span class="nc" id="L643">                          .append(&quot; (&quot;).append(String.format(&quot;%.2f kV&quot;, bus.getVoltageKv())).append(&quot;) |\n&quot;);</span>
+<span class="nc" id="L644">                    answer.append(&quot;| **Angle** | &quot;).append(String.format(&quot;%.2f°&quot;, bus.getVoltageAngle())).append(&quot; |\n&quot;);</span>
+<span class="nc" id="L645">                    answer.append(&quot;| **Active Power (P)** | &quot;).append(String.format(&quot;%.2f MW&quot;, bus.getActivePowerMw())).append(&quot; |\n&quot;);</span>
+<span class="nc" id="L646">                    answer.append(&quot;| **Reactive Power (Q)** | &quot;).append(String.format(&quot;%.2f MVAr&quot;, bus.getReactivePowerMvar())).append(&quot; |\n&quot;);</span>
+<span class="nc" id="L647">                    answer.append(&quot;| **Generation** | &quot;).append(String.format(&quot;%.2f MW / %.2f MVAr&quot;, bus.getGenerationMw(), bus.getGenerationMvar())).append(&quot; |\n&quot;);</span>
+<span class="nc" id="L648">                    answer.append(&quot;| **Load** | &quot;).append(String.format(&quot;%.2f MW / %.2f MVAr&quot;, bus.getLoadMw(), bus.getLoadMvar())).append(&quot; |\n&quot;);</span>
+<span class="nc bnc" id="L649" title="All 2 branches missed.">                    answer.append(&quot;| **Status** | &quot;).append(bus.isWithinLimits() ? &quot;✅ OK&quot; : &quot;⚠️ Violation&quot;).append(&quot; |\n\n&quot;);</span>
+<span class="nc" id="L650">                } else {</span>
+<span class="nc" id="L651">                    answer.append(&quot;### ⚠️ Bus Not Found\n\n&quot;);</span>
+<span class="nc" id="L652">                    answer.append(&quot;Bus '&quot;).append(targetBusId).append(&quot;' was not found in the network.\n\n&quot;);</span>
+<span class="nc" id="L653">                    answer.append(&quot;**Available buses in the network:**\n&quot;);</span>
+<span class="nc" id="L654">                    lfResult.getBusResults().stream()</span>
+<span class="nc" id="L655">                            .limit(10)</span>
+<span class="nc" id="L656">                            .forEach(b -&gt; answer.append(&quot;- &quot;).append(b.getBusId())</span>
+<span class="nc bnc" id="L657" title="All 2 branches missed.">                                    .append(b.getBusName() != null ? &quot; (&quot; + b.getBusName() + &quot;)&quot; : &quot;&quot;)</span>
+<span class="nc" id="L658">                                    .append(&quot;\n&quot;));</span>
+<span class="nc" id="L659">                    answer.append(&quot;\n&quot;);</span>
+                }
+            }
+
+<span class="nc bnc" id="L663" title="All 2 branches missed.">            if (lfResult.getStatistics() != null) {</span>
+<span class="nc" id="L664">                var stats = lfResult.getStatistics();</span>
+<span class="nc" id="L665">                answer.append(&quot;### System Overview\n&quot;);</span>
+<span class="nc" id="L666">                answer.append(&quot;- **Buses**: &quot;).append(stats.getTotalBuses())</span>
+<span class="nc" id="L667">                      .append(&quot; (&quot;).append(stats.getPvBuses()).append(&quot; PV, &quot;)</span>
+<span class="nc" id="L668">                      .append(stats.getPqBuses()).append(&quot; PQ, &quot;)</span>
+<span class="nc" id="L669">                      .append(stats.getSlackBuses()).append(&quot; Slack)\n&quot;);</span>
+<span class="nc" id="L670">                answer.append(&quot;- **Branches**: &quot;).append(stats.getTotalBranches()).append(&quot;\n&quot;);</span>
+<span class="nc" id="L671">                answer.append(&quot;- **Generation**: &quot;).append(String.format(&quot;%.2f&quot;, stats.getTotalGenerationMw()))</span>
+<span class="nc" id="L672">                      .append(&quot; MW, &quot;).append(String.format(&quot;%.2f&quot;, stats.getTotalGenerationMvar())).append(&quot; MVAr\n&quot;);</span>
+<span class="nc" id="L673">                answer.append(&quot;- **Load**: &quot;).append(String.format(&quot;%.2f&quot;, stats.getTotalLoadMw()))</span>
+<span class="nc" id="L674">                      .append(&quot; MW, &quot;).append(String.format(&quot;%.2f&quot;, stats.getTotalLoadMvar())).append(&quot; MVAr\n&quot;);</span>
+<span class="nc" id="L675">                answer.append(&quot;- **Losses**: &quot;).append(String.format(&quot;%.2f&quot;, stats.getTotalLossesMw()))</span>
+<span class="nc" id="L676">                      .append(&quot; MW (&quot;).append(String.format(&quot;%.2f&quot;, stats.getLossPercentage())).append(&quot;%)\n&quot;);</span>
+<span class="nc" id="L677">                answer.append(&quot;- **Voltage Range**: &quot;).append(String.format(&quot;%.3f&quot;, stats.getMinVoltagePu()))</span>
+<span class="nc" id="L678">                      .append(&quot; to &quot;).append(String.format(&quot;%.3f&quot;, stats.getMaxVoltagePu())).append(&quot; pu\n\n&quot;);</span>
+            }
+
+<span class="nc bnc" id="L681" title="All 4 branches missed.">            if (lfResult.getViolations() != null &amp;&amp; !lfResult.getViolations().isEmpty()) {</span>
+<span class="nc" id="L682">                answer.append(&quot;### ⚠️ Violations Detected\n&quot;);</span>
+<span class="nc bnc" id="L683" title="All 2 branches missed.">                for (var violation : lfResult.getViolations()) {</span>
+<span class="nc" id="L684">                    answer.append(&quot;- **&quot;).append(violation.getType()).append(&quot;** (&quot;)</span>
+<span class="nc" id="L685">                          .append(violation.getSeverity()).append(&quot;): &quot;)</span>
+<span class="nc" id="L686">                          .append(violation.getDescription()).append(&quot;\n&quot;);</span>
+<span class="nc" id="L687">                }</span>
+<span class="nc" id="L688">                answer.append(&quot;\n&quot;);</span>
+            } else {
+<span class="nc" id="L690">                answer.append(&quot;### ✅ No Violations\n&quot;);</span>
+<span class="nc" id="L691">                answer.append(&quot;All voltages and branch loadings are within limits.\n\n&quot;);</span>
+            }
+
+<span class="nc bnc" id="L694" title="All 4 branches missed.">            if (lfResult.getBusResults() != null &amp;&amp; !lfResult.getBusResults().isEmpty()) {</span>
+<span class="nc" id="L695">                answer.append(&quot;### Bus Voltages (Top 5)\n&quot;);</span>
+<span class="nc" id="L696">                lfResult.getBusResults().stream()</span>
+<span class="nc" id="L697">                        .sorted((a, b) -&gt; Double.compare(b.getVoltageMagnitude(), a.getVoltageMagnitude()))</span>
+<span class="nc" id="L698">                        .limit(5)</span>
+<span class="nc" id="L699">                        .forEach(bus -&gt; {</span>
+<span class="nc" id="L700">                            answer.append(&quot;- **&quot;).append(bus.getBusName()).append(&quot;**: &quot;)</span>
+<span class="nc" id="L701">                                  .append(String.format(&quot;%.3f pu&quot;, bus.getVoltageMagnitude()))</span>
+<span class="nc" id="L702">                                  .append(&quot; (&quot;).append(String.format(&quot;%.2f°&quot;, bus.getVoltageAngle())).append(&quot;)\n&quot;);</span>
+<span class="nc" id="L703">                        });</span>
+<span class="nc" id="L704">                answer.append(&quot;\n&quot;);</span>
+            }
+
+<span class="nc" id="L707">            GraphRAGResponse response = GraphRAGResponse.builder()</span>
+<span class="nc" id="L708">                    .answer(answer.toString())</span>
+<span class="nc" id="L709">                    .question(question)</span>
+<span class="nc" id="L710">                    .graphContext(&quot;Load flow calculation performed on CIM network model&quot;)</span>
+<span class="nc" id="L711">                    .sources(List.of(&quot;Load Flow Solver&quot;, &quot;CIM Network Model&quot;))</span>
+<span class="nc bnc" id="L712" title="All 2 branches missed.">                    .triplesRetrieved(lfResult.getBusResults() != null ? lfResult.getBusResults().size() : 0)</span>
+<span class="nc" id="L713">                    .executionTimeMs(System.currentTimeMillis() - startTime)</span>
+<span class="nc" id="L714">                    .llmModel(&quot;Load Flow Calculator&quot;)</span>
+<span class="nc" id="L715">                    .inferenceUsed(false)</span>
+<span class="nc bnc" id="L716" title="All 2 branches missed.">                    .confidence(lfResult.isConverged() ? 0.95 : 0.6)</span>
+<span class="nc" id="L717">                    .timestamp(LocalDateTime.now())</span>
+<span class="nc" id="L718">                    .build();</span>
+
+<span class="nc" id="L720">            saveChatHistory(sessionId, response);</span>
+
+<span class="nc" id="L722">            return response;</span>
+
+<span class="nc" id="L724">        } catch (Exception e) {</span>
+<span class="nc" id="L725">            log.error(&quot;Error in load flow calculation&quot;, e);</span>
+<span class="nc" id="L726">            return GraphRAGResponse.builder()</span>
+<span class="nc" id="L727">                    .answer(&quot;❌ Error calculating load flow: &quot; + e.getMessage())</span>
+<span class="nc" id="L728">                    .question(question)</span>
+<span class="nc" id="L729">                    .graphContext(&quot;Load flow calculation failed&quot;)</span>
+<span class="nc" id="L730">                    .sources(List.of())</span>
+<span class="nc" id="L731">                    .triplesRetrieved(0)</span>
+<span class="nc" id="L732">                    .executionTimeMs(System.currentTimeMillis() - startTime)</span>
+<span class="nc" id="L733">                    .llmModel(&quot;Load Flow Calculator&quot;)</span>
+<span class="nc" id="L734">                    .confidence(0.0)</span>
+<span class="nc" id="L735">                    .build();</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

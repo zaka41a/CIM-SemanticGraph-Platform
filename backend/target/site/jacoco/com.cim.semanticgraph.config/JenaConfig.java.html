@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JenaConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.config</a> &gt; <span class="el_source">JenaConfig.java</span></div><h1>JenaConfig.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.config;
+
+import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.ontology.OntModel;
+import org.apache.jena.ontology.OntModelSpec;
+import org.apache.jena.query.Dataset;
+import org.apache.jena.query.DatasetFactory;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdfconnection.RDFConnection;
+import org.apache.jena.rdfconnection.RDFConnectionRemote;
+import org.apache.jena.reasoner.Reasoner;
+import org.apache.jena.reasoner.ReasonerRegistry;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+import org.springframework.web.client.RestTemplate;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import java.io.IOException;
+import java.io.InputStream;
+
+<span class="fc" id="L25">@Slf4j</span>
+@Configuration
+public class JenaConfig {
+
+    @Value(&quot;${jena.reasoning.enabled}&quot;)
+    private boolean reasoningEnabled;
+
+    @Value(&quot;${jena.reasoning.reasoner-type}&quot;)
+    private String reasonerType;
+
+    @Value(&quot;${cim.schema.ontology-path}&quot;)
+    private String cimOntologyPath;
+
+    @Value(&quot;${cim.schema.base-uri}&quot;)
+    private String cimBaseUri;
+
+    @Value(&quot;${jena.storage-mode:remote}&quot;)
+    private String storageMode;
+
+    @Value(&quot;${jena.fuseki.remote-url:}&quot;)
+    private String fusekiRemoteUrl;
+
+    @Value(&quot;${jena.fuseki.dataset-name:cim}&quot;)
+    private String fusekiDatasetName;
+
+    private final ResourceLoader resourceLoader;
+    private Dataset dataset;
+    private RDFConnection rdfConnection;
+
+<span class="nc" id="L54">    public JenaConfig(ResourceLoader resourceLoader) {</span>
+<span class="nc" id="L55">        this.resourceLoader = resourceLoader;</span>
+<span class="nc" id="L56">    }</span>
+
+    @PostConstruct
+    public void init() {
+<span class="nc" id="L60">        log.info(&quot;Storage Mode: {}&quot;, storageMode);</span>
+<span class="nc" id="L61">        log.info(&quot;Reasoning Enabled: {}&quot;, reasoningEnabled);</span>
+<span class="nc" id="L62">        log.info(&quot;Fuseki Endpoint: {}/{}&quot;, fusekiRemoteUrl, fusekiDatasetName);</span>
+<span class="nc" id="L63">    }</span>
+
+    public boolean isRemoteMode() {
+<span class="nc" id="L66">        return &quot;remote&quot;.equalsIgnoreCase(storageMode);</span>
+    }
+
+    public RDFConnection getRdfConnection() {
+<span class="nc" id="L70">        return rdfConnection;</span>
+    }
+
+    @Bean
+    public Dataset dataset() {
+<span class="nc" id="L75">        dataset = DatasetFactory.createTxnMem();</span>
+<span class="nc" id="L76">        log.info(&quot;Initialized in-memory dataset placeholder for remote Fuseki mode&quot;);</span>
+<span class="nc" id="L77">        return dataset;</span>
+    }
+
+    @Bean
+    public RDFConnection rdfConnection() {
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (!isRemoteMode()) {</span>
+<span class="nc" id="L83">            log.warn(&quot;Remote Fuseki mode disabled; RDFConnection not created.&quot;);</span>
+<span class="nc" id="L84">            return null;</span>
+        }
+
+<span class="nc bnc" id="L87" title="All 4 branches missed.">        if (fusekiRemoteUrl == null || fusekiRemoteUrl.isBlank()) {</span>
+<span class="nc" id="L88">            throw new IllegalStateException(&quot;jena.fuseki.remote-url must be configured when storage mode is remote&quot;);</span>
+        }
+
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        String base = fusekiRemoteUrl.endsWith(&quot;/&quot;) ? fusekiRemoteUrl : fusekiRemoteUrl + &quot;/&quot;;</span>
+<span class="nc" id="L92">        String endpoint = base + fusekiDatasetName;</span>
+<span class="nc" id="L93">        log.info(&quot;Connecting to remote Fuseki endpoint: {}&quot;, endpoint);</span>
+
+<span class="nc" id="L95">        rdfConnection = RDFConnectionRemote.newBuilder()</span>
+<span class="nc" id="L96">                .destination(endpoint)</span>
+<span class="nc" id="L97">                .queryEndpoint(endpoint + &quot;/query&quot;)</span>
+<span class="nc" id="L98">                .updateEndpoint(endpoint + &quot;/update&quot;)</span>
+<span class="nc" id="L99">                .gspEndpoint(endpoint + &quot;/data&quot;)</span>
+<span class="nc" id="L100">                .build();</span>
+
+<span class="nc" id="L102">        return rdfConnection;</span>
+    }
+
+    @Bean
+    public OntModel ontModel(Dataset dataset) {
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        OntModelSpec spec = reasoningEnabled ? getOntModelSpec() : OntModelSpec.OWL_MEM;</span>
+<span class="nc" id="L108">        OntModel ontModel = ModelFactory.createOntologyModel(spec);</span>
+
+        try {
+<span class="nc" id="L111">            loadCimOntology(ontModel);</span>
+<span class="nc" id="L112">        } catch (Exception e) {</span>
+<span class="nc" id="L113">            log.warn(&quot;Could not load CIM ontology: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L114">        }</span>
+
+<span class="nc" id="L116">        return ontModel;</span>
+    }
+
+    @Bean
+    public Reasoner reasoner() {
+<span class="nc bnc" id="L121" title="All 2 branches missed.">        if (!reasoningEnabled) {</span>
+<span class="nc" id="L122">            return null;</span>
+        }
+
+<span class="nc bnc" id="L125" title="All 5 branches missed.">        return switch (reasonerType.toUpperCase()) {</span>
+<span class="nc" id="L126">            case &quot;OWL_MEM_RULE_INF&quot; -&gt; ReasonerRegistry.getOWLMicroReasoner();</span>
+<span class="nc" id="L127">            case &quot;RDFS_INF&quot; -&gt; ReasonerRegistry.getRDFSReasoner();</span>
+<span class="nc" id="L128">            case &quot;OWL_DL_MEM&quot; -&gt; ReasonerRegistry.getOWLReasoner();</span>
+<span class="nc" id="L129">            case &quot;TRANSITIVE&quot; -&gt; ReasonerRegistry.getTransitiveReasoner();</span>
+<span class="nc" id="L130">            default -&gt; ReasonerRegistry.getOWLMicroReasoner();</span>
+        };
+    }
+
+    private OntModelSpec getOntModelSpec() {
+<span class="nc bnc" id="L135" title="All 4 branches missed.">        return switch (reasonerType.toUpperCase()) {</span>
+<span class="nc" id="L136">            case &quot;OWL_MEM_RULE_INF&quot; -&gt; OntModelSpec.OWL_MEM_RULE_INF;</span>
+<span class="nc" id="L137">            case &quot;RDFS_INF&quot; -&gt; OntModelSpec.OWL_MEM_RDFS_INF;</span>
+<span class="nc" id="L138">            case &quot;OWL_DL_MEM&quot; -&gt; OntModelSpec.OWL_DL_MEM;</span>
+<span class="nc" id="L139">            default -&gt; OntModelSpec.OWL_MEM_RULE_INF;</span>
+        };
+    }
+
+    private void loadCimOntology(OntModel ontModel) throws IOException {
+<span class="nc" id="L144">        Resource resource = resourceLoader.getResource(cimOntologyPath);</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">        if (resource.exists()) {</span>
+<span class="nc" id="L146">            try (InputStream is = resource.getInputStream()) {</span>
+<span class="nc" id="L147">                ontModel.read(is, cimBaseUri, &quot;RDF/XML&quot;);</span>
+<span class="nc" id="L148">                log.info(&quot;CIM ontology loaded: {} statements&quot;, ontModel.size());</span>
+            }
+        }
+<span class="nc" id="L151">    }</span>
+
+    @PreDestroy
+    public void cleanup() {
+<span class="nc" id="L155">        log.info(&quot;Shutting down Jena resources...&quot;);</span>
+<span class="nc" id="L156">        closeQuietly(rdfConnection, &quot;RDFConnection&quot;);</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">        if (dataset != null) {</span>
+            try {
+<span class="nc" id="L159">                dataset.close();</span>
+<span class="nc" id="L160">            } catch (Exception e) {</span>
+<span class="nc" id="L161">                log.warn(&quot;Error closing Dataset: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L162">            }</span>
+        }
+<span class="nc" id="L164">    }</span>
+
+    private void closeQuietly(AutoCloseable resource, String name) {
+<span class="nc bnc" id="L167" title="All 2 branches missed.">        if (resource != null) {</span>
+<span class="nc" id="L168">            try { resource.close(); } catch (Exception e) { log.warn(&quot;Error closing {}: {}&quot;, name, e.getMessage()); }</span>
+        }
+<span class="nc" id="L170">    }</span>
+
+    @Bean
+    public RestTemplate restTemplate() {
+<span class="nc" id="L174">        return new RestTemplate();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LoadFlowService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.service</a> &gt; <span class="el_source">LoadFlowService.java</span></div><h1>LoadFlowService.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.service;
+
+import com.cim.semanticgraph.dto.LoadFlowResponse;
+import com.cim.semanticgraph.loadflow.extractor.CIMNetworkExtractor;
+import com.cim.semanticgraph.loadflow.model.Branch;
+import com.cim.semanticgraph.loadflow.model.Bus;
+import com.cim.semanticgraph.loadflow.model.CalculationMethod;
+import com.cim.semanticgraph.loadflow.model.NetworkModel;
+import com.cim.semanticgraph.loadflow.solver.SimplifiedLoadFlowSolver;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.rdf.model.Model;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+<span class="fc" id="L21">@Slf4j</span>
+@Service
+<span class="fc" id="L23">@RequiredArgsConstructor</span>
+public class LoadFlowService {
+
+    private final CIMNetworkExtractor networkExtractor;
+    private final SimplifiedLoadFlowSolver loadFlowSolver;
+    private final JenaService jenaService;
+    private final PandapowerService pandapowerService;
+
+    public LoadFlowResponse calculateLoadFlow() {
+<span class="fc" id="L32">        return calculateLoadFlow(null, CalculationMethod.DC);</span>
+    }
+
+    public LoadFlowResponse calculateLoadFlow(String targetBusId) {
+<span class="fc" id="L36">        return calculateLoadFlow(targetBusId, CalculationMethod.DC);</span>
+    }
+
+    public LoadFlowResponse calculateLoadFlow(String targetBusId, CalculationMethod method) {
+<span class="fc" id="L40">        long startTime = System.currentTimeMillis();</span>
+
+<span class="fc" id="L42">            log.info(&quot;═══════════════════════════════════════════════════════════&quot;);</span>
+<span class="fc" id="L43">            log.info(&quot;Starting Load Flow Calculation{}&quot;,</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">                    targetBusId != null ? &quot; for bus: &quot; + targetBusId : &quot;&quot;);</span>
+<span class="fc" id="L45">            log.info(&quot;═══════════════════════════════════════════════════════════&quot;);</span>
+
+        try {
+<span class="fc" id="L48">            Model cimModel = jenaService.getModelCopy();</span>
+
+<span class="pc bpc" id="L50" title="1 of 4 branches missed.">            if (cimModel == null || cimModel.isEmpty()) {</span>
+<span class="fc" id="L51">                log.error(&quot;CIM model is empty - cannot perform load flow calculation&quot;);</span>
+<span class="fc" id="L52">                return createEmptyDataResponse(&quot;CIM model is empty. Please import network data first.&quot;);</span>
+            }
+
+<span class="fc" id="L55">            log.info(&quot;CIM model contains {} triples&quot;, cimModel.size());</span>
+
+<span class="fc" id="L57">            NetworkModel network = networkExtractor.extractNetwork(cimModel);</span>
+
+<span class="fc bfc" id="L59" title="All 2 branches covered.">            if (network.getBusCount() == 0) {</span>
+<span class="fc" id="L60">                log.error(&quot;No buses found in network model&quot;);</span>
+<span class="fc" id="L61">                return createEmptyDataResponse(&quot;No buses found in the network. Please check your CIM data import.&quot;);</span>
+            }
+
+<span class="fc" id="L64">            double totalGen = network.getBuses().stream().mapToDouble(Bus::getGenerationMw).sum();</span>
+<span class="fc" id="L65">            double totalLoad = network.getBuses().stream().mapToDouble(Bus::getLoadMw).sum();</span>
+
+<span class="fc" id="L67">            log.info(&quot;Network validation: {} buses, {} branches, {} MW generation, {} MW load&quot;,</span>
+<span class="fc" id="L68">                    network.getBusCount(), network.getBranchCount(), totalGen, totalLoad);</span>
+
+<span class="pc bpc" id="L70" title="2 of 4 branches missed.">            if (totalGen == 0.0 &amp;&amp; totalLoad &gt; 0.0) {</span>
+<span class="nc" id="L71">                log.error(&quot;WARNING: Network has {} MW load but NO generation!&quot;, totalLoad);</span>
+            }
+<span class="pc bpc" id="L73" title="2 of 4 branches missed.">            if (totalLoad == 0.0 &amp;&amp; totalGen &gt; 0.0) {</span>
+<span class="nc" id="L74">                log.warn(&quot;WARNING: Network has {} MW generation but NO load!&quot;, totalGen);</span>
+            }
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">            if (network.getBranchCount() == 0) {</span>
+<span class="fc" id="L77">                log.warn(&quot;WARNING: Network has NO branches - all buses are isolated!&quot;);</span>
+            }
+
+<span class="fc" id="L80">            String actualBusId = targetBusId;</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">            if (targetBusId != null) {</span>
+<span class="fc" id="L82">                final String searchBusId = targetBusId;</span>
+<span class="fc" id="L83">                Bus targetBus = network.getBus(searchBusId);</span>
+
+                // Try without _CN suffix since bus IDs may or may not include it
+<span class="pc bpc" id="L86" title="2 of 4 branches missed.">                if (targetBus == null &amp;&amp; searchBusId.endsWith(&quot;_CN&quot;)) {</span>
+<span class="nc" id="L87">                    String busIdWithoutSuffix = searchBusId.substring(0, searchBusId.length() - 3);</span>
+<span class="nc" id="L88">                    targetBus = network.getBus(busIdWithoutSuffix);</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">                    if (targetBus != null) {</span>
+<span class="nc" id="L90">                        actualBusId = busIdWithoutSuffix;</span>
+<span class="nc" id="L91">                        log.info(&quot;Found bus without _CN suffix: {} (searched: {})&quot;, actualBusId, searchBusId);</span>
+                    }
+                }
+
+                // Try partial match as last resort
+<span class="pc bpc" id="L96" title="1 of 2 branches missed.">                if (targetBus == null) {</span>
+<span class="fc" id="L97">                    targetBus = network.getBuses().stream()</span>
+<span class="fc" id="L98">                            .filter(b -&gt; {</span>
+<span class="fc" id="L99">                                String busId = b.getId().toLowerCase();</span>
+<span class="fc" id="L100">                                String searchId = searchBusId.toLowerCase();</span>
+<span class="pc bpc" id="L101" title="3 of 4 branches missed.">                                return busId.contains(searchId) || searchId.contains(busId) ||</span>
+<span class="pc bnc" id="L102" title="All 2 branches missed.">                                       busId.replace(&quot;_cn&quot;, &quot;&quot;).equals(searchId.replace(&quot;_cn&quot;, &quot;&quot;));</span>
+                            })
+<span class="fc" id="L104">                            .findFirst()</span>
+<span class="fc" id="L105">                            .orElse(null);</span>
+
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">                    if (targetBus != null) {</span>
+<span class="fc" id="L108">                        actualBusId = targetBus.getId();</span>
+<span class="fc" id="L109">                        log.info(&quot;Found bus by partial match: {} (searched: {})&quot;, actualBusId, searchBusId);</span>
+                    }
+                }
+
+<span class="pc bpc" id="L113" title="1 of 2 branches missed.">                if (targetBus == null) {</span>
+<span class="nc" id="L114">                    log.warn(&quot;Target bus {} not found in network. Available buses: {}&quot;,</span>
+<span class="nc" id="L115">                            searchBusId, network.getBuses().stream()</span>
+<span class="nc" id="L116">                                    .map(Bus::getId)</span>
+<span class="nc" id="L117">                                    .collect(java.util.stream.Collectors.joining(&quot;, &quot;)));</span>
+<span class="nc" id="L118">                    return createBusNotFoundResponse(searchBusId);</span>
+                }
+
+<span class="fc" id="L121">                targetBusId = actualBusId;</span>
+            }
+
+            LoadFlowResponse response;
+
+<span class="pc bpc" id="L126" title="1 of 2 branches missed.">            if (method == CalculationMethod.DC) {</span>
+<span class="fc" id="L127">                log.info(&quot;Using built-in DC Power Flow solver&quot;);</span>
+<span class="fc" id="L128">                SimplifiedLoadFlowSolver.LoadFlowResult solverResult = loadFlowSolver.solve(network);</span>
+<span class="fc" id="L129">                response = buildResponse(network, solverResult, targetBusId);</span>
+<span class="fc" id="L130">            } else {</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">                if (pandapowerService.isAvailable()) {</span>
+<span class="nc" id="L132">                    log.info(&quot;Using pandapower service for {} calculation&quot;, method);</span>
+<span class="nc" id="L133">                    response = pandapowerService.calculate(network, method.name());</span>
+<span class="nc" id="L134">                    response.setTargetBusId(targetBusId);</span>
+                } else {
+<span class="nc" id="L136">                    log.warn(&quot;Pandapower service unavailable. Falling back to DC solver.&quot;);</span>
+<span class="nc" id="L137">                    SimplifiedLoadFlowSolver.LoadFlowResult solverResult = loadFlowSolver.solve(network);</span>
+<span class="nc" id="L138">                    response = buildResponse(network, solverResult, targetBusId);</span>
+<span class="nc" id="L139">                    response.setCalculationMethod(&quot;SIMPLIFIED_DC (fallback from &quot; + method + &quot;)&quot;);</span>
+                }
+            }
+
+<span class="fc" id="L143">            long executionTime = System.currentTimeMillis() - startTime;</span>
+<span class="fc" id="L144">            response.setExecutionTimeMs(executionTime);</span>
+
+<span class="fc" id="L146">            log.info(&quot;Load flow calculation completed in {} ms - Converged: {}&quot;,</span>
+<span class="fc" id="L147">                    executionTime, response.isConverged());</span>
+
+<span class="fc" id="L149">            return response;</span>
+
+<span class="fc" id="L151">        } catch (Exception e) {</span>
+<span class="fc" id="L152">            log.error(&quot;Error calculating load flow: {}&quot;, e.getMessage(), e);</span>
+<span class="fc" id="L153">            return createErrorResponse(e.getMessage());</span>
+        }
+    }
+
+    private LoadFlowResponse buildResponse(NetworkModel network,
+                                          SimplifiedLoadFlowSolver.LoadFlowResult solverResult,
+                                          String targetBusId) {
+
+<span class="fc" id="L161">        List&lt;LoadFlowResponse.BusResult&gt; busResults = network.getBuses().stream()</span>
+<span class="fc" id="L162">                .map(this::buildBusResult)</span>
+<span class="fc" id="L163">                .collect(Collectors.toList());</span>
+
+<span class="fc" id="L165">        List&lt;LoadFlowResponse.BranchResult&gt; branchResults = network.getBranches().stream()</span>
+<span class="fc" id="L166">                .map(this::buildBranchResult)</span>
+<span class="fc" id="L167">                .collect(Collectors.toList());</span>
+
+<span class="fc" id="L169">        LoadFlowResponse.SystemStatistics statistics = calculateStatistics(network);</span>
+<span class="fc" id="L170">        List&lt;LoadFlowResponse.Violation&gt; violations = detectViolations(network);</span>
+
+<span class="fc" id="L172">        return LoadFlowResponse.builder()</span>
+<span class="fc" id="L173">                .converged(solverResult.isConverged())</span>
+<span class="fc" id="L174">                .iterations(solverResult.getIterations())</span>
+<span class="fc" id="L175">                .tolerance(solverResult.getTolerance())</span>
+<span class="fc" id="L176">                .executionTimeMs(solverResult.getExecutionTimeMs())</span>
+<span class="fc" id="L177">                .timestamp(LocalDateTime.now())</span>
+<span class="fc" id="L178">                .calculationMethod(&quot;SIMPLIFIED_DC&quot;)</span>
+<span class="fc" id="L179">                .busResults(busResults)</span>
+<span class="fc" id="L180">                .branchResults(branchResults)</span>
+<span class="fc" id="L181">                .statistics(statistics)</span>
+<span class="fc" id="L182">                .violations(violations)</span>
+<span class="fc" id="L183">                .targetBusId(targetBusId)</span>
+<span class="fc" id="L184">                .networkId(network.getNetworkId())</span>
+<span class="fc" id="L185">                .build();</span>
+    }
+
+    private LoadFlowResponse.BusResult buildBusResult(Bus bus) {
+        // Default NaN/Infinite values to safe defaults to prevent JSON serialization issues
+<span class="fc" id="L190">        double voltageAngle = bus.getCalculatedVoltageAngle();</span>
+<span class="pc bpc" id="L191" title="2 of 4 branches missed.">        if (Double.isNaN(voltageAngle) || Double.isInfinite(voltageAngle)) {</span>
+<span class="nc" id="L192">            voltageAngle = 0.0;</span>
+        }
+
+<span class="fc" id="L195">        double activePowerMw = bus.getCalculatedActivePower();</span>
+<span class="pc bpc" id="L196" title="2 of 4 branches missed.">        if (Double.isNaN(activePowerMw) || Double.isInfinite(activePowerMw)) {</span>
+<span class="nc" id="L197">            activePowerMw = bus.getNetActivePower();</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">            if (Double.isNaN(activePowerMw)) {</span>
+<span class="nc" id="L199">                activePowerMw = 0.0;</span>
+            }
+        }
+
+<span class="fc" id="L203">        double reactivePowerMvar = bus.getCalculatedReactivePower();</span>
+<span class="pc bpc" id="L204" title="2 of 4 branches missed.">        if (Double.isNaN(reactivePowerMvar) || Double.isInfinite(reactivePowerMvar)) {</span>
+<span class="nc" id="L205">            reactivePowerMvar = bus.getNetReactivePower();</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">            if (Double.isNaN(reactivePowerMvar)) {</span>
+<span class="nc" id="L207">                reactivePowerMvar = 0.0;</span>
+            }
+        }
+
+<span class="fc" id="L211">        double voltageMagnitude = bus.getCalculatedVoltageMagnitude();</span>
+<span class="pc bpc" id="L212" title="2 of 4 branches missed.">        if (Double.isNaN(voltageMagnitude) || Double.isInfinite(voltageMagnitude)) {</span>
+<span class="nc bnc" id="L213" title="All 2 branches missed.">            voltageMagnitude = bus.getVoltageMagnitude() &gt; 0 ? bus.getVoltageMagnitude() : 1.0;</span>
+        }
+
+<span class="fc" id="L216">        return LoadFlowResponse.BusResult.builder()</span>
+<span class="fc" id="L217">                .busId(bus.getId())</span>
+<span class="fc" id="L218">                .busName(bus.getName())</span>
+<span class="fc" id="L219">                .busType(bus.getType().name())</span>
+<span class="fc" id="L220">                .voltageMagnitude(voltageMagnitude)</span>
+<span class="fc" id="L221">                .voltageAngle(voltageAngle)</span>
+<span class="fc" id="L222">                .voltageKv(voltageMagnitude * bus.getBaseVoltageKv())</span>
+<span class="fc" id="L223">                .activePowerMw(activePowerMw)</span>
+<span class="fc" id="L224">                .reactivePowerMvar(reactivePowerMvar)</span>
+<span class="fc" id="L225">                .generationMw(bus.getGenerationMw())</span>
+<span class="fc" id="L226">                .generationMvar(bus.getGenerationMvar())</span>
+<span class="fc" id="L227">                .loadMw(bus.getLoadMw())</span>
+<span class="fc" id="L228">                .loadMvar(bus.getLoadMvar())</span>
+<span class="pc bpc" id="L229" title="1 of 2 branches missed.">                .withinLimits(!bus.isViolatesLimits())</span>
+<span class="fc" id="L230">                .voltagePercentage(voltageMagnitude * 100.0)</span>
+<span class="fc" id="L231">                .build();</span>
+    }
+
+    private LoadFlowResponse.BranchResult buildBranchResult(Branch branch) {
+<span class="nc" id="L235">        return LoadFlowResponse.BranchResult.builder()</span>
+<span class="nc" id="L236">                .branchId(branch.getId())</span>
+<span class="nc" id="L237">                .branchName(branch.getName())</span>
+<span class="nc" id="L238">                .branchType(branch.getType().name())</span>
+<span class="nc" id="L239">                .fromBusId(branch.getFromBusId())</span>
+<span class="nc" id="L240">                .toBusId(branch.getToBusId())</span>
+<span class="nc" id="L241">                .fromActivePowerMw(branch.getFromActivePowerMw())</span>
+<span class="nc" id="L242">                .fromReactivePowerMvar(branch.getFromReactivePowerMvar())</span>
+<span class="nc" id="L243">                .toActivePowerMw(branch.getToActivePowerMw())</span>
+<span class="nc" id="L244">                .toReactivePowerMvar(branch.getToReactivePowerMvar())</span>
+<span class="nc" id="L245">                .lossActivePowerMw(branch.getLossActivePowerMw())</span>
+<span class="nc" id="L246">                .lossReactivePowerMvar(branch.getLossReactivePowerMvar())</span>
+<span class="nc" id="L247">                .currentMagnitude(branch.getCurrentMagnitude())</span>
+<span class="nc" id="L248">                .loadingPercentage(branch.getLoadingPercentage())</span>
+<span class="nc" id="L249">                .overloaded(branch.isOverloaded())</span>
+<span class="nc" id="L250">                .build();</span>
+    }
+
+    private LoadFlowResponse.SystemStatistics calculateStatistics(NetworkModel network) {
+<span class="fc" id="L254">        int pvBuses = (int) network.getBuses().stream().filter(Bus::isPV).count();</span>
+<span class="fc" id="L255">        int pqBuses = (int) network.getBuses().stream().filter(Bus::isPQ).count();</span>
+<span class="fc" id="L256">        int slackBuses = (int) network.getBuses().stream().filter(Bus::isSlack).count();</span>
+
+<span class="fc" id="L258">        double totalGenMw = network.getBuses().stream()</span>
+<span class="fc" id="L259">                .mapToDouble(Bus::getGenerationMw).sum();</span>
+<span class="fc" id="L260">        double totalGenMvar = network.getBuses().stream()</span>
+<span class="fc" id="L261">                .mapToDouble(Bus::getGenerationMvar).sum();</span>
+
+<span class="fc" id="L263">        double totalLoadMw = network.getBuses().stream()</span>
+<span class="fc" id="L264">                .mapToDouble(Bus::getLoadMw).sum();</span>
+<span class="fc" id="L265">        double totalLoadMvar = network.getBuses().stream()</span>
+<span class="fc" id="L266">                .mapToDouble(Bus::getLoadMvar).sum();</span>
+
+<span class="fc" id="L268">        double totalLossesMw = network.getBranches().stream()</span>
+<span class="fc" id="L269">                .mapToDouble(branch -&gt; {</span>
+<span class="nc" id="L270">                    double loss = branch.getLossActivePowerMw();</span>
+<span class="nc bnc" id="L271" title="All 4 branches missed.">                    return Double.isNaN(loss) || Double.isInfinite(loss) ? 0.0 : loss;</span>
+                })
+<span class="fc" id="L273">                .sum();</span>
+<span class="fc" id="L274">        double totalLossesMvar = network.getBranches().stream()</span>
+<span class="fc" id="L275">                .mapToDouble(branch -&gt; {</span>
+<span class="nc" id="L276">                    double loss = branch.getLossReactivePowerMvar();</span>
+<span class="nc bnc" id="L277" title="All 4 branches missed.">                    return Double.isNaN(loss) || Double.isInfinite(loss) ? 0.0 : loss;</span>
+                })
+<span class="fc" id="L279">                .sum();</span>
+
+<span class="fc" id="L281">        double lossPercentage = 0.0;</span>
+<span class="pc bpc" id="L282" title="5 of 6 branches missed.">        if (totalLoadMw &gt; 0 &amp;&amp; !Double.isNaN(totalLossesMw) &amp;&amp; !Double.isInfinite(totalLossesMw)) {</span>
+<span class="nc" id="L283">            lossPercentage = (totalLossesMw / totalLoadMw) * 100.0;</span>
+        }
+
+        // Sanitize all computed values to avoid NaN in JSON response
+<span class="pc bpc" id="L287" title="2 of 4 branches missed.">        if (Double.isNaN(totalLossesMw) || Double.isInfinite(totalLossesMw)) {</span>
+<span class="nc" id="L288">            totalLossesMw = 0.0;</span>
+        }
+<span class="pc bpc" id="L290" title="2 of 4 branches missed.">        if (Double.isNaN(totalLossesMvar) || Double.isInfinite(totalLossesMvar)) {</span>
+<span class="nc" id="L291">            totalLossesMvar = 0.0;</span>
+        }
+
+<span class="fc" id="L294">        Bus minVoltageBus = network.getBuses().stream()</span>
+<span class="fc" id="L295">                .min(Comparator.comparingDouble(Bus::getCalculatedVoltageMagnitude))</span>
+<span class="fc" id="L296">                .orElse(null);</span>
+
+<span class="fc" id="L298">        Bus maxVoltageBus = network.getBuses().stream()</span>
+<span class="fc" id="L299">                .max(Comparator.comparingDouble(Bus::getCalculatedVoltageMagnitude))</span>
+<span class="fc" id="L300">                .orElse(null);</span>
+
+<span class="fc" id="L302">        double avgVoltagePu = network.getBuses().stream()</span>
+<span class="fc" id="L303">                .mapToDouble(Bus::getCalculatedVoltageMagnitude)</span>
+<span class="fc" id="L304">                .average()</span>
+<span class="fc" id="L305">                .orElse(1.0);</span>
+
+<span class="pc bpc" id="L307" title="2 of 4 branches missed.">        if (Double.isNaN(totalGenMw) || Double.isInfinite(totalGenMw)) totalGenMw = 0.0;</span>
+<span class="pc bpc" id="L308" title="2 of 4 branches missed.">        if (Double.isNaN(totalGenMvar) || Double.isInfinite(totalGenMvar)) totalGenMvar = 0.0;</span>
+<span class="pc bpc" id="L309" title="2 of 4 branches missed.">        if (Double.isNaN(totalLoadMw) || Double.isInfinite(totalLoadMw)) totalLoadMw = 0.0;</span>
+<span class="pc bpc" id="L310" title="2 of 4 branches missed.">        if (Double.isNaN(totalLoadMvar) || Double.isInfinite(totalLoadMvar)) totalLoadMvar = 0.0;</span>
+<span class="pc bpc" id="L311" title="2 of 4 branches missed.">        if (Double.isNaN(lossPercentage) || Double.isInfinite(lossPercentage)) lossPercentage = 0.0;</span>
+
+<span class="pc bpc" id="L313" title="1 of 2 branches missed.">        double minVoltage = minVoltageBus != null ? minVoltageBus.getCalculatedVoltageMagnitude() : 1.0;</span>
+<span class="pc bpc" id="L314" title="1 of 2 branches missed.">        double maxVoltage = maxVoltageBus != null ? maxVoltageBus.getCalculatedVoltageMagnitude() : 1.0;</span>
+<span class="pc bpc" id="L315" title="2 of 4 branches missed.">        if (Double.isNaN(minVoltage) || Double.isInfinite(minVoltage)) minVoltage = 1.0;</span>
+<span class="pc bpc" id="L316" title="2 of 4 branches missed.">        if (Double.isNaN(maxVoltage) || Double.isInfinite(maxVoltage)) maxVoltage = 1.0;</span>
+<span class="pc bpc" id="L317" title="2 of 4 branches missed.">        if (Double.isNaN(avgVoltagePu) || Double.isInfinite(avgVoltagePu)) avgVoltagePu = 1.0;</span>
+
+<span class="fc" id="L319">        return LoadFlowResponse.SystemStatistics.builder()</span>
+<span class="fc" id="L320">                .totalBuses(network.getBusCount())</span>
+<span class="fc" id="L321">                .totalBranches(network.getBranchCount())</span>
+<span class="fc" id="L322">                .pvBuses(pvBuses)</span>
+<span class="fc" id="L323">                .pqBuses(pqBuses)</span>
+<span class="fc" id="L324">                .slackBuses(slackBuses)</span>
+<span class="fc" id="L325">                .totalGenerationMw(totalGenMw)</span>
+<span class="fc" id="L326">                .totalGenerationMvar(totalGenMvar)</span>
+<span class="fc" id="L327">                .totalLoadMw(totalLoadMw)</span>
+<span class="fc" id="L328">                .totalLoadMvar(totalLoadMvar)</span>
+<span class="fc" id="L329">                .totalLossesMw(totalLossesMw)</span>
+<span class="fc" id="L330">                .totalLossesMvar(totalLossesMvar)</span>
+<span class="fc" id="L331">                .lossPercentage(lossPercentage)</span>
+<span class="fc" id="L332">                .minVoltagePu(minVoltage)</span>
+<span class="fc" id="L333">                .maxVoltagePu(maxVoltage)</span>
+<span class="fc" id="L334">                .avgVoltagePu(avgVoltagePu)</span>
+<span class="pc bpc" id="L335" title="1 of 2 branches missed.">                .minVoltageBus(minVoltageBus != null ? minVoltageBus.getId() : &quot;N/A&quot;)</span>
+<span class="pc bpc" id="L336" title="1 of 2 branches missed.">                .maxVoltageBus(maxVoltageBus != null ? maxVoltageBus.getId() : &quot;N/A&quot;)</span>
+<span class="fc" id="L337">                .build();</span>
+    }
+
+    private List&lt;LoadFlowResponse.Violation&gt; detectViolations(NetworkModel network) {
+<span class="fc" id="L341">        List&lt;LoadFlowResponse.Violation&gt; violations = new ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L343" title="All 2 branches covered.">        for (Bus bus : network.getBuses()) {</span>
+<span class="fc" id="L344">            double vPu = bus.getCalculatedVoltageMagnitude();</span>
+
+<span class="pc bpc" id="L346" title="1 of 2 branches missed.">            if (vPu &lt; bus.getVoltageMin()) {</span>
+<span class="fc" id="L347">                violations.add(LoadFlowResponse.Violation.builder()</span>
+<span class="fc" id="L348">                        .type(&quot;VOLTAGE_LOW&quot;)</span>
+<span class="pc bpc" id="L349" title="1 of 2 branches missed.">                        .severity(vPu &lt; 0.90 ? &quot;CRITICAL&quot; : &quot;WARNING&quot;)</span>
+<span class="fc" id="L350">                        .elementId(bus.getId())</span>
+<span class="fc" id="L351">                        .elementName(bus.getName())</span>
+<span class="fc" id="L352">                        .actualValue(vPu)</span>
+<span class="fc" id="L353">                        .limitValue(bus.getVoltageMin())</span>
+<span class="fc" id="L354">                        .violationPercentage(((bus.getVoltageMin() - vPu) / bus.getVoltageMin()) * 100.0)</span>
+<span class="fc" id="L355">                        .description(String.format(&quot;Bus voltage %.3f pu is below minimum %.3f pu&quot;, vPu, bus.getVoltageMin()))</span>
+<span class="fc" id="L356">                        .build());</span>
+<span class="nc bnc" id="L357" title="All 2 branches missed.">            } else if (vPu &gt; bus.getVoltageMax()) {</span>
+<span class="nc" id="L358">                violations.add(LoadFlowResponse.Violation.builder()</span>
+<span class="nc" id="L359">                        .type(&quot;VOLTAGE_HIGH&quot;)</span>
+<span class="nc bnc" id="L360" title="All 2 branches missed.">                        .severity(vPu &gt; 1.10 ? &quot;CRITICAL&quot; : &quot;WARNING&quot;)</span>
+<span class="nc" id="L361">                        .elementId(bus.getId())</span>
+<span class="nc" id="L362">                        .elementName(bus.getName())</span>
+<span class="nc" id="L363">                        .actualValue(vPu)</span>
+<span class="nc" id="L364">                        .limitValue(bus.getVoltageMax())</span>
+<span class="nc" id="L365">                        .violationPercentage(((vPu - bus.getVoltageMax()) / bus.getVoltageMax()) * 100.0)</span>
+<span class="nc" id="L366">                        .description(String.format(&quot;Bus voltage %.3f pu exceeds maximum %.3f pu&quot;, vPu, bus.getVoltageMax()))</span>
+<span class="nc" id="L367">                        .build());</span>
+            }
+<span class="fc" id="L369">        }</span>
+
+<span class="pc bpc" id="L371" title="1 of 2 branches missed.">        for (Branch branch : network.getBranches()) {</span>
+<span class="nc bnc" id="L372" title="All 2 branches missed.">            if (branch.isOverloaded()) {</span>
+<span class="nc" id="L373">                violations.add(LoadFlowResponse.Violation.builder()</span>
+<span class="nc" id="L374">                        .type(&quot;BRANCH_OVERLOAD&quot;)</span>
+<span class="nc bnc" id="L375" title="All 2 branches missed.">                        .severity(branch.getLoadingPercentage() &gt; 120.0 ? &quot;CRITICAL&quot; : &quot;WARNING&quot;)</span>
+<span class="nc" id="L376">                        .elementId(branch.getId())</span>
+<span class="nc" id="L377">                        .elementName(branch.getName())</span>
+<span class="nc" id="L378">                        .actualValue(branch.getLoadingPercentage())</span>
+<span class="nc" id="L379">                        .limitValue(100.0)</span>
+<span class="nc" id="L380">                        .violationPercentage(branch.getLoadingPercentage() - 100.0)</span>
+<span class="nc" id="L381">                        .description(String.format(&quot;Branch loading %.1f%% exceeds rating&quot;, branch.getLoadingPercentage()))</span>
+<span class="nc" id="L382">                        .build());</span>
+            }
+<span class="nc" id="L384">        }</span>
+
+<span class="fc" id="L386">        return violations;</span>
+    }
+
+    private LoadFlowResponse createEmptyDataResponse() {
+<span class="fc" id="L390">        return createEmptyDataResponse(&quot;No network data available&quot;);</span>
+    }
+
+    private LoadFlowResponse createEmptyDataResponse(String errorMessage) {
+<span class="fc" id="L394">        List&lt;LoadFlowResponse.Violation&gt; violations = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L395">        violations.add(LoadFlowResponse.Violation.builder()</span>
+<span class="fc" id="L396">                .type(&quot;DATA_ERROR&quot;)</span>
+<span class="fc" id="L397">                .severity(&quot;CRITICAL&quot;)</span>
+<span class="fc" id="L398">                .elementId(&quot;NETWORK&quot;)</span>
+<span class="fc" id="L399">                .elementName(&quot;Network Model&quot;)</span>
+<span class="fc" id="L400">                .description(errorMessage)</span>
+<span class="fc" id="L401">                .build());</span>
+
+<span class="fc" id="L403">        return LoadFlowResponse.builder()</span>
+<span class="fc" id="L404">                .converged(false)</span>
+<span class="fc" id="L405">                .iterations(0)</span>
+<span class="fc" id="L406">                .tolerance(0.0)</span>
+<span class="fc" id="L407">                .executionTimeMs(0)</span>
+<span class="fc" id="L408">                .timestamp(LocalDateTime.now())</span>
+<span class="fc" id="L409">                .calculationMethod(&quot;SIMPLIFIED_DC&quot;)</span>
+<span class="fc" id="L410">                .busResults(new ArrayList&lt;&gt;())</span>
+<span class="fc" id="L411">                .branchResults(new ArrayList&lt;&gt;())</span>
+<span class="fc" id="L412">                .statistics(createEmptyStatistics())</span>
+<span class="fc" id="L413">                .violations(violations)</span>
+<span class="fc" id="L414">                .build();</span>
+    }
+
+    private LoadFlowResponse createBusNotFoundResponse(String busId) {
+<span class="nc" id="L418">        LoadFlowResponse response = createEmptyDataResponse();</span>
+<span class="nc" id="L419">        response.setTargetBusId(busId);</span>
+<span class="nc" id="L420">        return response;</span>
+    }
+
+    private LoadFlowResponse createErrorResponse(String errorMessage) {
+<span class="fc" id="L424">        LoadFlowResponse response = createEmptyDataResponse();</span>
+<span class="fc" id="L425">        response.getViolations().add(LoadFlowResponse.Violation.builder()</span>
+<span class="fc" id="L426">                .type(&quot;CALCULATION_ERROR&quot;)</span>
+<span class="fc" id="L427">                .severity(&quot;CRITICAL&quot;)</span>
+<span class="fc" id="L428">                .elementId(&quot;SYSTEM&quot;)</span>
+<span class="fc" id="L429">                .elementName(&quot;Load Flow Solver&quot;)</span>
+<span class="fc" id="L430">                .description(errorMessage)</span>
+<span class="fc" id="L431">                .build());</span>
+<span class="fc" id="L432">        return response;</span>
+    }
+
+    private LoadFlowResponse.SystemStatistics createEmptyStatistics() {
+<span class="fc" id="L436">        return LoadFlowResponse.SystemStatistics.builder()</span>
+<span class="fc" id="L437">                .totalBuses(0)</span>
+<span class="fc" id="L438">                .totalBranches(0)</span>
+<span class="fc" id="L439">                .pvBuses(0)</span>
+<span class="fc" id="L440">                .pqBuses(0)</span>
+<span class="fc" id="L441">                .slackBuses(0)</span>
+<span class="fc" id="L442">                .totalGenerationMw(0.0)</span>
+<span class="fc" id="L443">                .totalGenerationMvar(0.0)</span>
+<span class="fc" id="L444">                .totalLoadMw(0.0)</span>
+<span class="fc" id="L445">                .totalLoadMvar(0.0)</span>
+<span class="fc" id="L446">                .totalLossesMw(0.0)</span>
+<span class="fc" id="L447">                .totalLossesMvar(0.0)</span>
+<span class="fc" id="L448">                .lossPercentage(0.0)</span>
+<span class="fc" id="L449">                .minVoltagePu(0.0)</span>
+<span class="fc" id="L450">                .maxVoltagePu(0.0)</span>
+<span class="fc" id="L451">                .avgVoltagePu(0.0)</span>
+<span class="fc" id="L452">                .minVoltageBus(&quot;N/A&quot;)</span>
+<span class="fc" id="L453">                .maxVoltageBus(&quot;N/A&quot;)</span>
+<span class="fc" id="L454">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

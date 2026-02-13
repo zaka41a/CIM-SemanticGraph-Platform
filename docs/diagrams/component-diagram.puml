@@ -1,0 +1,220 @@
+@startuml Component Diagram - System Architecture
+!theme vibrant
+title Component Diagram - CIM-SemanticGraph-Platform Architecture
+
+' External Actors
+actor "Power System\nEngineer" as User
+actor "Administrator" as Admin
+
+' External Systems
+cloud "Claude AI" {
+  [Anthropic API] as ClaudeAPI
+}
+
+package "Frontend Layer" {
+  component "React Application" as React {
+    [Dashboard] as Dashboard
+    [Graph Viewer\n(Cytoscape.js)] as GraphViewer
+    [Chat Interface] as ChatUI
+    [SPARQL Editor] as SparqlEditor
+    [Settings] as Settings
+  }
+}
+
+package "Backend Layer - Spring Boot" {
+
+  ' REST API
+  component "REST API Controllers" {
+    [CimController] as CimCtrl
+    [GraphRAGController] as GraphRAGCtrl
+    [SparqlController] as SparqlCtrl
+    [VisualizationController] as VizCtrl
+  }
+
+  ' Business Logic
+  component "Service Layer" {
+    [CimTransformerService] as CimService
+    [GraphRAGService] as GraphRAGService
+    [JenaService] as JenaService
+    [ClaudeService] as ClaudeService
+    [EmbeddingService] as EmbeddingService
+    [SparqlQueryService] as SparqlService
+  }
+
+  ' GraphRAG Engine
+  component "GraphRAG Engine" {
+    [GraphTraverser] as Traverser
+    [ContextBuilder] as ContextBuilder
+    [RelevanceScorer] as Scorer
+    [Embedding Generator] as EmbedGen
+  }
+
+  ' Configuration
+  component "Configuration" {
+    [JenaConfig] as JenaConfig
+    [SecurityConfig] as SecurityConfig
+    [WebConfig] as WebConfig
+  }
+}
+
+package "Data Layer - Apache Jena" {
+
+  ' Jena Components
+  component "Apache Jena Framework" {
+    [TDB2 Storage] as TDB2
+    [OntModel\n(OWL Reasoner)] as OntModel
+    [SPARQL Engine] as SPARQLEngine
+    [RDF Parser/Writer] as RDFParser
+  }
+
+  database "Knowledge Graph\nTriple Store" as KG {
+    [CIM Ontology] as CIMOnt
+    [Network Data\n(Triples)] as Triples
+    [Inferred Data] as Inferred
+  }
+}
+
+package "External Data Sources" {
+  file "CIM Files" as CIMFiles {
+    [CIM/XML] as CIMXML
+    [CIM/RDF] as CIMRDF
+  }
+}
+
+' Frontend Connections
+User --> React
+Admin --> React
+
+Dashboard --> CimCtrl : HTTP/REST
+GraphViewer --> VizCtrl : HTTP/REST
+ChatUI --> GraphRAGCtrl : HTTP/REST
+SparqlEditor --> SparqlCtrl : HTTP/REST
+Settings --> CimCtrl : HTTP/REST
+
+' Controller to Service Connections
+CimCtrl --> CimService
+CimCtrl --> JenaService
+GraphRAGCtrl --> GraphRAGService
+SparqlCtrl --> JenaService
+SparqlCtrl --> SparqlService
+VizCtrl --> JenaService
+
+' Service Layer Connections
+CimService --> JenaService
+GraphRAGService --> JenaService
+GraphRAGService --> ClaudeService
+GraphRAGService --> EmbeddingService
+GraphRAGService --> Traverser
+GraphRAGService --> ContextBuilder
+SparqlService --> JenaService
+
+' GraphRAG Engine Connections
+Traverser --> JenaService
+ContextBuilder --> Traverser
+EmbedGen --> Scorer
+EmbeddingService --> EmbedGen
+
+' Claude Integration
+ClaudeService --> ClaudeAPI : HTTPS
+
+' Jena Framework Connections
+JenaService --> SPARQLEngine
+JenaService --> TDB2
+JenaService --> RDFParser
+CimService --> OntModel
+CimService --> RDFParser
+
+' Data Storage
+SPARQLEngine --> KG
+TDB2 --> KG
+OntModel --> CIMOnt
+
+' Configuration
+JenaService ..> JenaConfig : <<uses>>
+CimCtrl ..> SecurityConfig : <<secured by>>
+GraphRAGCtrl ..> SecurityConfig : <<secured by>>
+React ..> WebConfig : <<CORS>>
+
+' External Data
+CIMXML --> CimCtrl : Upload
+CIMRDF --> CimCtrl : Upload
+
+' Notes
+note top of React
+  **Frontend Technologies:**
+  - React 18
+  - TypeScript
+  - Cytoscape.js (visualization)
+  - Axios (HTTP client)
+  - TailwindCSS
+end note
+
+note top of "REST API Controllers"
+  **REST API:**
+  - OpenAPI 3.0 documented
+  - JWT authentication
+  - Exception handling
+  - Request validation
+end note
+
+note top of GraphRAGService
+  **GraphRAG Implementation:**
+  1. Generate query embedding
+  2. Retrieve relevant subgraph
+  3. Build context for LLM
+  4. Query Claude with context
+  5. Return enhanced answer
+end note
+
+note top of "Apache Jena Framework"
+  **Apache Jena Features:**
+  - TDB2 persistent storage
+  - SPARQL 1.1 queries
+  - OWL reasoning
+  - RDF/XML, Turtle, JSON-LD
+  - Millions of triples support
+end note
+
+note right of KG
+  **Knowledge Graph Contents:**
+  - CIM ontology (IEC 61970)
+  - Substations
+  - Transmission lines
+  - Generators
+  - Transformers
+  - Connectivity topology
+  - Inferred relationships
+end note
+
+note left of ClaudeAPI
+  **Claude AI Integration:**
+  - Model: Claude 3.5 Sonnet
+  - Context-aware reasoning
+  - Natural language understanding
+  - Explanation generation
+end note
+
+' Deployment Boundary
+package "Docker Containers" {
+  node "Backend Container" {
+    component [Spring Boot App] as SpringBoot
+  }
+
+  node "Frontend Container" {
+    component [Nginx + React] as NginxReact
+  }
+
+  node "Jena Fuseki Container" {
+    component [Fuseki Server] as Fuseki
+  }
+}
+
+note bottom of "Docker Containers"
+  **Deployment:**
+  - Docker Compose orchestration
+  - Container networking
+  - Volume persistence
+  - Health checks
+end note
+
+@enduml

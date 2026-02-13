@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WebConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.config</a> &gt; <span class="el_source">WebConfig.java</span></div><h1>WebConfig.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.config;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.util.Arrays;
+
+<span class="nc" id="L13">@Slf4j</span>
+@Configuration
+<span class="nc" id="L15">public class WebConfig implements WebMvcConfigurer {</span>
+
+    @Bean
+    public CorsFilter corsFilter() {
+<span class="nc" id="L19">        log.info(&quot;Configuring CORS...&quot;);</span>
+
+<span class="nc" id="L21">        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();</span>
+<span class="nc" id="L22">        CorsConfiguration config = new CorsConfiguration();</span>
+
+<span class="nc" id="L24">        config.setAllowedOrigins(Arrays.asList(</span>
+                &quot;http://localhost:3000&quot;,
+                &quot;http://localhost:5173&quot;,
+                &quot;http://localhost:8080&quot;
+        ));
+<span class="nc" id="L29">        config.setAllowedMethods(Arrays.asList(&quot;GET&quot;, &quot;POST&quot;, &quot;PUT&quot;, &quot;DELETE&quot;, &quot;OPTIONS&quot;, &quot;PATCH&quot;));</span>
+<span class="nc" id="L30">        config.setAllowedHeaders(Arrays.asList(&quot;*&quot;));</span>
+<span class="nc" id="L31">        config.setAllowCredentials(true);</span>
+<span class="nc" id="L32">        config.setMaxAge(3600L);</span>
+
+<span class="nc" id="L34">        source.registerCorsConfiguration(&quot;/**&quot;, config);</span>
+
+<span class="nc" id="L36">        log.info(&quot;CORS configured successfully for origins: http://localhost:3000, http://localhost:5173&quot;);</span>
+<span class="nc" id="L37">        return new CorsFilter(source);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

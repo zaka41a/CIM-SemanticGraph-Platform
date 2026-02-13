@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExcelController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.controller</a> &gt; <span class="el_source">ExcelController.java</span></div><h1>ExcelController.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.controller;
+
+import com.cim.semanticgraph.model.ImportHistory;
+import com.cim.semanticgraph.service.ExcelImportService;
+import com.cim.semanticgraph.service.ImportHistoryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.Map;
+
+<span class="nc" id="L19">@Slf4j</span>
+@RestController
+@RequestMapping(&quot;/excel&quot;)
+<span class="nc" id="L22">@RequiredArgsConstructor</span>
+@CrossOrigin(origins = {&quot;http://localhost:3000&quot;, &quot;http://localhost:5173&quot;})
+@Tag(name = &quot;Excel Import&quot;, description = &quot;Import power system data from Excel files&quot;)
+public class ExcelController {
+
+    private final ExcelImportService excelImportService;
+    private final ImportHistoryService importHistoryService;
+
+    @PostMapping(value = &quot;/import&quot;, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = &quot;Import Excel file&quot;,
+               description = &quot;Import power system network data from an Excel file (.xlsx)&quot;)
+    public ResponseEntity&lt;ExcelImportService.ImportResult&gt; importExcel(
+            @RequestParam(&quot;file&quot;) MultipartFile file) {
+
+<span class="nc" id="L36">        log.info(&quot;Excel import request received. File: {}, Size: {} bytes&quot;,</span>
+<span class="nc" id="L37">                file.getOriginalFilename(), file.getSize());</span>
+
+<span class="nc" id="L39">        String filename = file.getOriginalFilename();</span>
+
+<span class="nc" id="L41">        ImportHistory historyRecord = null;</span>
+<span class="nc bnc" id="L42" title="All 2 branches missed.">        if (filename != null) {</span>
+<span class="nc" id="L43">            historyRecord = importHistoryService.addImportRecord(</span>
+                    filename,
+<span class="nc" id="L45">                    file.getSize(),</span>
+                    &quot;Excel&quot;
+            );
+        }
+
+<span class="nc" id="L50">        long startTime = System.currentTimeMillis();</span>
+
+<span class="nc bnc" id="L52" title="All 2 branches missed.">        if (file.isEmpty()) {</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">            if (historyRecord != null) {</span>
+<span class="nc" id="L54">                importHistoryService.updateImportFailure(historyRecord.getId(), &quot;File is empty&quot;);</span>
+            }
+<span class="nc" id="L56">            return ResponseEntity.badRequest().body(</span>
+<span class="nc" id="L57">                ExcelImportService.ImportResult.builder()</span>
+<span class="nc" id="L58">                    .success(false)</span>
+<span class="nc" id="L59">                    .errors(List.of(&quot;File is empty&quot;))</span>
+<span class="nc" id="L60">                    .build()</span>
+            );
+        }
+
+<span class="nc bnc" id="L64" title="All 6 branches missed.">        if (filename == null || (!filename.endsWith(&quot;.xlsx&quot;) &amp;&amp; !filename.endsWith(&quot;.xls&quot;))) {</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">            if (historyRecord != null) {</span>
+<span class="nc" id="L66">                importHistoryService.updateImportFailure(historyRecord.getId(),</span>
+                        &quot;Invalid file format. Only .xlsx and .xls files are supported&quot;);
+            }
+<span class="nc" id="L69">            return ResponseEntity.badRequest().body(</span>
+<span class="nc" id="L70">                ExcelImportService.ImportResult.builder()</span>
+<span class="nc" id="L71">                    .success(false)</span>
+<span class="nc" id="L72">                    .errors(List.of(&quot;Invalid file format. Only .xlsx and .xls files are supported&quot;))</span>
+<span class="nc" id="L73">                    .build()</span>
+            );
+        }
+
+        try {
+<span class="nc" id="L78">            ExcelImportService.ImportResult result = excelImportService.importExcel(file);</span>
+
+<span class="nc" id="L80">            long endTime = System.currentTimeMillis();</span>
+<span class="nc" id="L81">            double duration = (endTime - startTime) / 1000.0;</span>
+
+<span class="nc bnc" id="L83" title="All 2 branches missed.">            if (result.isSuccess()) {</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">                if (historyRecord != null) {</span>
+<span class="nc" id="L85">                    importHistoryService.updateImportSuccess(</span>
+<span class="nc" id="L86">                            historyRecord.getId(),</span>
+<span class="nc" id="L87">                            result.getTriplesCreated(),</span>
+                            duration
+                    );
+                }
+
+<span class="nc" id="L92">                log.info(&quot;Excel import successful. Entities: {}, Triples: {}&quot;,</span>
+<span class="nc" id="L93">                        result.getEntitiesImported(), result.getTriplesCreated());</span>
+<span class="nc" id="L94">                return ResponseEntity.ok(result);</span>
+            } else {
+<span class="nc bnc" id="L96" title="All 2 branches missed.">                if (historyRecord != null) {</span>
+<span class="nc" id="L97">                    String errorMsg = String.join(&quot;; &quot;, result.getErrors());</span>
+<span class="nc" id="L98">                    importHistoryService.updateImportFailure(historyRecord.getId(), errorMsg);</span>
+                }
+
+<span class="nc" id="L101">                log.warn(&quot;Excel import completed with errors: {}&quot;, result.getErrors());</span>
+<span class="nc" id="L102">                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).body(result);</span>
+            }
+
+<span class="nc" id="L105">        } catch (Exception e) {</span>
+<span class="nc" id="L106">            long endTime = System.currentTimeMillis();</span>
+<span class="nc" id="L107">            double duration = (endTime - startTime) / 1000.0;</span>
+
+<span class="nc bnc" id="L109" title="All 2 branches missed.">            if (historyRecord != null) {</span>
+<span class="nc" id="L110">                importHistoryService.updateImportFailure(historyRecord.getId(), e.getMessage());</span>
+            }
+
+<span class="nc" id="L113">            log.error(&quot;Error importing Excel file&quot;, e);</span>
+<span class="nc" id="L114">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(</span>
+<span class="nc" id="L115">                ExcelImportService.ImportResult.builder()</span>
+<span class="nc" id="L116">                    .success(false)</span>
+<span class="nc" id="L117">                    .fileName(filename)</span>
+<span class="nc" id="L118">                    .errors(List.of(&quot;Import failed: &quot; + e.getMessage()))</span>
+<span class="nc" id="L119">                    .build()</span>
+            );
+        }
+    }
+
+    @GetMapping(&quot;/format&quot;)
+    @Operation(summary = &quot;Get Excel format info&quot;,
+               description = &quot;Returns information about the expected Excel file format&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getFormatInfo() {
+<span class="nc" id="L128">        return ResponseEntity.ok(Map.of(</span>
+<span class="nc" id="L129">            &quot;supportedFormats&quot;, List.of(&quot;.xlsx&quot;, &quot;.xls&quot;),</span>
+            &quot;maxFileSize&quot;, &quot;100MB&quot;,
+<span class="nc" id="L131">            &quot;sheets&quot;, List.of(</span>
+<span class="nc" id="L132">                Map.of(</span>
+                    &quot;name&quot;, &quot;Substations&quot;,
+<span class="nc" id="L134">                    &quot;columns&quot;, List.of(&quot;id&quot;, &quot;name&quot;, &quot;region&quot;),</span>
+                    &quot;description&quot;, &quot;Electrical substations&quot;
+                ),
+<span class="nc" id="L137">                Map.of(</span>
+                    &quot;name&quot;, &quot;Buses&quot;,
+<span class="nc" id="L139">                    &quot;columns&quot;, List.of(&quot;id&quot;, &quot;name&quot;, &quot;voltage&quot;, &quot;substation&quot;),</span>
+                    &quot;description&quot;, &quot;Bus bars / Nodes&quot;
+                ),
+<span class="nc" id="L142">                Map.of(</span>
+                    &quot;name&quot;, &quot;Lines&quot;,
+<span class="nc" id="L144">                    &quot;columns&quot;, List.of(&quot;id&quot;, &quot;name&quot;, &quot;from&quot;, &quot;to&quot;, &quot;length&quot;, &quot;r&quot;, &quot;x&quot;),</span>
+                    &quot;description&quot;, &quot;Transmission lines&quot;
+                ),
+<span class="nc" id="L147">                Map.of(</span>
+                    &quot;name&quot;, &quot;Transformers&quot;,
+<span class="nc" id="L149">                    &quot;columns&quot;, List.of(&quot;id&quot;, &quot;name&quot;, &quot;hv_bus&quot;, &quot;lv_bus&quot;, &quot;rated_s&quot;),</span>
+                    &quot;description&quot;, &quot;Power transformers&quot;
+                ),
+<span class="nc" id="L152">                Map.of(</span>
+                    &quot;name&quot;, &quot;Generators&quot;,
+<span class="nc" id="L154">                    &quot;columns&quot;, List.of(&quot;id&quot;, &quot;name&quot;, &quot;bus&quot;, &quot;max_p&quot;, &quot;min_p&quot;),</span>
+                    &quot;description&quot;, &quot;Generating units&quot;
+                ),
+<span class="nc" id="L157">                Map.of(</span>
+                    &quot;name&quot;, &quot;Loads&quot;,
+<span class="nc" id="L159">                    &quot;columns&quot;, List.of(&quot;id&quot;, &quot;name&quot;, &quot;bus&quot;, &quot;p&quot;, &quot;q&quot;),</span>
+                    &quot;description&quot;, &quot;Energy consumers&quot;
+                ),
+<span class="nc" id="L162">                Map.of(</span>
+                    &quot;name&quot;, &quot;Voltage Levels&quot;,
+<span class="nc" id="L164">                    &quot;columns&quot;, List.of(&quot;id&quot;, &quot;name&quot;, &quot;voltage&quot;, &quot;substation&quot;),</span>
+                    &quot;description&quot;, &quot;Voltage levels&quot;
+                )
+            ),
+<span class="nc" id="L168">            &quot;notes&quot;, List.of(</span>
+                &quot;First row must contain column headers&quot;,
+                &quot;Sheet names are case-insensitive&quot;,
+                &quot;Empty rows are skipped&quot;
+            )
+        ));
+    }
+
+    @GetMapping(&quot;/template&quot;)
+    @Operation(summary = &quot;Get Excel template info&quot;,
+               description = &quot;Returns information about available Excel templates&quot;)
+    public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getTemplate() {
+<span class="nc" id="L180">        return ResponseEntity.ok(Map.of(</span>
+            &quot;message&quot;, &quot;Use the /excel/format endpoint to see the expected format&quot;,
+<span class="nc" id="L182">            &quot;exampleSheets&quot;, List.of(</span>
+                &quot;Substations: id, name, region&quot;,
+                &quot;Buses: id, name, voltage, substation&quot;,
+                &quot;Lines: id, name, from, to, length, r, x&quot;,
+                &quot;Generators: id, name, bus, max_p, min_p&quot;,
+                &quot;Loads: id, name, bus, p, q&quot;
+            )
+        ));
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

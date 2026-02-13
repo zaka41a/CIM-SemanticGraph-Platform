@@ -1,0 +1,108 @@
+@startuml Use Case Diagram - CIM-SemanticGraph-Platform
+!theme vibrant
+title Use Case Diagram - CIM-SemanticGraph-Platform
+
+' Actors
+actor "Power System Engineer" as Engineer
+actor "System Administrator" as Admin
+actor "Data Analyst" as Analyst
+actor "Claude AI" as Claude #lightblue
+
+' System boundary
+rectangle "CIM-SemanticGraph-Platform" {
+
+  ' CIM Data Management
+  package "CIM Data Management" {
+    usecase "Import CIM Data\n(XML/RDF)" as UC1
+    usecase "Validate CIM Schema" as UC2
+    usecase "Transform CIM to RDF/OWL" as UC3
+    usecase "Export Knowledge Graph" as UC4
+  }
+
+  ' Knowledge Graph Operations
+  package "Knowledge Graph Operations" {
+    usecase "Execute SPARQL Queries" as UC5
+    usecase "Browse Knowledge Graph" as UC6
+    usecase "Visualize Network Topology" as UC7
+    usecase "Get Graph Statistics" as UC8
+  }
+
+  ' GraphRAG & LLM
+  package "GraphRAG & LLM Intelligence" {
+    usecase "Ask Natural Language Question" as UC9
+    usecase "Retrieve Graph Context" as UC10
+    usecase "Generate LLM Response" as UC11
+    usecase "Explain SPARQL Results" as UC12
+  }
+
+  ' Analysis Use Cases
+  package "Power System Analysis" {
+    usecase "Analyze Equipment Impact" as UC13
+    usecase "Verify Network Consistency" as UC14
+    usecase "Trace Power Flow Path" as UC15
+    usecase "Find Isolated Equipment" as UC16
+    usecase "Detect Configuration Issues" as UC17
+  }
+
+  ' Administration
+  package "System Administration" {
+    usecase "Configure System" as UC18
+    usecase "Monitor Performance" as UC19
+    usecase "Manage Users" as UC20
+    usecase "Backup Knowledge Graph" as UC21
+  }
+}
+
+' Actor relationships
+Engineer --> UC1
+Engineer --> UC5
+Engineer --> UC7
+Engineer --> UC9
+Engineer --> UC13
+Engineer --> UC14
+Engineer --> UC15
+
+Analyst --> UC6
+Analyst --> UC8
+Analyst --> UC9
+Analyst --> UC16
+Analyst --> UC17
+
+Admin --> UC18
+Admin --> UC19
+Admin --> UC20
+Admin --> UC21
+Admin --> UC4
+
+Claude --> UC11
+Claude --> UC12
+
+' Use case dependencies
+UC1 ..> UC2 : <<include>>
+UC1 ..> UC3 : <<include>>
+UC9 ..> UC10 : <<include>>
+UC10 ..> UC11 : <<include>>
+UC5 ..> UC12 : <<extend>>
+UC13 ..> UC10 : <<include>>
+UC14 ..> UC5 : <<include>>
+UC15 ..> UC5 : <<include>>
+
+' Notes
+note right of UC9
+  User asks question in natural language.
+  System uses GraphRAG to retrieve
+  relevant context and queries Claude AI.
+end note
+
+note right of UC13
+  Analyzes impact of equipment failure
+  by traversing the knowledge graph
+  and using LLM reasoning.
+end note
+
+note bottom of Claude
+  External LLM Service
+  (Anthropic Claude API)
+end note
+
+@enduml

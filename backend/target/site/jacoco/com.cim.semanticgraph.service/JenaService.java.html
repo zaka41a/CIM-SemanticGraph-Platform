@@ -1,0 +1,714 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JenaService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.service</a> &gt; <span class="el_source">JenaService.java</span></div><h1>JenaService.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.service;
+
+import com.cim.semanticgraph.config.JenaConfig;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.ontology.OntModel;
+import org.apache.jena.query.*;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdfconnection.RDFConnection;
+import org.apache.jena.update.UpdateAction;
+import org.apache.jena.update.UpdateFactory;
+import org.apache.jena.update.UpdateRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+<span class="fc" id="L25">@Slf4j</span>
+@Service
+public class JenaService {
+
+    private final Dataset dataset;
+    private final OntModel ontModel;
+    private final JenaConfig jenaConfig;
+
+    @Autowired(required = false)
+    private RDFConnection rdfConnection;
+
+    @Value(&quot;${jena.query.timeout}&quot;)
+    private long queryTimeout;
+
+    @Value(&quot;${jena.query.max-results}&quot;)
+    private int maxResults;
+
+    @Value(&quot;${cim.namespaces.cim}&quot;)
+    private String cimNamespace;
+
+    @Value(&quot;${cim.namespaces.rdf}&quot;)
+    private String rdfNamespace;
+
+    @Value(&quot;${cim.namespaces.rdfs}&quot;)
+    private String rdfsNamespace;
+
+<span class="fc" id="L51">    public JenaService(Dataset dataset, OntModel ontModel, JenaConfig jenaConfig) {</span>
+<span class="fc" id="L52">        this.dataset = dataset;</span>
+<span class="fc" id="L53">        this.ontModel = ontModel;</span>
+<span class="fc" id="L54">        this.jenaConfig = jenaConfig;</span>
+<span class="fc" id="L55">    }</span>
+
+    public Dataset getDataset() {
+<span class="nc" id="L58">        return dataset;</span>
+    }
+
+    public void addModel(Model model) {
+<span class="fc" id="L62">        long modelSize = model.size();</span>
+<span class="fc" id="L63">        log.info(&quot;Adding model with {} triples to dataset&quot;, modelSize);</span>
+
+<span class="pc bpc" id="L65" title="3 of 4 branches missed.">        if (jenaConfig.isRemoteMode() &amp;&amp; rdfConnection != null) {</span>
+<span class="nc" id="L66">            addModelFuseki(model);</span>
+        } else {
+<span class="fc" id="L68">            addModelEmbedded(model);</span>
+        }
+<span class="fc" id="L70">    }</span>
+
+    private void addModelFuseki(Model model) {
+        try {
+<span class="nc" id="L74">            rdfConnection.load(model);</span>
+<span class="nc" id="L75">            log.info(&quot;Model added via Fuseki successfully. {} triples were loaded.&quot;, model.size());</span>
+<span class="nc" id="L76">        } catch (Exception e) {</span>
+<span class="nc" id="L77">            log.error(&quot;Error adding model via Fuseki&quot;, e);</span>
+<span class="nc" id="L78">            throw new RuntimeException(&quot;Failed to add model via Fuseki: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L79">        }</span>
+<span class="nc" id="L80">    }</span>
+
+    private void addModelEmbedded(Model model) {
+<span class="fc" id="L83">        long modelSize = model.size();</span>
+
+<span class="pc bpc" id="L85" title="1 of 2 branches missed.">        if (dataset.isInTransaction()) {</span>
+<span class="nc" id="L86">            log.warn(&quot;Active transaction detected, ending it before starting new transaction&quot;);</span>
+<span class="nc" id="L87">            dataset.end();</span>
+        }
+
+<span class="fc" id="L90">        dataset.begin(ReadWrite.WRITE);</span>
+        try {
+<span class="fc" id="L92">            Model datasetModel = dataset.getDefaultModel();</span>
+<span class="fc" id="L93">            datasetModel.add(model);</span>
+<span class="fc" id="L94">            dataset.commit();</span>
+<span class="fc" id="L95">            log.info(&quot;Model added successfully. {} triples were added.&quot;, modelSize);</span>
+<span class="nc" id="L96">        } catch (Exception e) {</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">            if (dataset.isInTransaction()) {</span>
+                try {
+<span class="nc" id="L99">                    dataset.abort();</span>
+<span class="nc" id="L100">                } catch (Exception abortEx) {</span>
+<span class="nc" id="L101">                    log.warn(&quot;Could not abort transaction: {}&quot;, abortEx.getMessage());</span>
+<span class="nc" id="L102">                }</span>
+            }
+<span class="nc" id="L104">            log.error(&quot;Error adding model to dataset&quot;, e);</span>
+<span class="nc" id="L105">            throw new RuntimeException(&quot;Failed to add model: &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">            if (dataset.isInTransaction()) {</span>
+<span class="nc" id="L108">                dataset.end();</span>
+            }
+        }
+
+<span class="fc" id="L112">        dataset.begin(ReadWrite.READ);</span>
+        try {
+<span class="fc" id="L114">            long totalSize = dataset.getDefaultModel().size();</span>
+<span class="fc" id="L115">            dataset.commit();</span>
+<span class="fc" id="L116">            log.info(&quot;Total triples in dataset after addition: {}&quot;, totalSize);</span>
+<span class="nc" id="L117">        } catch (Exception e) {</span>
+<span class="nc" id="L118">            dataset.abort();</span>
+<span class="nc" id="L119">            log.warn(&quot;Could not get total size: {}&quot;, e.getMessage());</span>
+        } finally {
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">            if (dataset.isInTransaction()) {</span>
+<span class="nc" id="L122">                dataset.end();</span>
+            }
+        }
+<span class="fc" id="L125">    }</span>
+
+    public List&lt;Map&lt;String, String&gt;&gt; executeSparqlSelect(String sparqlQuery) {
+<span class="fc" id="L128">        log.debug(&quot;Executing SPARQL SELECT query: {}&quot;, sparqlQuery);</span>
+
+<span class="pc bpc" id="L130" title="3 of 4 branches missed.">        if (jenaConfig.isRemoteMode() &amp;&amp; rdfConnection != null) {</span>
+<span class="nc" id="L131">            return executeSparqlSelectFuseki(sparqlQuery);</span>
+        }
+<span class="fc" id="L133">        return executeSparqlSelectEmbedded(sparqlQuery);</span>
+    }
+
+    private List&lt;Map&lt;String, String&gt;&gt; executeSparqlSelectFuseki(String sparqlQuery) {
+<span class="nc" id="L137">        List&lt;Map&lt;String, String&gt;&gt; results = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L138">        String fullQuery = addPrefixes(sparqlQuery);</span>
+
+<span class="nc" id="L140">        try (QueryExecution qexec = rdfConnection.query(fullQuery)) {</span>
+<span class="nc" id="L141">            ResultSet resultSet = qexec.execSelect();</span>
+
+<span class="nc" id="L143">            int count = 0;</span>
+<span class="nc bnc" id="L144" title="All 4 branches missed.">            while (resultSet.hasNext() &amp;&amp; count &lt; maxResults) {</span>
+<span class="nc" id="L145">                QuerySolution solution = resultSet.nextSolution();</span>
+<span class="nc" id="L146">                Map&lt;String, String&gt; row = new HashMap&lt;&gt;();</span>
+
+<span class="nc" id="L148">                solution.varNames().forEachRemaining(varName -&gt; {</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">                    if (solution.get(varName) != null) {</span>
+<span class="nc" id="L150">                        row.put(varName, solution.get(varName).toString());</span>
+                    }
+<span class="nc" id="L152">                });</span>
+
+<span class="nc" id="L154">                results.add(row);</span>
+<span class="nc" id="L155">                count++;</span>
+<span class="nc" id="L156">            }</span>
+
+<span class="nc" id="L158">            log.info(&quot;Fuseki query returned {} results&quot;, results.size());</span>
+<span class="nc" id="L159">        } catch (Exception e) {</span>
+<span class="nc" id="L160">            log.error(&quot;Error executing SPARQL query via Fuseki&quot;, e);</span>
+<span class="nc" id="L161">            throw new RuntimeException(&quot;SPARQL query execution failed (Fuseki): &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L162">        }</span>
+
+<span class="nc" id="L164">        return results;</span>
+    }
+
+    private List&lt;Map&lt;String, String&gt;&gt; executeSparqlSelectEmbedded(String sparqlQuery) {
+<span class="fc" id="L168">        List&lt;Map&lt;String, String&gt;&gt; results = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L170">        dataset.begin(ReadWrite.READ);</span>
+        try {
+<span class="fc" id="L172">            Model model = dataset.getDefaultModel();</span>
+<span class="fc" id="L173">            Query query = QueryFactory.create(addPrefixes(sparqlQuery));</span>
+
+<span class="fc" id="L175">            try (QueryExecution qexec = QueryExecution.create()</span>
+<span class="fc" id="L176">                    .query(query)</span>
+<span class="fc" id="L177">                    .model(model)</span>
+<span class="fc" id="L178">                    .timeout(queryTimeout, java.util.concurrent.TimeUnit.MILLISECONDS)</span>
+<span class="fc" id="L179">                    .build()) {</span>
+<span class="fc" id="L180">                ResultSet resultSet = qexec.execSelect();</span>
+
+<span class="fc" id="L182">                int count = 0;</span>
+<span class="pc bpc" id="L183" title="1 of 4 branches missed.">                while (resultSet.hasNext() &amp;&amp; count &lt; maxResults) {</span>
+<span class="fc" id="L184">                    QuerySolution solution = resultSet.nextSolution();</span>
+<span class="fc" id="L185">                    Map&lt;String, String&gt; row = new HashMap&lt;&gt;();</span>
+
+<span class="fc" id="L187">                    solution.varNames().forEachRemaining(varName -&gt; {</span>
+<span class="pc bpc" id="L188" title="1 of 2 branches missed.">                        if (solution.get(varName) != null) {</span>
+<span class="fc" id="L189">                            row.put(varName, solution.get(varName).toString());</span>
+                        }
+<span class="fc" id="L191">                    });</span>
+
+<span class="fc" id="L193">                    results.add(row);</span>
+<span class="fc" id="L194">                    count++;</span>
+<span class="fc" id="L195">                }</span>
+
+<span class="fc" id="L197">                log.info(&quot;Query returned {} results&quot;, results.size());</span>
+            }
+
+<span class="fc" id="L200">            dataset.commit();</span>
+<span class="nc" id="L201">        } catch (Exception e) {</span>
+<span class="nc" id="L202">            dataset.abort();</span>
+<span class="nc" id="L203">            log.error(&quot;Error executing SPARQL query&quot;, e);</span>
+<span class="nc" id="L204">            throw new RuntimeException(&quot;SPARQL query execution failed: &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="fc" id="L206">            dataset.end();</span>
+        }
+
+<span class="fc" id="L209">        return results;</span>
+    }
+
+    public Model executeSparqlConstruct(String sparqlQuery) {
+<span class="nc" id="L213">        log.debug(&quot;Executing SPARQL CONSTRUCT query&quot;);</span>
+
+<span class="nc bnc" id="L215" title="All 4 branches missed.">        if (jenaConfig.isRemoteMode() &amp;&amp; rdfConnection != null) {</span>
+<span class="nc" id="L216">            return executeSparqlConstructFuseki(sparqlQuery);</span>
+        }
+<span class="nc" id="L218">        return executeSparqlConstructEmbedded(sparqlQuery);</span>
+    }
+
+    private Model executeSparqlConstructFuseki(String sparqlQuery) {
+        try {
+<span class="nc" id="L223">            Model resultModel = rdfConnection.queryConstruct(addPrefixes(sparqlQuery));</span>
+<span class="nc" id="L224">            log.info(&quot;Fuseki CONSTRUCT query returned {} triples&quot;, resultModel.size());</span>
+<span class="nc" id="L225">            return resultModel;</span>
+<span class="nc" id="L226">        } catch (Exception e) {</span>
+<span class="nc" id="L227">            log.error(&quot;Error executing SPARQL CONSTRUCT via Fuseki&quot;, e);</span>
+<span class="nc" id="L228">            throw new RuntimeException(&quot;SPARQL CONSTRUCT failed (Fuseki): &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    private Model executeSparqlConstructEmbedded(String sparqlQuery) {
+<span class="nc" id="L233">        dataset.begin(ReadWrite.READ);</span>
+        try {
+<span class="nc" id="L235">            Model model = dataset.getDefaultModel();</span>
+<span class="nc" id="L236">            Query query = QueryFactory.create(addPrefixes(sparqlQuery));</span>
+
+<span class="nc" id="L238">            try (QueryExecution qexec = QueryExecutionFactory.create(query, model)) {</span>
+<span class="nc" id="L239">                Model resultModel = qexec.execConstruct();</span>
+<span class="nc" id="L240">                log.info(&quot;CONSTRUCT query returned {} triples&quot;, resultModel.size());</span>
+<span class="nc" id="L241">                dataset.commit();</span>
+<span class="nc" id="L242">                return resultModel;</span>
+            }
+<span class="nc" id="L244">        } catch (Exception e) {</span>
+<span class="nc" id="L245">            dataset.abort();</span>
+<span class="nc" id="L246">            log.error(&quot;Error executing SPARQL CONSTRUCT query&quot;, e);</span>
+<span class="nc" id="L247">            throw new RuntimeException(&quot;SPARQL CONSTRUCT failed: &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L249">            dataset.end();</span>
+        }
+    }
+
+    public boolean executeSparqlAsk(String sparqlQuery) {
+<span class="nc" id="L254">        log.debug(&quot;Executing SPARQL ASK query&quot;);</span>
+
+<span class="nc bnc" id="L256" title="All 4 branches missed.">        if (jenaConfig.isRemoteMode() &amp;&amp; rdfConnection != null) {</span>
+<span class="nc" id="L257">            return executeSparqlAskFuseki(sparqlQuery);</span>
+        }
+<span class="nc" id="L259">        return executeSparqlAskEmbedded(sparqlQuery);</span>
+    }
+
+    private boolean executeSparqlAskFuseki(String sparqlQuery) {
+        try {
+<span class="nc" id="L264">            boolean result = rdfConnection.queryAsk(addPrefixes(sparqlQuery));</span>
+<span class="nc" id="L265">            log.info(&quot;Fuseki ASK query result: {}&quot;, result);</span>
+<span class="nc" id="L266">            return result;</span>
+<span class="nc" id="L267">        } catch (Exception e) {</span>
+<span class="nc" id="L268">            log.error(&quot;Error executing SPARQL ASK via Fuseki&quot;, e);</span>
+<span class="nc" id="L269">            throw new RuntimeException(&quot;SPARQL ASK failed (Fuseki): &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    private boolean executeSparqlAskEmbedded(String sparqlQuery) {
+<span class="nc" id="L274">        dataset.begin(ReadWrite.READ);</span>
+        try {
+<span class="nc" id="L276">            Model model = dataset.getDefaultModel();</span>
+<span class="nc" id="L277">            Query query = QueryFactory.create(addPrefixes(sparqlQuery));</span>
+
+<span class="nc" id="L279">            try (QueryExecution qexec = QueryExecutionFactory.create(query, model)) {</span>
+<span class="nc" id="L280">                boolean result = qexec.execAsk();</span>
+<span class="nc" id="L281">                log.info(&quot;ASK query result: {}&quot;, result);</span>
+<span class="nc" id="L282">                dataset.commit();</span>
+<span class="nc" id="L283">                return result;</span>
+            }
+<span class="nc" id="L285">        } catch (Exception e) {</span>
+<span class="nc" id="L286">            dataset.abort();</span>
+<span class="nc" id="L287">            log.error(&quot;Error executing SPARQL ASK query&quot;, e);</span>
+<span class="nc" id="L288">            throw new RuntimeException(&quot;SPARQL ASK failed: &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L290">            dataset.end();</span>
+        }
+    }
+
+    public void executeSparqlUpdate(String sparqlUpdate) {
+<span class="nc" id="L295">        log.debug(&quot;Executing SPARQL UPDATE&quot;);</span>
+
+<span class="nc bnc" id="L297" title="All 4 branches missed.">        if (jenaConfig.isRemoteMode() &amp;&amp; rdfConnection != null) {</span>
+<span class="nc" id="L298">            executeSparqlUpdateFuseki(sparqlUpdate);</span>
+        } else {
+<span class="nc" id="L300">            executeSparqlUpdateEmbedded(sparqlUpdate);</span>
+        }
+<span class="nc" id="L302">    }</span>
+
+    private void executeSparqlUpdateFuseki(String sparqlUpdate) {
+        try {
+<span class="nc" id="L306">            rdfConnection.update(addPrefixes(sparqlUpdate));</span>
+<span class="nc" id="L307">            log.info(&quot;Fuseki SPARQL UPDATE executed successfully&quot;);</span>
+<span class="nc" id="L308">        } catch (Exception e) {</span>
+<span class="nc" id="L309">            log.error(&quot;Error executing SPARQL UPDATE via Fuseki&quot;, e);</span>
+<span class="nc" id="L310">            throw new RuntimeException(&quot;SPARQL UPDATE failed (Fuseki): &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L311">        }</span>
+<span class="nc" id="L312">    }</span>
+
+    private void executeSparqlUpdateEmbedded(String sparqlUpdate) {
+<span class="nc" id="L315">        dataset.begin(ReadWrite.WRITE);</span>
+        try {
+<span class="nc" id="L317">            Model model = dataset.getDefaultModel();</span>
+<span class="nc" id="L318">            UpdateRequest update = UpdateFactory.create(addPrefixes(sparqlUpdate));</span>
+<span class="nc" id="L319">            UpdateAction.execute(update, model);</span>
+
+<span class="nc" id="L321">            dataset.commit();</span>
+<span class="nc" id="L322">            log.info(&quot;SPARQL UPDATE executed successfully&quot;);</span>
+<span class="nc" id="L323">        } catch (Exception e) {</span>
+<span class="nc" id="L324">            dataset.abort();</span>
+<span class="nc" id="L325">            log.error(&quot;Error executing SPARQL UPDATE&quot;, e);</span>
+<span class="nc" id="L326">            throw new RuntimeException(&quot;SPARQL UPDATE failed: &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L328">            dataset.end();</span>
+        }
+<span class="nc" id="L330">    }</span>
+
+    public void importRdfData(InputStream inputStream, String format) {
+<span class="nc" id="L333">        log.info(&quot;Importing RDF data in format: {}&quot;, format);</span>
+
+<span class="nc" id="L335">        Model tempModel = ModelFactory.createDefaultModel();</span>
+        try {
+<span class="nc" id="L337">            tempModel.read(inputStream, null, format);</span>
+<span class="nc" id="L338">            log.info(&quot;Read {} triples from input stream&quot;, tempModel.size());</span>
+<span class="nc" id="L339">        } catch (Exception e) {</span>
+<span class="nc" id="L340">            log.error(&quot;Error reading RDF data&quot;, e);</span>
+<span class="nc" id="L341">            throw new RuntimeException(&quot;Failed to read RDF data: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L342">        }</span>
+
+<span class="nc bnc" id="L344" title="All 4 branches missed.">        if (jenaConfig.isRemoteMode() &amp;&amp; rdfConnection != null) {</span>
+            try {
+<span class="nc" id="L346">                rdfConnection.load(tempModel);</span>
+<span class="nc" id="L347">                log.info(&quot;RDF data imported via Fuseki successfully. {} triples loaded.&quot;, tempModel.size());</span>
+<span class="nc" id="L348">            } catch (Exception e) {</span>
+<span class="nc" id="L349">                log.error(&quot;Error importing RDF data via Fuseki&quot;, e);</span>
+<span class="nc" id="L350">                throw new RuntimeException(&quot;RDF import failed (Fuseki): &quot; + e.getMessage(), e);</span>
+            } finally {
+<span class="nc" id="L352">                tempModel.close();</span>
+<span class="nc" id="L353">            }</span>
+        } else {
+<span class="nc bnc" id="L355" title="All 2 branches missed.">            if (dataset.isInTransaction()) {</span>
+<span class="nc" id="L356">                log.warn(&quot;Active transaction detected, ending it before starting new transaction&quot;);</span>
+<span class="nc" id="L357">                dataset.end();</span>
+            }
+
+<span class="nc" id="L360">            dataset.begin(ReadWrite.WRITE);</span>
+            try {
+<span class="nc" id="L362">                Model datasetModel = dataset.getDefaultModel();</span>
+<span class="nc" id="L363">                datasetModel.add(tempModel);</span>
+
+<span class="nc" id="L365">                long totalTriples = datasetModel.size();</span>
+<span class="nc" id="L366">                dataset.commit();</span>
+<span class="nc" id="L367">                log.info(&quot;RDF data imported successfully. Total triples in dataset: {}&quot;, totalTriples);</span>
+<span class="nc" id="L368">            } catch (Exception e) {</span>
+<span class="nc bnc" id="L369" title="All 2 branches missed.">                if (dataset.isInTransaction()) {</span>
+                    try {
+<span class="nc" id="L371">                        dataset.abort();</span>
+<span class="nc" id="L372">                    } catch (Exception abortEx) {</span>
+<span class="nc" id="L373">                        log.warn(&quot;Could not abort transaction: {}&quot;, abortEx.getMessage());</span>
+<span class="nc" id="L374">                    }</span>
+                }
+<span class="nc" id="L376">                log.error(&quot;Error importing RDF data into dataset&quot;, e);</span>
+<span class="nc" id="L377">                throw new RuntimeException(&quot;RDF import failed: &quot; + e.getMessage(), e);</span>
+            } finally {
+<span class="nc bnc" id="L379" title="All 2 branches missed.">                if (dataset.isInTransaction()) {</span>
+<span class="nc" id="L380">                    dataset.end();</span>
+                }
+<span class="nc" id="L382">                tempModel.close();</span>
+            }
+        }
+<span class="nc" id="L385">    }</span>
+
+    public String exportRdfData(String format) {
+<span class="nc" id="L388">        log.info(&quot;Exporting RDF data in format: {}&quot;, format);</span>
+
+<span class="nc bnc" id="L390" title="All 4 branches missed.">        if (jenaConfig.isRemoteMode() &amp;&amp; rdfConnection != null) {</span>
+            try {
+<span class="nc" id="L392">                Model model = rdfConnection.fetch();</span>
+<span class="nc" id="L393">                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();</span>
+<span class="nc" id="L394">                model.write(outputStream, format);</span>
+<span class="nc" id="L395">                String result = outputStream.toString();</span>
+<span class="nc" id="L396">                log.info(&quot;RDF data exported via Fuseki successfully. Size: {} bytes&quot;, result.length());</span>
+<span class="nc" id="L397">                return result;</span>
+<span class="nc" id="L398">            } catch (Exception e) {</span>
+<span class="nc" id="L399">                log.error(&quot;Error exporting RDF data via Fuseki&quot;, e);</span>
+<span class="nc" id="L400">                throw new RuntimeException(&quot;RDF export failed (Fuseki): &quot; + e.getMessage(), e);</span>
+            }
+        }
+
+<span class="nc" id="L404">        dataset.begin(ReadWrite.READ);</span>
+        try {
+<span class="nc" id="L406">            Model model = dataset.getDefaultModel();</span>
+<span class="nc" id="L407">            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();</span>
+<span class="nc" id="L408">            model.write(outputStream, format);</span>
+
+<span class="nc" id="L410">            dataset.commit();</span>
+<span class="nc" id="L411">            String result = outputStream.toString();</span>
+<span class="nc" id="L412">            log.info(&quot;RDF data exported successfully. Size: {} bytes&quot;, result.length());</span>
+<span class="nc" id="L413">            return result;</span>
+<span class="nc" id="L414">        } catch (Exception e) {</span>
+<span class="nc" id="L415">            dataset.abort();</span>
+<span class="nc" id="L416">            log.error(&quot;Error exporting RDF data&quot;, e);</span>
+<span class="nc" id="L417">            throw new RuntimeException(&quot;RDF export failed: &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L419">            dataset.end();</span>
+        }
+    }
+
+    public Model getModelCopy() {
+<span class="nc bnc" id="L424" title="All 4 branches missed.">        if (jenaConfig.isRemoteMode() &amp;&amp; rdfConnection != null) {</span>
+<span class="nc" id="L425">            log.debug(&quot;Fetching full model copy from Fuseki&quot;);</span>
+            try {
+<span class="nc" id="L427">                return rdfConnection.queryConstruct(&quot;CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }&quot;);</span>
+<span class="nc" id="L428">            } catch (Exception e) {</span>
+<span class="nc" id="L429">                log.error(&quot;Error fetching model from Fuseki&quot;, e);</span>
+<span class="nc" id="L430">                throw new RuntimeException(&quot;Failed to fetch model from Fuseki: &quot; + e.getMessage(), e);</span>
+            }
+        }
+
+<span class="nc" id="L434">        log.debug(&quot;Getting model copy from embedded TDB2&quot;);</span>
+<span class="nc" id="L435">        dataset.begin(ReadWrite.READ);</span>
+        try {
+<span class="nc" id="L437">            Model copy = ModelFactory.createDefaultModel();</span>
+<span class="nc" id="L438">            copy.add(dataset.getDefaultModel());</span>
+<span class="nc" id="L439">            dataset.commit();</span>
+<span class="nc" id="L440">            return copy;</span>
+<span class="nc" id="L441">        } catch (Exception e) {</span>
+<span class="nc" id="L442">            dataset.abort();</span>
+<span class="nc" id="L443">            throw new RuntimeException(&quot;Failed to get model copy: &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L445">            dataset.end();</span>
+        }
+    }
+
+    public Model getModel() {
+<span class="fc" id="L450">        return dataset.getDefaultModel();</span>
+    }
+
+    @Cacheable(&quot;triple-count&quot;)
+    public long getTripleCount() {
+<span class="pc bpc" id="L455" title="3 of 4 branches missed.">        if (jenaConfig.isRemoteMode() &amp;&amp; rdfConnection != null) {</span>
+            try {
+<span class="nc" id="L457">                List&lt;Map&lt;String, String&gt;&gt; results = executeSparqlSelect(</span>
+                        &quot;SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }&quot;);
+<span class="nc bnc" id="L459" title="All 4 branches missed.">                if (!results.isEmpty() &amp;&amp; results.get(0).containsKey(&quot;count&quot;)) {</span>
+<span class="nc" id="L460">                    return parseCountValue(results.get(0).get(&quot;count&quot;));</span>
+                }
+<span class="nc" id="L462">                return 0;</span>
+<span class="nc" id="L463">            } catch (Exception e) {</span>
+<span class="nc" id="L464">                log.error(&quot;Error getting triple count from Fuseki&quot;, e);</span>
+<span class="nc" id="L465">                return 0;</span>
+            }
+        }
+
+<span class="fc" id="L469">        dataset.begin(ReadWrite.READ);</span>
+        try {
+<span class="fc" id="L471">            Model model = dataset.getDefaultModel();</span>
+<span class="fc" id="L472">            long count = model.size();</span>
+<span class="fc" id="L473">            dataset.commit();</span>
+<span class="fc" id="L474">            log.debug(&quot;Total triples: {}&quot;, count);</span>
+<span class="fc" id="L475">            return count;</span>
+        } finally {
+<span class="fc" id="L477">            dataset.end();</span>
+        }
+    }
+
+    public void clearKnowledgeGraph() {
+<span class="nc" id="L482">        log.warn(&quot;Clearing entire knowledge graph...&quot;);</span>
+
+<span class="nc bnc" id="L484" title="All 4 branches missed.">        if (jenaConfig.isRemoteMode() &amp;&amp; rdfConnection != null) {</span>
+            try {
+<span class="nc" id="L486">                rdfConnection.update(&quot;DROP ALL&quot;);</span>
+<span class="nc" id="L487">                log.info(&quot;Knowledge graph cleared via Fuseki successfully&quot;);</span>
+<span class="nc" id="L488">            } catch (Exception e) {</span>
+<span class="nc" id="L489">                log.error(&quot;Error clearing knowledge graph via Fuseki&quot;, e);</span>
+<span class="nc" id="L490">                throw new RuntimeException(&quot;Clear failed (Fuseki): &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L491">            }</span>
+<span class="nc" id="L492">            return;</span>
+        }
+
+<span class="nc" id="L495">        dataset.begin(ReadWrite.WRITE);</span>
+        try {
+<span class="nc" id="L497">            Model model = dataset.getDefaultModel();</span>
+<span class="nc" id="L498">            model.removeAll();</span>
+<span class="nc" id="L499">            dataset.commit();</span>
+<span class="nc" id="L500">            log.info(&quot;Knowledge graph cleared successfully&quot;);</span>
+<span class="nc" id="L501">        } catch (Exception e) {</span>
+<span class="nc" id="L502">            dataset.abort();</span>
+<span class="nc" id="L503">            log.error(&quot;Error clearing knowledge graph&quot;, e);</span>
+<span class="nc" id="L504">            throw new RuntimeException(&quot;Clear failed: &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L506">            dataset.end();</span>
+        }
+<span class="nc" id="L508">    }</span>
+
+    public List&lt;Map&lt;String, String&gt;&gt; getResourceTriples(String resourceUri) {
+<span class="nc" id="L511">        log.debug(&quot;Getting triples for resource: {}&quot;, resourceUri);</span>
+
+<span class="nc" id="L513">        String query = &quot;&quot;&quot;</span>
+            SELECT ?p ?o
+            WHERE {
+                &lt;%s&gt; ?p ?o .
+            }
+<span class="nc" id="L518">            &quot;&quot;&quot;.formatted(resourceUri);</span>
+
+<span class="nc" id="L520">        return executeSparqlSelect(query);</span>
+    }
+
+    private String addPrefixes(String query) {
+<span class="pc bpc" id="L524" title="1 of 2 branches missed.">        if (query.contains(&quot;PREFIX&quot;)) {</span>
+<span class="fc" id="L525">            return query;</span>
+        }
+
+<span class="nc" id="L528">        StringBuilder prefixes = new StringBuilder();</span>
+<span class="nc" id="L529">        prefixes.append(&quot;PREFIX cim: &lt;&quot;).append(cimNamespace).append(&quot;&gt;\n&quot;);</span>
+<span class="nc" id="L530">        prefixes.append(&quot;PREFIX rdf: &lt;&quot;).append(rdfNamespace).append(&quot;&gt;\n&quot;);</span>
+<span class="nc" id="L531">        prefixes.append(&quot;PREFIX rdfs: &lt;&quot;).append(rdfsNamespace).append(&quot;&gt;\n&quot;);</span>
+<span class="nc" id="L532">        prefixes.append(&quot;PREFIX owl: &lt;http://www.w3.org/2002/07/owl#&gt;\n&quot;);</span>
+<span class="nc" id="L533">        prefixes.append(&quot;\n&quot;);</span>
+
+<span class="nc" id="L535">        return prefixes + query;</span>
+    }
+
+    public Map&lt;String, Object&gt; getGraphStatistics() {
+<span class="nc" id="L539">        log.info(&quot;Calculating knowledge graph statistics...&quot;);</span>
+
+<span class="nc" id="L541">        Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();</span>
+
+<span class="nc bnc" id="L543" title="All 4 branches missed.">        if (jenaConfig.isRemoteMode() &amp;&amp; rdfConnection != null) {</span>
+<span class="nc" id="L544">            return getGraphStatisticsFuseki();</span>
+        }
+
+<span class="nc" id="L547">        dataset.begin(ReadWrite.READ);</span>
+        try {
+<span class="nc" id="L549">            Model model = dataset.getDefaultModel();</span>
+
+<span class="nc" id="L551">            stats.put(&quot;totalTriples&quot;, model.size());</span>
+<span class="nc" id="L552">            stats.put(&quot;totalSubjects&quot;, countDistinctInModel(model, &quot;SELECT (COUNT(DISTINCT ?s) as ?count) WHERE { ?s ?p ?o }&quot;));</span>
+<span class="nc" id="L553">            stats.put(&quot;totalPredicates&quot;, countDistinctInModel(model, &quot;SELECT (COUNT(DISTINCT ?p) as ?count) WHERE { ?s ?p ?o }&quot;));</span>
+<span class="nc" id="L554">            stats.put(&quot;totalClasses&quot;, countDistinctInModel(model, &quot;SELECT (COUNT(DISTINCT ?class) as ?count) WHERE { ?s rdf:type ?class }&quot;));</span>
+
+<span class="nc" id="L556">            stats.put(&quot;substations&quot;, countCimEntitiesInModel(model, &quot;Substation&quot;));</span>
+<span class="nc" id="L557">            stats.put(&quot;generators&quot;, countCimEntitiesInModel(model, &quot;GeneratingUnit&quot;, &quot;SynchronousMachine&quot;));</span>
+<span class="nc" id="L558">            stats.put(&quot;transmissionLines&quot;, countCimEntitiesInModel(model, &quot;ACLineSegment&quot;));</span>
+<span class="nc" id="L559">            stats.put(&quot;transformers&quot;, countCimEntitiesInModel(model, &quot;PowerTransformer&quot;));</span>
+<span class="nc" id="L560">            stats.put(&quot;breakers&quot;, countCimEntitiesInModel(model, &quot;Breaker&quot;));</span>
+<span class="nc" id="L561">            stats.put(&quot;disconnectors&quot;, countCimEntitiesInModel(model, &quot;Disconnector&quot;));</span>
+<span class="nc" id="L562">            stats.put(&quot;loads&quot;, countCimEntitiesInModel(model, &quot;EnergyConsumer&quot;));</span>
+<span class="nc" id="L563">            stats.put(&quot;connectivityNodes&quot;, countCimEntitiesInModel(model, &quot;ConnectivityNode&quot;));</span>
+<span class="nc" id="L564">            stats.put(&quot;terminals&quot;, countCimEntitiesInModel(model, &quot;Terminal&quot;));</span>
+<span class="nc" id="L565">            stats.put(&quot;busbarSections&quot;, countCimEntitiesInModel(model, &quot;BusbarSection&quot;));</span>
+<span class="nc" id="L566">            stats.put(&quot;baseVoltages&quot;, countCimEntitiesInModel(model, &quot;BaseVoltage&quot;));</span>
+<span class="nc" id="L567">            stats.put(&quot;voltageLevels&quot;, countCimEntitiesInModel(model, &quot;VoltageLevel&quot;));</span>
+
+<span class="nc" id="L569">            dataset.commit();</span>
+<span class="nc" id="L570">            log.info(&quot;Statistics calculated: {}&quot;, stats);</span>
+<span class="nc" id="L571">        } catch (Exception e) {</span>
+<span class="nc" id="L572">            dataset.abort();</span>
+<span class="nc" id="L573">            log.error(&quot;Error calculating statistics&quot;, e);</span>
+<span class="nc" id="L574">            throw new RuntimeException(&quot;Failed to calculate statistics: &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L576">            dataset.end();</span>
+        }
+
+<span class="nc" id="L579">        return stats;</span>
+    }
+
+    private Map&lt;String, Object&gt; getGraphStatisticsFuseki() {
+<span class="nc" id="L583">        Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();</span>
+
+<span class="nc" id="L585">        stats.put(&quot;totalTriples&quot;, countFuseki(&quot;SELECT (COUNT(*) as ?count) WHERE { ?s ?p ?o }&quot;));</span>
+<span class="nc" id="L586">        stats.put(&quot;totalSubjects&quot;, countFuseki(&quot;SELECT (COUNT(DISTINCT ?s) as ?count) WHERE { ?s ?p ?o }&quot;));</span>
+<span class="nc" id="L587">        stats.put(&quot;totalPredicates&quot;, countFuseki(&quot;SELECT (COUNT(DISTINCT ?p) as ?count) WHERE { ?s ?p ?o }&quot;));</span>
+<span class="nc" id="L588">        stats.put(&quot;totalClasses&quot;, countFuseki(&quot;SELECT (COUNT(DISTINCT ?class) as ?count) WHERE { ?s rdf:type ?class }&quot;));</span>
+
+<span class="nc" id="L590">        stats.put(&quot;substations&quot;, countCimEntitiesFuseki(&quot;Substation&quot;));</span>
+<span class="nc" id="L591">        stats.put(&quot;generators&quot;, countCimEntitiesFuseki(&quot;GeneratingUnit&quot;, &quot;SynchronousMachine&quot;));</span>
+<span class="nc" id="L592">        stats.put(&quot;transmissionLines&quot;, countCimEntitiesFuseki(&quot;ACLineSegment&quot;));</span>
+<span class="nc" id="L593">        stats.put(&quot;transformers&quot;, countCimEntitiesFuseki(&quot;PowerTransformer&quot;));</span>
+<span class="nc" id="L594">        stats.put(&quot;breakers&quot;, countCimEntitiesFuseki(&quot;Breaker&quot;));</span>
+<span class="nc" id="L595">        stats.put(&quot;disconnectors&quot;, countCimEntitiesFuseki(&quot;Disconnector&quot;));</span>
+<span class="nc" id="L596">        stats.put(&quot;loads&quot;, countCimEntitiesFuseki(&quot;EnergyConsumer&quot;));</span>
+<span class="nc" id="L597">        stats.put(&quot;connectivityNodes&quot;, countCimEntitiesFuseki(&quot;ConnectivityNode&quot;));</span>
+<span class="nc" id="L598">        stats.put(&quot;terminals&quot;, countCimEntitiesFuseki(&quot;Terminal&quot;));</span>
+<span class="nc" id="L599">        stats.put(&quot;busbarSections&quot;, countCimEntitiesFuseki(&quot;BusbarSection&quot;));</span>
+<span class="nc" id="L600">        stats.put(&quot;baseVoltages&quot;, countCimEntitiesFuseki(&quot;BaseVoltage&quot;));</span>
+<span class="nc" id="L601">        stats.put(&quot;voltageLevels&quot;, countCimEntitiesFuseki(&quot;VoltageLevel&quot;));</span>
+
+<span class="nc" id="L603">        log.info(&quot;Fuseki statistics calculated: {}&quot;, stats);</span>
+<span class="nc" id="L604">        return stats;</span>
+    }
+
+    private long countFuseki(String queryString) {
+        try {
+<span class="nc" id="L609">            List&lt;Map&lt;String, String&gt;&gt; results = executeSparqlSelect(queryString);</span>
+<span class="nc bnc" id="L610" title="All 4 branches missed.">            if (!results.isEmpty() &amp;&amp; results.get(0).containsKey(&quot;count&quot;)) {</span>
+<span class="nc" id="L611">                return parseCountValue(results.get(0).get(&quot;count&quot;));</span>
+            }
+<span class="nc" id="L613">        } catch (Exception e) {</span>
+<span class="nc" id="L614">            log.error(&quot;Error counting via Fuseki: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L615">        }</span>
+<span class="nc" id="L616">        return 0;</span>
+    }
+
+    private long parseCountValue(String rawValue) {
+<span class="nc bnc" id="L620" title="All 2 branches missed.">        if (rawValue == null) {</span>
+<span class="nc" id="L621">            return 0;</span>
+        }
+
+<span class="nc" id="L624">        String sanitized = rawValue</span>
+<span class="nc" id="L625">                .replaceAll(&quot;\\^\\^.*&quot;, &quot;&quot;)</span>
+<span class="nc" id="L626">                .replace(&quot;\&quot;&quot;, &quot;&quot;)</span>
+<span class="nc" id="L627">                .trim();</span>
+
+<span class="nc bnc" id="L629" title="All 2 branches missed.">        if (sanitized.isEmpty()) {</span>
+<span class="nc" id="L630">            return 0;</span>
+        }
+
+        try {
+<span class="nc" id="L634">            return Long.parseLong(sanitized);</span>
+<span class="nc" id="L635">        } catch (NumberFormatException ex) {</span>
+<span class="nc" id="L636">            log.warn(&quot;Unable to parse count value '{}': {}&quot;, rawValue, ex.getMessage());</span>
+<span class="nc" id="L637">            return 0;</span>
+        }
+    }
+
+    private long countCimEntitiesFuseki(String... entityTypes) {
+<span class="nc" id="L642">        StringBuilder queryBuilder = new StringBuilder();</span>
+<span class="nc" id="L643">        queryBuilder.append(&quot;SELECT (COUNT(DISTINCT ?entity) as ?count) WHERE { &quot;);</span>
+
+<span class="nc bnc" id="L645" title="All 2 branches missed.">        if (entityTypes.length == 1) {</span>
+<span class="nc" id="L646">            queryBuilder.append(&quot;?entity rdf:type cim:&quot;).append(entityTypes[0]).append(&quot; . &quot;);</span>
+        } else {
+<span class="nc" id="L648">            queryBuilder.append(&quot;{ &quot;);</span>
+<span class="nc bnc" id="L649" title="All 2 branches missed.">            for (int i = 0; i &lt; entityTypes.length; i++) {</span>
+<span class="nc bnc" id="L650" title="All 2 branches missed.">                if (i &gt; 0) queryBuilder.append(&quot; UNION &quot;);</span>
+<span class="nc" id="L651">                queryBuilder.append(&quot;{ ?entity rdf:type cim:&quot;).append(entityTypes[i]).append(&quot; } &quot;);</span>
+            }
+<span class="nc" id="L653">            queryBuilder.append(&quot;} &quot;);</span>
+        }
+
+<span class="nc" id="L656">        queryBuilder.append(&quot;}&quot;);</span>
+<span class="nc" id="L657">        return countFuseki(queryBuilder.toString());</span>
+    }
+
+    private long countDistinctInModel(Model model, String queryString) {
+        try {
+<span class="nc" id="L662">            Query query = QueryFactory.create(addPrefixes(queryString));</span>
+<span class="nc" id="L663">            try (QueryExecution qexec = QueryExecutionFactory.create(query, model)) {</span>
+<span class="nc" id="L664">                ResultSet results = qexec.execSelect();</span>
+<span class="nc bnc" id="L665" title="All 2 branches missed.">                if (results.hasNext()) {</span>
+<span class="nc" id="L666">                    QuerySolution solution = results.nextSolution();</span>
+<span class="nc bnc" id="L667" title="All 2 branches missed.">                    if (solution.get(&quot;count&quot;) != null) {</span>
+<span class="nc" id="L668">                        return Long.parseLong(solution.get(&quot;count&quot;).asLiteral().getString());</span>
+                    }
+                }
+<span class="nc bnc" id="L671" title="All 2 branches missed.">            }</span>
+<span class="nc" id="L672">        } catch (Exception e) {</span>
+<span class="nc" id="L673">            log.error(&quot;Error counting in model: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L674">        }</span>
+<span class="nc" id="L675">        return 0;</span>
+    }
+
+    private long countCimEntitiesInModel(Model model, String... entityTypes) {
+<span class="nc" id="L679">        StringBuilder queryBuilder = new StringBuilder();</span>
+<span class="nc" id="L680">        queryBuilder.append(&quot;PREFIX cim: &lt;http://iec.ch/TC57/CIM100#&gt; &quot;);</span>
+<span class="nc" id="L681">        queryBuilder.append(&quot;PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; &quot;);</span>
+<span class="nc" id="L682">        queryBuilder.append(&quot;SELECT (COUNT(DISTINCT ?entity) as ?count) WHERE { &quot;);</span>
+
+<span class="nc bnc" id="L684" title="All 2 branches missed.">        if (entityTypes.length == 1) {</span>
+<span class="nc" id="L685">            queryBuilder.append(&quot;?entity rdf:type cim:&quot;).append(entityTypes[0]).append(&quot; . &quot;);</span>
+        } else {
+<span class="nc" id="L687">            queryBuilder.append(&quot;{ &quot;);</span>
+<span class="nc bnc" id="L688" title="All 2 branches missed.">            for (int i = 0; i &lt; entityTypes.length; i++) {</span>
+<span class="nc bnc" id="L689" title="All 2 branches missed.">                if (i &gt; 0) queryBuilder.append(&quot; UNION &quot;);</span>
+<span class="nc" id="L690">                queryBuilder.append(&quot;{ ?entity rdf:type cim:&quot;).append(entityTypes[i]).append(&quot; } &quot;);</span>
+            }
+<span class="nc" id="L692">            queryBuilder.append(&quot;} &quot;);</span>
+        }
+
+<span class="nc" id="L695">        queryBuilder.append(&quot;}&quot;);</span>
+
+        try {
+<span class="nc" id="L698">            Query query = QueryFactory.create(queryBuilder.toString());</span>
+<span class="nc" id="L699">            try (QueryExecution qexec = QueryExecutionFactory.create(query, model)) {</span>
+<span class="nc" id="L700">                ResultSet results = qexec.execSelect();</span>
+<span class="nc bnc" id="L701" title="All 2 branches missed.">                if (results.hasNext()) {</span>
+<span class="nc" id="L702">                    QuerySolution solution = results.nextSolution();</span>
+<span class="nc bnc" id="L703" title="All 2 branches missed.">                    if (solution.get(&quot;count&quot;) != null) {</span>
+<span class="nc" id="L704">                        return Long.parseLong(solution.get(&quot;count&quot;).asLiteral().getString());</span>
+                    }
+                }
+<span class="nc bnc" id="L707" title="All 2 branches missed.">            }</span>
+<span class="nc" id="L708">        } catch (Exception e) {</span>
+<span class="nc" id="L709">            log.error(&quot;Error counting CIM entities {}: {}&quot;, String.join(&quot;,&quot;, entityTypes), e.getMessage());</span>
+<span class="nc" id="L710">        }</span>
+<span class="nc" id="L711">        return 0;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

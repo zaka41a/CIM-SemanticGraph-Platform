@@ -1,0 +1,236 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix cim: <http://iec.ch/TC57/CIM100#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ====================
+# Example Power Grid Network in CIM/TURTLE Format
+# ====================
+
+# -------------------
+# Substations
+# -------------------
+
+cim:Substation_MainCity a cim:Substation ;
+    cim:IdentifiedObject.name "Main City Substation" ;
+    cim:IdentifiedObject.description "Primary 400kV/132kV substation serving downtown area" ;
+    cim:Substation.Region cim:Region_Metropolitan .
+
+cim:Substation_IndustrialZone a cim:Substation ;
+    cim:IdentifiedObject.name "Industrial Zone Substation" ;
+    cim:IdentifiedObject.description "Secondary 132kV/33kV substation for industrial loads" ;
+    cim:Substation.Region cim:Region_Industrial .
+
+# -------------------
+# Voltage Levels
+# -------------------
+
+cim:VoltageLevel_400kV a cim:VoltageLevel ;
+    cim:IdentifiedObject.name "400kV Level" ;
+    cim:VoltageLevel.BaseVoltage cim:BaseVoltage_400 ;
+    cim:VoltageLevel.Substation cim:Substation_MainCity ;
+    cim:VoltageLevel.highVoltageLimit "420.0"^^xsd:double ;
+    cim:VoltageLevel.lowVoltageLimit "380.0"^^xsd:double .
+
+cim:VoltageLevel_132kV a cim:VoltageLevel ;
+    cim:IdentifiedObject.name "132kV Level" ;
+    cim:VoltageLevel.BaseVoltage cim:BaseVoltage_132 ;
+    cim:VoltageLevel.Substation cim:Substation_MainCity ;
+    cim:VoltageLevel.highVoltageLimit "145.0"^^xsd:double ;
+    cim:VoltageLevel.lowVoltageLimit "120.0"^^xsd:double .
+
+# -------------------
+# Generating Units
+# -------------------
+
+cim:GeneratingUnit_CoalPlant1 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "Coal Power Plant Unit 1" ;
+    cim:IdentifiedObject.description "500MW coal-fired generating unit" ;
+    cim:GeneratingUnit.genControlSource cim:GeneratorControlSource.plantControl ;
+    cim:GeneratingUnit.maxOperatingP "500.0"^^xsd:double ;
+    cim:GeneratingUnit.minOperatingP "100.0"^^xsd:double ;
+    cim:GeneratingUnit.nominalP "500.0"^^xsd:double .
+
+cim:GeneratingUnit_WindFarm1 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "Offshore Wind Farm" ;
+    cim:IdentifiedObject.description "200MW offshore wind generation facility" ;
+    cim:GeneratingUnit.genControlSource cim:GeneratorControlSource.plantControl ;
+    cim:GeneratingUnit.maxOperatingP "200.0"^^xsd:double ;
+    cim:GeneratingUnit.minOperatingP "0.0"^^xsd:double ;
+    cim:GeneratingUnit.nominalP "200.0"^^xsd:double .
+
+cim:GeneratingUnit_SolarPark1 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "Solar Park 1" ;
+    cim:IdentifiedObject.description "100MW solar photovoltaic park" ;
+    cim:GeneratingUnit.genControlSource cim:GeneratorControlSource.plantControl ;
+    cim:GeneratingUnit.maxOperatingP "100.0"^^xsd:double ;
+    cim:GeneratingUnit.minOperatingP "0.0"^^xsd:double ;
+    cim:GeneratingUnit.nominalP "100.0"^^xsd:double .
+
+# -------------------
+# Synchronous Machines
+# -------------------
+
+cim:SynchMachine_CoalGen1 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "Coal Generator 1" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GeneratingUnit_CoalPlant1 ;
+    cim:SynchronousMachine.ratedPowerFactor "0.85"^^xsd:double ;
+    cim:SynchronousMachine.ratedS "588.24"^^xsd:double ;
+    cim:SynchronousMachine.type cim:SynchronousMachineKind.generator .
+
+# -------------------
+# AC Line Segments (Transmission Lines)
+# -------------------
+
+cim:Line_MainCity_Industrial a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "Main City - Industrial Zone Line" ;
+    cim:IdentifiedObject.description "400kV transmission line connecting substations" ;
+    cim:ACLineSegment.r "0.05"^^xsd:double ;
+    cim:ACLineSegment.x "0.15"^^xsd:double ;
+    cim:ACLineSegment.bch "0.0001"^^xsd:double ;
+    cim:Conductor.length "45.5"^^xsd:double .
+
+cim:Line_MainCity_Coastal a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "Main City - Coastal Line" ;
+    cim:IdentifiedObject.description "400kV transmission line to coastal region" ;
+    cim:ACLineSegment.r "0.08"^^xsd:double ;
+    cim:ACLineSegment.x "0.22"^^xsd:double ;
+    cim:ACLineSegment.bch "0.00015"^^xsd:double ;
+    cim:Conductor.length "78.3"^^xsd:double .
+
+cim:Line_Industrial_Coastal a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "Industrial - Coastal Line" ;
+    cim:IdentifiedObject.description "132kV backup transmission line" ;
+    cim:ACLineSegment.r "0.12"^^xsd:double ;
+    cim:ACLineSegment.x "0.35"^^xsd:double ;
+    cim:ACLineSegment.bch "0.0002"^^xsd:double ;
+    cim:Conductor.length "52.7"^^xsd:double .
+
+# -------------------
+# Power Transformers
+# -------------------
+
+cim:Transformer_T1 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "Main Transformer T1" ;
+    cim:IdentifiedObject.description "400/132kV 300MVA power transformer" ;
+    cim:PowerTransformer.Substation cim:Substation_MainCity .
+
+cim:TransformerEnd_T1_HV a cim:PowerTransformerEnd ;
+    cim:IdentifiedObject.name "T1 High Voltage Winding" ;
+    cim:PowerTransformerEnd.PowerTransformer cim:Transformer_T1 ;
+    cim:PowerTransformerEnd.ratedS "300.0"^^xsd:double ;
+    cim:PowerTransformerEnd.ratedU "400.0"^^xsd:double ;
+    cim:TransformerEnd.endNumber "1"^^xsd:integer .
+
+cim:TransformerEnd_T1_LV a cim:PowerTransformerEnd ;
+    cim:IdentifiedObject.name "T1 Low Voltage Winding" ;
+    cim:PowerTransformerEnd.PowerTransformer cim:Transformer_T1 ;
+    cim:PowerTransformerEnd.ratedS "300.0"^^xsd:double ;
+    cim:PowerTransformerEnd.ratedU "132.0"^^xsd:double ;
+    cim:TransformerEnd.endNumber "2"^^xsd:integer .
+
+cim:Transformer_T2 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "Industrial Transformer T2" ;
+    cim:IdentifiedObject.description "132/33kV 150MVA transformer" ;
+    cim:PowerTransformer.Substation cim:Substation_IndustrialZone .
+
+# -------------------
+# Circuit Breakers
+# -------------------
+
+cim:Breaker_CB1 a cim:Breaker ;
+    cim:IdentifiedObject.name "Circuit Breaker CB1" ;
+    cim:IdentifiedObject.description "400kV circuit breaker for line protection" ;
+    cim:Breaker.ratedCurrent "2000.0"^^xsd:double ;
+    cim:Switch.normalOpen "false"^^xsd:boolean .
+
+cim:Breaker_CB2 a cim:Breaker ;
+    cim:IdentifiedObject.name "Circuit Breaker CB2" ;
+    cim:IdentifiedObject.description "400kV bus coupler breaker" ;
+    cim:Breaker.ratedCurrent "2500.0"^^xsd:double ;
+    cim:Switch.normalOpen "true"^^xsd:boolean .
+
+cim:Breaker_CB3 a cim:Breaker ;
+    cim:IdentifiedObject.name "Circuit Breaker CB3" ;
+    cim:IdentifiedObject.description "132kV feeder breaker" ;
+    cim:Breaker.ratedCurrent "1500.0"^^xsd:double ;
+    cim:Switch.normalOpen "false"^^xsd:boolean .
+
+# -------------------
+# Energy Consumers (Loads)
+# -------------------
+
+cim:Load_Industrial1 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "Industrial Load 1" ;
+    cim:IdentifiedObject.description "Large industrial manufacturing facility" ;
+    cim:EnergyConsumer.p "150.0"^^xsd:double ;
+    cim:EnergyConsumer.q "75.0"^^xsd:double ;
+    cim:EnergyConsumer.pfixed "150.0"^^xsd:double ;
+    cim:EnergyConsumer.qfixed "75.0"^^xsd:double .
+
+cim:Load_Commercial1 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "Commercial Load 1" ;
+    cim:IdentifiedObject.description "Downtown commercial district" ;
+    cim:EnergyConsumer.p "80.0"^^xsd:double ;
+    cim:EnergyConsumer.q "35.0"^^xsd:double ;
+    cim:EnergyConsumer.pfixed "80.0"^^xsd:double ;
+    cim:EnergyConsumer.qfixed "35.0"^^xsd:double .
+
+cim:Load_Residential1 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "Residential Load 1" ;
+    cim:IdentifiedObject.description "Urban residential area" ;
+    cim:EnergyConsumer.p "120.0"^^xsd:double ;
+    cim:EnergyConsumer.q "50.0"^^xsd:double ;
+    cim:EnergyConsumer.pfixed "120.0"^^xsd:double ;
+    cim:EnergyConsumer.qfixed "50.0"^^xsd:double .
+
+# -------------------
+# Connectivity Nodes (Busbars)
+# -------------------
+
+cim:ConnNode_400kV_Bus1 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "400kV Bus 1" ;
+    cim:IdentifiedObject.description "Main 400kV busbar" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VoltageLevel_400kV .
+
+cim:ConnNode_400kV_Bus2 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "400kV Bus 2" ;
+    cim:IdentifiedObject.description "Secondary 400kV busbar" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VoltageLevel_400kV .
+
+cim:ConnNode_132kV_Bus1 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "132kV Bus 1" ;
+    cim:IdentifiedObject.description "Main 132kV busbar" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VoltageLevel_132kV .
+
+# -------------------
+# Base Voltages
+# -------------------
+
+cim:BaseVoltage_400 a cim:BaseVoltage ;
+    cim:IdentifiedObject.name "400 kV" ;
+    cim:BaseVoltage.nominalVoltage "400.0"^^xsd:double .
+
+cim:BaseVoltage_132 a cim:BaseVoltage ;
+    cim:IdentifiedObject.name "132 kV" ;
+    cim:BaseVoltage.nominalVoltage "132.0"^^xsd:double .
+
+cim:BaseVoltage_33 a cim:BaseVoltage ;
+    cim:IdentifiedObject.name "33 kV" ;
+    cim:BaseVoltage.nominalVoltage "33.0"^^xsd:double .
+
+# -------------------
+# Geographic Regions
+# -------------------
+
+cim:Region_Metropolitan a cim:GeographicalRegion ;
+    cim:IdentifiedObject.name "Metropolitan Region" ;
+    cim:IdentifiedObject.description "Urban metropolitan area" .
+
+cim:Region_Industrial a cim:GeographicalRegion ;
+    cim:IdentifiedObject.name "Industrial Region" ;
+    cim:IdentifiedObject.description "Heavy industrial zone" .
+
+cim:Region_Coastal a cim:GeographicalRegion ;
+    cim:IdentifiedObject.name "Coastal Region" ;
+    cim:IdentifiedObject.description "Coastal and offshore areas" .

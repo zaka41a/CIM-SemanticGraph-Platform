@@ -1,0 +1,170 @@
+@startuml Sequence Diagram - CIM Data Import
+!theme vibrant
+title Sequence Diagram - CIM Data Import & Transformation
+
+actor "Engineer" as User
+participant "Frontend" as Frontend
+participant "CimController" as Controller
+participant "CimTransformerService" as Transformer
+participant "JenaService" as Jena
+participant "OntModel\n(OWL Reasoner)" as OntModel
+database "Knowledge Graph\n(TDB2)" as KG
+
+User -> Frontend: Upload CIM file\n(XML/RDF format)
+
+Frontend -> Controller: POST /api/cim/import\nMultipartFile
+activate Controller
+
+Controller -> Controller: Validate file:\n- Size < 100MB\n- Format supported\n- Not empty
+
+alt File validation fails
+  Controller --> Frontend: HTTP 400 Bad Request
+  Frontend --> User: "Invalid file"
+else File validation OK
+
+  == Step 1: Parse & Transform ==
+  Controller -> Transformer: transformCimXmlToRdf(\ninputStream)
+  activate Transformer
+
+  Transformer -> Transformer: Parse CIM/XML
+  note right
+    Parse CIM elements:
+    - Substations
+    - Transmission Lines
+    - Generators
+    - Transformers
+    - Breakers
+    - Connectivity Nodes
+  end note
+
+  Transformer -> Transformer: Map to RDF/OWL
+  note right
+    Transform to triples:
+
+    <Substation_123>
+      rdf:type cim:Substation
+      cim:name "Main Station"
+      cim:voltage "110000"
+      cim:location "..."
+  end note
+
+  Transformer --> Controller: RDF Model\n(in-memory)
+  deactivate Transformer
+
+  == Step 2: Validate Schema ==
+  Controller -> Transformer: validateCimSchema(model)
+  activate Transformer
+
+  Transformer -> OntModel: Check ontology compliance
+  activate OntModel
+
+  OntModel -> OntModel: Verify:\n- Class definitions\n- Property domains/ranges\n- Cardinality constraints
+
+  alt Schema validation fails
+    OntModel --> Transformer: Validation errors
+    deactivate OntModel
+    Transformer --> Controller: ValidationResult\n{valid: false, errors: [...]}
+    deactivate Transformer
+    Controller --> Frontend: HTTP 422 Unprocessable
+    Frontend --> User: Show validation errors
+  else Schema validation OK
+    OntModel --> Transformer: Valid
+    deactivate OntModel
+    Transformer --> Controller: ValidationResult\n{valid: true}
+    deactivate Transformer
+
+    == Step 3: Enrich with Inference ==
+    Controller -> Transformer: enrichWithInferences(model)
+    activate Transformer
+
+    Transformer -> OntModel: Apply OWL reasoning
+    activate OntModel
+
+    OntModel -> OntModel: Infer new triples:\n- Transitive properties\n- Inverse properties\n- Class hierarchies
+    note right
+      Example inferred triples:
+
+      If: Line_456 connects Sub_A to Sub_B
+      Infer: Sub_A is connected to Sub_B
+             (inverse relationship)
+
+      If: Transformer_789 is in Sub_A
+          Sub_A powers Region_North
+      Infer: Transformer_789 indirectly
+             powers Region_North
+    end note
+
+    OntModel --> Transformer: Enriched model
+    deactivate OntModel
+    Transformer --> Controller: Enriched RDF Model
+    deactivate Transformer
+
+    == Step 4: Import to Knowledge Graph ==
+    Controller -> Jena: importRdfData(\nmodel, "RDF/XML")
+    activate Jena
+
+    Jena -> KG: Begin transaction
+    activate KG
+
+    Jena -> KG: Write triples to TDB2
+    note right
+      Persistent storage of:
+      - Original triples
+      - Inferred triples
+      - Metadata
+    end note
+
+    KG --> Jena: Transaction committed
+    deactivate KG
+
+    Jena -> Jena: Update statistics
+    Jena --> Controller: Import successful\n{triplesCount: 15743}
+    deactivate Jena
+
+    == Step 5: Generate Statistics ==
+    Controller -> Jena: getGraphStatistics()
+    activate Jena
+
+    Jena -> KG: Query statistics
+    activate KG
+    KG --> Jena: Stats data
+    deactivate KG
+
+    Jena --> Controller: {\n totalTriples,\n totalSubjects,\n totalClasses,\n ...\n}
+    deactivate Jena
+
+    Controller --> Frontend: HTTP 200 OK\n{\n status: "success",\n triplesImported: 15743,\n inferredTriples: 3421,\n statistics: {...}\n}
+    deactivate Controller
+
+    Frontend -> Frontend: Show success message\n+ statistics
+    Frontend --> User: "Import successful!\n15,743 triples imported"
+
+  end
+end
+
+== Post-Import Operations ==
+User -> Frontend: View imported data
+Frontend -> Controller: GET /api/cim/statistics
+activate Controller
+Controller -> Jena: getGraphStatistics()
+activate Jena
+Jena --> Controller: Statistics
+deactivate Jena
+Controller --> Frontend: Statistics JSON
+deactivate Controller
+Frontend --> User: Display dashboard
+
+note over User, KG
+  **Performance:**
+  - Small file (< 1MB): 1-2 seconds
+  - Medium file (10MB): 5-10 seconds
+  - Large file (100MB): 30-60 seconds
+
+  **Statistics tracked:**
+  - Total triples
+  - Equipment count by type
+  - Network connectivity
+  - Inference coverage
+end note
+
+@enduml

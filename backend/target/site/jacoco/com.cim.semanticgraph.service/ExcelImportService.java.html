@@ -1,0 +1,739 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ExcelImportService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.service</a> &gt; <span class="el_source">ExcelImportService.java</span></div><h1>ExcelImportService.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.rdf.model.*;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
+
+<span class="nc" id="L18">@Slf4j</span>
+@Service
+<span class="nc" id="L20">@RequiredArgsConstructor</span>
+public class ExcelImportService {
+
+    private final JenaService jenaService;
+
+    @Value(&quot;${cim.namespaces.cim:http://iec.ch/TC57/CIM100#}&quot;)
+    private String cimNamespace;
+
+    private static final String BASE_URI = &quot;http://cim-platform.com/network/&quot;;
+
+    public ImportResult importExcel(MultipartFile file) throws IOException {
+<span class="nc" id="L31">        log.info(&quot;Importing Excel file: {}&quot;, file.getOriginalFilename());</span>
+<span class="nc" id="L32">        long startTime = System.currentTimeMillis();</span>
+
+<span class="nc" id="L34">        try (InputStream is = file.getInputStream();</span>
+<span class="nc" id="L35">             Workbook workbook = new XSSFWorkbook(is)) {</span>
+
+<span class="nc" id="L37">            Model model = ModelFactory.createDefaultModel();</span>
+<span class="nc" id="L38">            model.setNsPrefix(&quot;cim&quot;, cimNamespace);</span>
+<span class="nc" id="L39">            model.setNsPrefix(&quot;rdf&quot;, RDF.getURI());</span>
+<span class="nc" id="L40">            model.setNsPrefix(&quot;rdfs&quot;, RDFS.getURI());</span>
+
+<span class="nc" id="L42">            ImportResult.ImportResultBuilder resultBuilder = ImportResult.builder()</span>
+<span class="nc" id="L43">                    .fileName(file.getOriginalFilename());</span>
+
+<span class="nc" id="L45">            int totalEntities = 0;</span>
+<span class="nc" id="L46">            List&lt;String&gt; importedSheets = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L47">            List&lt;String&gt; errors = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L49">            log.info(&quot;Processing Excel file with {} sheets&quot;, workbook.getNumberOfSheets());</span>
+<span class="nc bnc" id="L50" title="All 2 branches missed.">            for (int i = 0; i &lt; workbook.getNumberOfSheets(); i++) {</span>
+<span class="nc" id="L51">                Sheet sheet = workbook.getSheetAt(i);</span>
+<span class="nc" id="L52">                String sheetName = sheet.getSheetName();</span>
+<span class="nc" id="L53">                String sheetNameLower = sheetName.toLowerCase().trim();</span>
+
+<span class="nc" id="L55">                log.info(&quot;Processing sheet {}: '{}' (normalized: '{}')&quot;, i + 1, sheetName, sheetNameLower);</span>
+
+                try {
+<span class="nc" id="L58">                    int count = 0;</span>
+<span class="nc" id="L59">                    long triplesBefore = model.size();</span>
+
+<span class="nc bnc" id="L61" title="All 4 branches missed.">                    if (sheetNameLower.contains(&quot;substation&quot;) || sheetNameLower.contains(&quot;poste&quot;)) {</span>
+<span class="nc" id="L62">                        log.info(&quot;Detected as Substations sheet&quot;);</span>
+<span class="nc" id="L63">                        count = importSubstations(sheet, model);</span>
+<span class="nc bnc" id="L64" title="All 6 branches missed.">                    } else if (sheetNameLower.contains(&quot;bus&quot;) || sheetNameLower.contains(&quot;noeud&quot;) || sheetNameLower.contains(&quot;jeu&quot;)) {</span>
+<span class="nc" id="L65">                        log.info(&quot;Detected as Buses sheet&quot;);</span>
+<span class="nc" id="L66">                        count = importBuses(sheet, model);</span>
+<span class="nc bnc" id="L67" title="All 4 branches missed.">                    } else if (sheetNameLower.contains(&quot;line&quot;) || sheetNameLower.contains(&quot;ligne&quot;)) {</span>
+<span class="nc" id="L68">                        log.info(&quot;Detected as Lines sheet&quot;);</span>
+<span class="nc" id="L69">                        count = importLines(sheet, model);</span>
+<span class="nc bnc" id="L70" title="All 4 branches missed.">                    } else if (sheetNameLower.contains(&quot;transformer&quot;) || sheetNameLower.contains(&quot;transfo&quot;)) {</span>
+<span class="nc" id="L71">                        log.info(&quot;Detected as Transformers sheet&quot;);</span>
+<span class="nc" id="L72">                        count = importTransformers(sheet, model);</span>
+<span class="nc bnc" id="L73" title="All 6 branches missed.">                    } else if (sheetNameLower.contains(&quot;generator&quot;) || sheetNameLower.contains(&quot;generateur&quot;) || sheetNameLower.contains(&quot;production&quot;)) {</span>
+<span class="nc" id="L74">                        log.info(&quot;Detected as Generators sheet&quot;);</span>
+<span class="nc" id="L75">                        count = importGenerators(sheet, model);</span>
+<span class="nc bnc" id="L76" title="All 6 branches missed.">                    } else if (sheetNameLower.contains(&quot;load&quot;) || sheetNameLower.contains(&quot;charge&quot;) || sheetNameLower.contains(&quot;consommation&quot;)) {</span>
+<span class="nc" id="L77">                        log.info(&quot;Detected as Loads sheet&quot;);</span>
+<span class="nc" id="L78">                        count = importLoads(sheet, model);</span>
+<span class="nc bnc" id="L79" title="All 4 branches missed.">                    } else if (sheetNameLower.contains(&quot;voltage&quot;) || sheetNameLower.contains(&quot;tension&quot;)) {</span>
+<span class="nc" id="L80">                        log.info(&quot;Detected as Voltage Levels sheet&quot;);</span>
+<span class="nc" id="L81">                        count = importVoltageLevels(sheet, model);</span>
+                    } else {
+<span class="nc" id="L83">                        log.warn(&quot;Skipping unrecognized sheet: '{}'. Expected: Substations, Buses, Lines, Transformers, Generators, Loads, or Voltage Levels&quot;, sheetName);</span>
+<span class="nc" id="L84">                        continue;</span>
+                    }
+
+<span class="nc" id="L87">                    long triplesAfter = model.size();</span>
+<span class="nc" id="L88">                    long triplesAdded = triplesAfter - triplesBefore;</span>
+<span class="nc" id="L89">                    log.info(&quot;Sheet '{}': {} entities imported, {} triples created (before: {}, after: {})&quot;,</span>
+<span class="nc" id="L90">                            sheetName, count, triplesAdded, triplesBefore, triplesAfter);</span>
+
+<span class="nc bnc" id="L92" title="All 2 branches missed.">                    if (count &gt; 0) {</span>
+<span class="nc" id="L93">                        totalEntities += count;</span>
+<span class="nc" id="L94">                        importedSheets.add(sheet.getSheetName() + &quot; (&quot; + count + &quot; entities)&quot;);</span>
+<span class="nc" id="L95">                        log.info(&quot;Imported {} entities from sheet: {}&quot;, count, sheet.getSheetName());</span>
+                    }
+
+<span class="nc" id="L98">                } catch (Exception e) {</span>
+<span class="nc" id="L99">                    String error = &quot;Error processing sheet &quot; + sheet.getSheetName() + &quot;: &quot; + e.getMessage();</span>
+<span class="nc" id="L100">                    log.error(error, e);</span>
+<span class="nc" id="L101">                    errors.add(error);</span>
+<span class="nc" id="L102">                }</span>
+            }
+
+<span class="nc" id="L105">            log.info(&quot;Model statistics before adding to knowledge graph:&quot;);</span>
+<span class="nc" id="L106">            log.info(&quot;  - Total triples in model: {}&quot;, model.size());</span>
+<span class="nc" id="L107">            log.info(&quot;  - Total entities imported: {}&quot;, totalEntities);</span>
+<span class="nc" id="L108">            log.info(&quot;  - Sheets processed: {}&quot;, importedSheets.size());</span>
+
+<span class="nc bnc" id="L110" title="All 2 branches missed.">            if (model.size() &gt; 0) {</span>
+<span class="nc" id="L111">                jenaService.addModel(model);</span>
+<span class="nc" id="L112">                log.info(&quot;Successfully added {} triples to knowledge graph&quot;, model.size());</span>
+            } else {
+<span class="nc" id="L114">                log.warn(&quot;Model is empty! No triples were created. Check if sheets were recognized and data was parsed correctly.&quot;);</span>
+<span class="nc" id="L115">                errors.add(&quot;No triples were created from the Excel file. Please check the file format and column names.&quot;);</span>
+            }
+
+<span class="nc" id="L118">            long executionTime = System.currentTimeMillis() - startTime;</span>
+
+<span class="nc" id="L120">            long finalTripleCount = model.size();</span>
+<span class="nc bnc" id="L121" title="All 4 branches missed.">            boolean isSuccess = errors.isEmpty() &amp;&amp; finalTripleCount &gt; 0;</span>
+
+<span class="nc" id="L123">            ImportResult finalResult = resultBuilder</span>
+<span class="nc" id="L124">                    .success(isSuccess)</span>
+<span class="nc" id="L125">                    .entitiesImported(totalEntities)</span>
+<span class="nc" id="L126">                    .triplesCreated(finalTripleCount)</span>
+<span class="nc" id="L127">                    .sheetsProcessed(importedSheets)</span>
+<span class="nc" id="L128">                    .errors(errors)</span>
+<span class="nc" id="L129">                    .executionTimeMs(executionTime)</span>
+<span class="nc" id="L130">                    .build();</span>
+
+<span class="nc" id="L132">            log.info(&quot;Excel Import Summary:&quot;);</span>
+<span class="nc" id="L133">            log.info(&quot;  - Success: {}&quot;, isSuccess);</span>
+<span class="nc" id="L134">            log.info(&quot;  - Entities Imported: {}&quot;, totalEntities);</span>
+<span class="nc" id="L135">            log.info(&quot;  - Triples Created: {}&quot;, finalTripleCount);</span>
+<span class="nc" id="L136">            log.info(&quot;  - Sheets Processed: {}&quot;, importedSheets.size());</span>
+<span class="nc" id="L137">            log.info(&quot;  - Errors: {}&quot;, errors.size());</span>
+<span class="nc" id="L138">            log.info(&quot;  - Execution Time: {} ms&quot;, executionTime);</span>
+
+<span class="nc" id="L140">            return finalResult;</span>
+
+<span class="nc" id="L142">        } catch (Exception e) {</span>
+<span class="nc" id="L143">            log.error(&quot;Error importing Excel file&quot;, e);</span>
+<span class="nc" id="L144">            throw new IOException(&quot;Failed to import Excel: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    private int importSubstations(Sheet sheet, Model model) {
+<span class="nc" id="L149">        log.info(&quot;Importing substations from sheet: {}&quot;, sheet.getSheetName());</span>
+
+<span class="nc" id="L151">        Map&lt;String, Integer&gt; columns = getColumnMapping(sheet);</span>
+<span class="nc" id="L152">        int count = 0;</span>
+<span class="nc" id="L153">        int processedRows = 0;</span>
+
+<span class="nc bnc" id="L155" title="All 2 branches missed.">        for (int i = 1; i &lt;= sheet.getLastRowNum(); i++) {</span>
+<span class="nc" id="L156">            Row row = sheet.getRow(i);</span>
+<span class="nc bnc" id="L157" title="All 4 branches missed.">            if (row == null || isRowEmpty(row)) {</span>
+<span class="nc" id="L158">                log.trace(&quot;Skipping empty row {} in substations sheet&quot;, i);</span>
+<span class="nc" id="L159">                continue;</span>
+            }
+
+<span class="nc" id="L162">            processedRows++;</span>
+
+<span class="nc" id="L164">            String id = getCellValue(row, columns.getOrDefault(&quot;id&quot;, 0));</span>
+<span class="nc" id="L165">            String name = getCellValue(row, columns.getOrDefault(&quot;name&quot;, columns.getOrDefault(&quot;nom&quot;, 1)));</span>
+
+<span class="nc bnc" id="L167" title="All 4 branches missed.">            if (id == null || id.isEmpty()) {</span>
+<span class="nc" id="L168">                id = &quot;SUB_&quot; + i;</span>
+            }
+
+<span class="nc" id="L171">            Resource substation = model.createResource(BASE_URI + &quot;Substation/&quot; + sanitizeId(id));</span>
+<span class="nc" id="L172">            substation.addProperty(RDF.type, model.createResource(cimNamespace + &quot;Substation&quot;));</span>
+
+<span class="nc bnc" id="L174" title="All 4 branches missed.">            if (name != null &amp;&amp; !name.isEmpty()) {</span>
+<span class="nc" id="L175">                substation.addProperty(model.createProperty(cimNamespace + &quot;IdentifiedObject.name&quot;),</span>
+<span class="nc" id="L176">                        model.createLiteral(name));</span>
+            }
+
+<span class="nc" id="L179">            String region = getCellValue(row, columns.getOrDefault(&quot;region&quot;, -1));</span>
+<span class="nc bnc" id="L180" title="All 4 branches missed.">            if (region != null &amp;&amp; !region.isEmpty()) {</span>
+<span class="nc" id="L181">                Resource regionRes = model.createResource(BASE_URI + &quot;SubGeographicalRegion/&quot; + sanitizeId(region));</span>
+<span class="nc" id="L182">                regionRes.addProperty(RDF.type, model.createResource(cimNamespace + &quot;SubGeographicalRegion&quot;));</span>
+<span class="nc" id="L183">                substation.addProperty(model.createProperty(cimNamespace + &quot;Substation.Region&quot;), regionRes);</span>
+            }
+
+<span class="nc" id="L186">            count++;</span>
+<span class="nc" id="L187">            log.trace(&quot;Created substation: {} (name: {})&quot;, id, name);</span>
+        }
+
+<span class="nc" id="L190">        log.info(&quot;Imported {} substations from {} processed rows. Model size: {} triples&quot;,</span>
+<span class="nc" id="L191">                count, processedRows, model.size());</span>
+<span class="nc" id="L192">        return count;</span>
+    }
+
+    private int importBuses(Sheet sheet, Model model) {
+<span class="nc" id="L196">        log.debug(&quot;Importing buses from sheet: {}&quot;, sheet.getSheetName());</span>
+
+<span class="nc" id="L198">        Map&lt;String, Integer&gt; columns = getColumnMapping(sheet);</span>
+<span class="nc" id="L199">        log.debug(&quot;Column mapping for buses: {}&quot;, columns);</span>
+<span class="nc" id="L200">        int count = 0;</span>
+<span class="nc" id="L201">        int totalRows = sheet.getLastRowNum() + 1;</span>
+<span class="nc" id="L202">        log.debug(&quot;Sheet has {} total rows (including header)&quot;, totalRows);</span>
+
+<span class="nc bnc" id="L204" title="All 2 branches missed.">        for (int i = 1; i &lt;= sheet.getLastRowNum(); i++) {</span>
+<span class="nc" id="L205">            Row row = sheet.getRow(i);</span>
+<span class="nc bnc" id="L206" title="All 4 branches missed.">            if (row == null || isRowEmpty(row)) {</span>
+<span class="nc" id="L207">                log.trace(&quot;Skipping empty row {}&quot;, i);</span>
+<span class="nc" id="L208">                continue;</span>
+            }
+
+<span class="nc" id="L211">            String id = getCellValue(row, columns.getOrDefault(&quot;id&quot;, 0));</span>
+<span class="nc" id="L212">            String name = getCellValue(row, columns.getOrDefault(&quot;name&quot;, columns.getOrDefault(&quot;nom&quot;, 1)));</span>
+<span class="nc" id="L213">            String voltage = getCellValue(row, columns.getOrDefault(&quot;voltage&quot;, columns.getOrDefault(&quot;tension&quot;, -1)));</span>
+<span class="nc" id="L214">            String substation = getCellValue(row, columns.getOrDefault(&quot;substation&quot;, columns.getOrDefault(&quot;poste&quot;, -1)));</span>
+
+<span class="nc bnc" id="L216" title="All 4 branches missed.">            if (id == null || id.isEmpty()) {</span>
+<span class="nc" id="L217">                id = &quot;BUS_&quot; + i;</span>
+            }
+
+<span class="nc" id="L220">            Resource bus = model.createResource(BASE_URI + &quot;BusbarSection/&quot; + sanitizeId(id));</span>
+<span class="nc" id="L221">            bus.addProperty(RDF.type, model.createResource(cimNamespace + &quot;BusbarSection&quot;));</span>
+
+<span class="nc bnc" id="L223" title="All 4 branches missed.">            if (name != null &amp;&amp; !name.isEmpty()) {</span>
+<span class="nc" id="L224">                bus.addProperty(model.createProperty(cimNamespace + &quot;IdentifiedObject.name&quot;),</span>
+<span class="nc" id="L225">                        model.createLiteral(name));</span>
+            }
+
+<span class="nc" id="L228">            Resource cn = model.createResource(BASE_URI + &quot;ConnectivityNode/&quot; + sanitizeId(id) + &quot;_CN&quot;);</span>
+<span class="nc" id="L229">            cn.addProperty(RDF.type, model.createResource(cimNamespace + &quot;ConnectivityNode&quot;));</span>
+<span class="nc bnc" id="L230" title="All 4 branches missed.">            if (name != null &amp;&amp; !name.isEmpty()) {</span>
+<span class="nc" id="L231">                cn.addProperty(model.createProperty(cimNamespace + &quot;IdentifiedObject.name&quot;),</span>
+<span class="nc" id="L232">                        model.createLiteral(name + &quot; CN&quot;));</span>
+            }
+
+<span class="nc" id="L235">            Resource terminal = model.createResource(BASE_URI + &quot;Terminal/&quot; + sanitizeId(id) + &quot;_T1&quot;);</span>
+<span class="nc" id="L236">            terminal.addProperty(RDF.type, model.createResource(cimNamespace + &quot;Terminal&quot;));</span>
+<span class="nc" id="L237">            terminal.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConductingEquipment&quot;), bus);</span>
+<span class="nc" id="L238">            terminal.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConnectivityNode&quot;), cn);</span>
+<span class="nc" id="L239">            terminal.addLiteral(model.createProperty(cimNamespace + &quot;Terminal.sequenceNumber&quot;), 1);</span>
+
+<span class="nc bnc" id="L241" title="All 4 branches missed.">            if (voltage != null &amp;&amp; !voltage.isEmpty()) {</span>
+<span class="nc" id="L242">                Resource voltageLevel = model.createResource(BASE_URI + &quot;VoltageLevel/&quot; + sanitizeId(voltage) + &quot;kV&quot;);</span>
+<span class="nc" id="L243">                voltageLevel.addProperty(RDF.type, model.createResource(cimNamespace + &quot;VoltageLevel&quot;));</span>
+<span class="nc" id="L244">                bus.addProperty(model.createProperty(cimNamespace + &quot;Equipment.EquipmentContainer&quot;), voltageLevel);</span>
+            }
+
+<span class="nc" id="L247">            count++;</span>
+<span class="nc" id="L248">            log.trace(&quot;Created bus: {} with {} triples&quot;, id, model.size());</span>
+        }
+
+<span class="nc" id="L251">        log.info(&quot;Imported {} buses from sheet '{}'. Model now has {} triples&quot;, count, sheet.getSheetName(), model.size());</span>
+<span class="nc" id="L252">        return count;</span>
+    }
+
+    private int importLines(Sheet sheet, Model model) {
+<span class="nc" id="L256">        log.debug(&quot;Importing lines from sheet: {}&quot;, sheet.getSheetName());</span>
+
+<span class="nc" id="L258">        Map&lt;String, Integer&gt; columns = getColumnMapping(sheet);</span>
+<span class="nc" id="L259">        int count = 0;</span>
+
+<span class="nc bnc" id="L261" title="All 2 branches missed.">        for (int i = 1; i &lt;= sheet.getLastRowNum(); i++) {</span>
+<span class="nc" id="L262">            Row row = sheet.getRow(i);</span>
+<span class="nc bnc" id="L263" title="All 4 branches missed.">            if (row == null || isRowEmpty(row)) continue;</span>
+
+<span class="nc" id="L265">            String id = getCellValue(row, columns.getOrDefault(&quot;id&quot;, 0));</span>
+<span class="nc" id="L266">            String name = getCellValue(row, columns.getOrDefault(&quot;name&quot;, columns.getOrDefault(&quot;nom&quot;, 1)));</span>
+<span class="nc" id="L267">            String fromBus = getCellValue(row, columns.getOrDefault(&quot;from&quot;, columns.getOrDefault(&quot;de&quot;, columns.getOrDefault(&quot;from_bus&quot;, -1))));</span>
+<span class="nc" id="L268">            String toBus = getCellValue(row, columns.getOrDefault(&quot;to&quot;, columns.getOrDefault(&quot;vers&quot;, columns.getOrDefault(&quot;to_bus&quot;, -1))));</span>
+<span class="nc" id="L269">            String length = getCellValue(row, columns.getOrDefault(&quot;length&quot;, columns.getOrDefault(&quot;longueur&quot;, -1)));</span>
+<span class="nc" id="L270">            String resistance = getCellValue(row, columns.getOrDefault(&quot;r&quot;, columns.getOrDefault(&quot;resistance&quot;, -1)));</span>
+<span class="nc" id="L271">            String reactance = getCellValue(row, columns.getOrDefault(&quot;x&quot;, columns.getOrDefault(&quot;reactance&quot;, -1)));</span>
+
+<span class="nc bnc" id="L273" title="All 4 branches missed.">            if (id == null || id.isEmpty()) {</span>
+<span class="nc" id="L274">                id = &quot;LINE_&quot; + i;</span>
+            }
+
+<span class="nc" id="L277">            Resource line = model.createResource(BASE_URI + &quot;ACLineSegment/&quot; + sanitizeId(id));</span>
+<span class="nc" id="L278">            line.addProperty(RDF.type, model.createResource(cimNamespace + &quot;ACLineSegment&quot;));</span>
+
+<span class="nc bnc" id="L280" title="All 4 branches missed.">            if (name != null &amp;&amp; !name.isEmpty()) {</span>
+<span class="nc" id="L281">                line.addProperty(model.createProperty(cimNamespace + &quot;IdentifiedObject.name&quot;),</span>
+<span class="nc" id="L282">                        model.createLiteral(name));</span>
+            }
+
+<span class="nc bnc" id="L285" title="All 4 branches missed.">            if (length != null &amp;&amp; !length.isEmpty()) {</span>
+                try {
+<span class="nc" id="L287">                    line.addLiteral(model.createProperty(cimNamespace + &quot;Conductor.length&quot;),</span>
+<span class="nc" id="L288">                            Double.parseDouble(length));</span>
+<span class="nc" id="L289">                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L290">                    log.warn(&quot;Invalid length value: {}&quot;, length);</span>
+<span class="nc" id="L291">                }</span>
+            }
+
+<span class="nc bnc" id="L294" title="All 4 branches missed.">            if (resistance != null &amp;&amp; !resistance.isEmpty()) {</span>
+                try {
+<span class="nc" id="L296">                    line.addLiteral(model.createProperty(cimNamespace + &quot;ACLineSegment.r&quot;),</span>
+<span class="nc" id="L297">                            Double.parseDouble(resistance));</span>
+<span class="nc" id="L298">                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L299">                    log.warn(&quot;Invalid resistance value: {}&quot;, resistance);</span>
+<span class="nc" id="L300">                }</span>
+            }
+
+<span class="nc bnc" id="L303" title="All 4 branches missed.">            if (reactance != null &amp;&amp; !reactance.isEmpty()) {</span>
+                try {
+<span class="nc" id="L305">                    line.addLiteral(model.createProperty(cimNamespace + &quot;ACLineSegment.x&quot;),</span>
+<span class="nc" id="L306">                            Double.parseDouble(reactance));</span>
+<span class="nc" id="L307">                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L308">                    log.warn(&quot;Invalid reactance value: {}&quot;, reactance);</span>
+<span class="nc" id="L309">                }</span>
+            }
+
+<span class="nc" id="L312">            createLineTerminals(model, line, id, fromBus, toBus);</span>
+
+<span class="nc" id="L314">            count++;</span>
+        }
+
+<span class="nc" id="L317">        return count;</span>
+    }
+
+    private int importTransformers(Sheet sheet, Model model) {
+<span class="nc" id="L321">        log.debug(&quot;Importing transformers from sheet: {}&quot;, sheet.getSheetName());</span>
+
+<span class="nc" id="L323">        Map&lt;String, Integer&gt; columns = getColumnMapping(sheet);</span>
+<span class="nc" id="L324">        int count = 0;</span>
+
+<span class="nc bnc" id="L326" title="All 2 branches missed.">        for (int i = 1; i &lt;= sheet.getLastRowNum(); i++) {</span>
+<span class="nc" id="L327">            Row row = sheet.getRow(i);</span>
+<span class="nc bnc" id="L328" title="All 4 branches missed.">            if (row == null || isRowEmpty(row)) continue;</span>
+
+<span class="nc" id="L330">            String id = getCellValue(row, columns.getOrDefault(&quot;id&quot;, 0));</span>
+<span class="nc" id="L331">            String name = getCellValue(row, columns.getOrDefault(&quot;name&quot;, columns.getOrDefault(&quot;nom&quot;, 1)));</span>
+<span class="nc" id="L332">            String hvBus = getCellValue(row, columns.getOrDefault(&quot;hv_bus&quot;, columns.getOrDefault(&quot;ht&quot;, -1)));</span>
+<span class="nc" id="L333">            String lvBus = getCellValue(row, columns.getOrDefault(&quot;lv_bus&quot;, columns.getOrDefault(&quot;bt&quot;, -1)));</span>
+<span class="nc" id="L334">            String ratedS = getCellValue(row, columns.getOrDefault(&quot;rated_s&quot;, columns.getOrDefault(&quot;puissance&quot;, -1)));</span>
+
+<span class="nc bnc" id="L336" title="All 4 branches missed.">            if (id == null || id.isEmpty()) {</span>
+<span class="nc" id="L337">                id = &quot;TRAFO_&quot; + i;</span>
+            }
+
+<span class="nc" id="L340">            Resource trafo = model.createResource(BASE_URI + &quot;PowerTransformer/&quot; + sanitizeId(id));</span>
+<span class="nc" id="L341">            trafo.addProperty(RDF.type, model.createResource(cimNamespace + &quot;PowerTransformer&quot;));</span>
+
+<span class="nc bnc" id="L343" title="All 4 branches missed.">            if (name != null &amp;&amp; !name.isEmpty()) {</span>
+<span class="nc" id="L344">                trafo.addProperty(model.createProperty(cimNamespace + &quot;IdentifiedObject.name&quot;),</span>
+<span class="nc" id="L345">                        model.createLiteral(name));</span>
+            }
+
+<span class="nc bnc" id="L348" title="All 4 branches missed.">            if (ratedS != null &amp;&amp; !ratedS.isEmpty()) {</span>
+                try {
+<span class="nc" id="L350">                    Resource hvEnd = model.createResource(BASE_URI + &quot;PowerTransformerEnd/&quot; + sanitizeId(id) + &quot;_HV&quot;);</span>
+<span class="nc" id="L351">                    hvEnd.addProperty(RDF.type, model.createResource(cimNamespace + &quot;PowerTransformerEnd&quot;));</span>
+<span class="nc" id="L352">                    hvEnd.addProperty(model.createProperty(cimNamespace + &quot;PowerTransformerEnd.PowerTransformer&quot;), trafo);</span>
+<span class="nc" id="L353">                    hvEnd.addLiteral(model.createProperty(cimNamespace + &quot;PowerTransformerEnd.ratedS&quot;),</span>
+<span class="nc" id="L354">                            Double.parseDouble(ratedS));</span>
+<span class="nc" id="L355">                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L356">                    log.warn(&quot;Invalid rated power value: {}&quot;, ratedS);</span>
+<span class="nc" id="L357">                }</span>
+            }
+
+<span class="nc bnc" id="L360" title="All 4 branches missed.">            if (hvBus != null &amp;&amp; !hvBus.isEmpty()) {</span>
+<span class="nc" id="L361">                Resource terminal1 = model.createResource(BASE_URI + &quot;Terminal/&quot; + sanitizeId(id) + &quot;_T1&quot;);</span>
+<span class="nc" id="L362">                terminal1.addProperty(RDF.type, model.createResource(cimNamespace + &quot;Terminal&quot;));</span>
+<span class="nc" id="L363">                terminal1.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConductingEquipment&quot;), trafo);</span>
+<span class="nc" id="L364">                terminal1.addLiteral(model.createProperty(cimNamespace + &quot;Terminal.sequenceNumber&quot;), 1);</span>
+            }
+
+<span class="nc bnc" id="L367" title="All 4 branches missed.">            if (lvBus != null &amp;&amp; !lvBus.isEmpty()) {</span>
+<span class="nc" id="L368">                Resource terminal2 = model.createResource(BASE_URI + &quot;Terminal/&quot; + sanitizeId(id) + &quot;_T2&quot;);</span>
+<span class="nc" id="L369">                terminal2.addProperty(RDF.type, model.createResource(cimNamespace + &quot;Terminal&quot;));</span>
+<span class="nc" id="L370">                terminal2.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConductingEquipment&quot;), trafo);</span>
+<span class="nc" id="L371">                terminal2.addLiteral(model.createProperty(cimNamespace + &quot;Terminal.sequenceNumber&quot;), 2);</span>
+            }
+
+<span class="nc" id="L374">            count++;</span>
+        }
+
+<span class="nc" id="L377">        return count;</span>
+    }
+
+    private int importGenerators(Sheet sheet, Model model) {
+<span class="nc" id="L381">        log.debug(&quot;Importing generators from sheet: {}&quot;, sheet.getSheetName());</span>
+
+<span class="nc" id="L383">        Map&lt;String, Integer&gt; columns = getColumnMapping(sheet);</span>
+<span class="nc" id="L384">        int count = 0;</span>
+
+<span class="nc bnc" id="L386" title="All 2 branches missed.">        for (int i = 1; i &lt;= sheet.getLastRowNum(); i++) {</span>
+<span class="nc" id="L387">            Row row = sheet.getRow(i);</span>
+<span class="nc bnc" id="L388" title="All 4 branches missed.">            if (row == null || isRowEmpty(row)) continue;</span>
+
+<span class="nc" id="L390">            String id = getCellValue(row, columns.getOrDefault(&quot;id&quot;, 0));</span>
+<span class="nc" id="L391">            String name = getCellValue(row, columns.getOrDefault(&quot;name&quot;, columns.getOrDefault(&quot;nom&quot;, 1)));</span>
+<span class="nc" id="L392">            String p = getCellValue(row, columns.getOrDefault(&quot;p&quot;, columns.getOrDefault(&quot;mw&quot;, -1)));</span>
+<span class="nc" id="L393">            String maxP = getCellValue(row, columns.getOrDefault(&quot;max_p&quot;, columns.getOrDefault(&quot;pmax&quot;, -1)));</span>
+<span class="nc" id="L394">            String minP = getCellValue(row, columns.getOrDefault(&quot;min_p&quot;, columns.getOrDefault(&quot;pmin&quot;, -1)));</span>
+<span class="nc" id="L395">            String bus = getCellValue(row, columns.getOrDefault(&quot;bus&quot;, columns.getOrDefault(&quot;noeud&quot;, columns.getOrDefault(&quot;node&quot;, -1))));</span>
+
+<span class="nc" id="L397">            log.debug(&quot;Generator row {}: id={}, bus={}, p={}, maxP={}&quot;, i, id, bus, p, maxP);</span>
+
+<span class="nc bnc" id="L399" title="All 4 branches missed.">            if (id == null || id.isEmpty()) {</span>
+<span class="nc" id="L400">                id = &quot;GEN_&quot; + i;</span>
+            }
+
+<span class="nc" id="L403">            Resource genUnit = model.createResource(BASE_URI + &quot;GeneratingUnit/&quot; + sanitizeId(id));</span>
+<span class="nc" id="L404">            genUnit.addProperty(RDF.type, model.createResource(cimNamespace + &quot;GeneratingUnit&quot;));</span>
+
+<span class="nc bnc" id="L406" title="All 4 branches missed.">            if (name != null &amp;&amp; !name.isEmpty()) {</span>
+<span class="nc" id="L407">                genUnit.addProperty(model.createProperty(cimNamespace + &quot;IdentifiedObject.name&quot;),</span>
+<span class="nc" id="L408">                        model.createLiteral(name));</span>
+            }
+
+<span class="nc bnc" id="L411" title="All 4 branches missed.">            if (maxP != null &amp;&amp; !maxP.isEmpty()) {</span>
+                try {
+<span class="nc" id="L413">                    genUnit.addLiteral(model.createProperty(cimNamespace + &quot;GeneratingUnit.maxOperatingP&quot;),</span>
+<span class="nc" id="L414">                            Double.parseDouble(maxP));</span>
+<span class="nc" id="L415">                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L416">                    log.warn(&quot;Invalid maxP value: {}&quot;, maxP);</span>
+<span class="nc" id="L417">                }</span>
+            }
+
+<span class="nc bnc" id="L420" title="All 4 branches missed.">            if (minP != null &amp;&amp; !minP.isEmpty()) {</span>
+                try {
+<span class="nc" id="L422">                    genUnit.addLiteral(model.createProperty(cimNamespace + &quot;GeneratingUnit.minOperatingP&quot;),</span>
+<span class="nc" id="L423">                            Double.parseDouble(minP));</span>
+<span class="nc" id="L424">                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L425">                    log.warn(&quot;Invalid minP value: {}&quot;, minP);</span>
+<span class="nc" id="L426">                }</span>
+            }
+
+<span class="nc" id="L429">            Resource syncMachine = model.createResource(BASE_URI + &quot;SynchronousMachine/&quot; + sanitizeId(id) + &quot;_SM&quot;);</span>
+<span class="nc" id="L430">            syncMachine.addProperty(RDF.type, model.createResource(cimNamespace + &quot;SynchronousMachine&quot;));</span>
+<span class="nc" id="L431">            syncMachine.addProperty(model.createProperty(cimNamespace + &quot;RotatingMachine.GeneratingUnit&quot;), genUnit);</span>
+
+            // Prefer explicit &quot;p&quot; field, fall back to maxP as the active power value
+<span class="nc bnc" id="L434" title="All 4 branches missed.">            String activePower = (p != null &amp;&amp; !p.isEmpty()) ? p : maxP;</span>
+<span class="nc bnc" id="L435" title="All 4 branches missed.">            if (activePower != null &amp;&amp; !activePower.isEmpty()) {</span>
+                try {
+<span class="nc" id="L437">                    syncMachine.addLiteral(model.createProperty(cimNamespace + &quot;RotatingMachine.p&quot;),</span>
+<span class="nc" id="L438">                            Double.parseDouble(activePower));</span>
+<span class="nc" id="L439">                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L440">                    log.warn(&quot;Invalid active power value: {}&quot;, activePower);</span>
+<span class="nc" id="L441">                }</span>
+            }
+
+<span class="nc" id="L444">            Resource terminal = model.createResource(BASE_URI + &quot;Terminal/&quot; + sanitizeId(id) + &quot;_T1&quot;);</span>
+<span class="nc" id="L445">            terminal.addProperty(RDF.type, model.createResource(cimNamespace + &quot;Terminal&quot;));</span>
+<span class="nc" id="L446">            terminal.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConductingEquipment&quot;), syncMachine);</span>
+<span class="nc" id="L447">            terminal.addLiteral(model.createProperty(cimNamespace + &quot;Terminal.sequenceNumber&quot;), 1);</span>
+
+<span class="nc bnc" id="L449" title="All 4 branches missed.">            if (bus != null &amp;&amp; !bus.isEmpty()) {</span>
+<span class="nc" id="L450">                String cnId = sanitizeId(bus) + &quot;_CN&quot;;</span>
+<span class="nc" id="L451">                Resource cn = model.getResource(BASE_URI + &quot;ConnectivityNode/&quot; + cnId);</span>
+
+<span class="nc bnc" id="L453" title="All 4 branches missed.">                if (cn == null || !cn.hasProperty(RDF.type)) {</span>
+<span class="nc" id="L454">                    cn = model.createResource(BASE_URI + &quot;ConnectivityNode/&quot; + cnId);</span>
+<span class="nc" id="L455">                    cn.addProperty(RDF.type, model.createResource(cimNamespace + &quot;ConnectivityNode&quot;));</span>
+<span class="nc" id="L456">                    log.debug(&quot;Created ConnectivityNode: {}&quot;, cnId);</span>
+                }
+
+<span class="nc" id="L459">                terminal.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConnectivityNode&quot;), cn);</span>
+<span class="nc" id="L460">                log.info(&quot;Connected generator {} (P={} MW) to ConnectivityNode {} (bus: {})&quot;,</span>
+<span class="nc bnc" id="L461" title="All 2 branches missed.">                        id, activePower != null ? activePower : &quot;N/A&quot;, cn.getLocalName(), bus);</span>
+<span class="nc" id="L462">            } else {</span>
+<span class="nc" id="L463">                log.warn(&quot;Generator {} has no bus specified - will not be connected to network&quot;, id);</span>
+            }
+
+<span class="nc" id="L466">            count++;</span>
+        }
+
+<span class="nc" id="L469">        return count;</span>
+    }
+
+    private int importLoads(Sheet sheet, Model model) {
+<span class="nc" id="L473">        log.debug(&quot;Importing loads from sheet: {}&quot;, sheet.getSheetName());</span>
+
+<span class="nc" id="L475">        Map&lt;String, Integer&gt; columns = getColumnMapping(sheet);</span>
+<span class="nc" id="L476">        int count = 0;</span>
+
+<span class="nc bnc" id="L478" title="All 2 branches missed.">        for (int i = 1; i &lt;= sheet.getLastRowNum(); i++) {</span>
+<span class="nc" id="L479">            Row row = sheet.getRow(i);</span>
+<span class="nc bnc" id="L480" title="All 4 branches missed.">            if (row == null || isRowEmpty(row)) continue;</span>
+
+<span class="nc" id="L482">            String id = getCellValue(row, columns.getOrDefault(&quot;id&quot;, 0));</span>
+<span class="nc" id="L483">            String name = getCellValue(row, columns.getOrDefault(&quot;name&quot;, columns.getOrDefault(&quot;nom&quot;, 1)));</span>
+<span class="nc" id="L484">            String p = getCellValue(row, columns.getOrDefault(&quot;p&quot;, columns.getOrDefault(&quot;mw&quot;, -1)));</span>
+<span class="nc" id="L485">            String q = getCellValue(row, columns.getOrDefault(&quot;q&quot;, columns.getOrDefault(&quot;mvar&quot;, -1)));</span>
+<span class="nc" id="L486">            String bus = getCellValue(row, columns.getOrDefault(&quot;bus&quot;, columns.getOrDefault(&quot;noeud&quot;, columns.getOrDefault(&quot;node&quot;, -1))));</span>
+
+<span class="nc" id="L488">            log.debug(&quot;Load row {}: id={}, bus={}, p={}, q={}&quot;, i, id, bus, p, q);</span>
+
+<span class="nc bnc" id="L490" title="All 4 branches missed.">            if (id == null || id.isEmpty()) {</span>
+<span class="nc" id="L491">                id = &quot;LOAD_&quot; + i;</span>
+            }
+
+<span class="nc" id="L494">            Resource load = model.createResource(BASE_URI + &quot;EnergyConsumer/&quot; + sanitizeId(id));</span>
+<span class="nc" id="L495">            load.addProperty(RDF.type, model.createResource(cimNamespace + &quot;EnergyConsumer&quot;));</span>
+
+<span class="nc bnc" id="L497" title="All 4 branches missed.">            if (name != null &amp;&amp; !name.isEmpty()) {</span>
+<span class="nc" id="L498">                load.addProperty(model.createProperty(cimNamespace + &quot;IdentifiedObject.name&quot;),</span>
+<span class="nc" id="L499">                        model.createLiteral(name));</span>
+            }
+
+<span class="nc bnc" id="L502" title="All 4 branches missed.">            if (p != null &amp;&amp; !p.isEmpty()) {</span>
+                try {
+<span class="nc" id="L504">                    load.addLiteral(model.createProperty(cimNamespace + &quot;EnergyConsumer.p&quot;),</span>
+<span class="nc" id="L505">                            Double.parseDouble(p));</span>
+<span class="nc" id="L506">                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L507">                    log.warn(&quot;Invalid P value: {}&quot;, p);</span>
+<span class="nc" id="L508">                }</span>
+            }
+
+<span class="nc bnc" id="L511" title="All 4 branches missed.">            if (q != null &amp;&amp; !q.isEmpty()) {</span>
+                try {
+<span class="nc" id="L513">                    load.addLiteral(model.createProperty(cimNamespace + &quot;EnergyConsumer.q&quot;),</span>
+<span class="nc" id="L514">                            Double.parseDouble(q));</span>
+<span class="nc" id="L515">                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L516">                    log.warn(&quot;Invalid Q value: {}&quot;, q);</span>
+<span class="nc" id="L517">                }</span>
+            }
+
+<span class="nc" id="L520">            Resource terminal = model.createResource(BASE_URI + &quot;Terminal/&quot; + sanitizeId(id) + &quot;_T1&quot;);</span>
+<span class="nc" id="L521">            terminal.addProperty(RDF.type, model.createResource(cimNamespace + &quot;Terminal&quot;));</span>
+<span class="nc" id="L522">            terminal.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConductingEquipment&quot;), load);</span>
+<span class="nc" id="L523">            terminal.addLiteral(model.createProperty(cimNamespace + &quot;Terminal.sequenceNumber&quot;), 1);</span>
+
+<span class="nc bnc" id="L525" title="All 4 branches missed.">            if (bus != null &amp;&amp; !bus.isEmpty()) {</span>
+<span class="nc" id="L526">                String cnId = sanitizeId(bus) + &quot;_CN&quot;;</span>
+<span class="nc" id="L527">                Resource cn = model.getResource(BASE_URI + &quot;ConnectivityNode/&quot; + cnId);</span>
+
+<span class="nc bnc" id="L529" title="All 4 branches missed.">                if (cn == null || !cn.hasProperty(RDF.type)) {</span>
+<span class="nc" id="L530">                    cn = model.createResource(BASE_URI + &quot;ConnectivityNode/&quot; + cnId);</span>
+<span class="nc" id="L531">                    cn.addProperty(RDF.type, model.createResource(cimNamespace + &quot;ConnectivityNode&quot;));</span>
+<span class="nc" id="L532">                    log.debug(&quot;Created ConnectivityNode: {}&quot;, cnId);</span>
+                }
+
+<span class="nc" id="L535">                terminal.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConnectivityNode&quot;), cn);</span>
+<span class="nc" id="L536">                log.info(&quot;Connected load {} (P={} MW, Q={} MVAr) to ConnectivityNode {} (bus: {})&quot;,</span>
+<span class="nc bnc" id="L537" title="All 4 branches missed.">                        id, p != null ? p : &quot;0&quot;, q != null ? q : &quot;0&quot;, cn.getLocalName(), bus);</span>
+<span class="nc" id="L538">            } else {</span>
+<span class="nc" id="L539">                log.warn(&quot;Load {} has no bus specified - will not be connected to network&quot;, id);</span>
+            }
+
+<span class="nc" id="L542">            count++;</span>
+        }
+
+<span class="nc" id="L545">        return count;</span>
+    }
+
+    private int importVoltageLevels(Sheet sheet, Model model) {
+<span class="nc" id="L549">        log.debug(&quot;Importing voltage levels from sheet: {}&quot;, sheet.getSheetName());</span>
+
+<span class="nc" id="L551">        Map&lt;String, Integer&gt; columns = getColumnMapping(sheet);</span>
+<span class="nc" id="L552">        int count = 0;</span>
+
+<span class="nc bnc" id="L554" title="All 2 branches missed.">        for (int i = 1; i &lt;= sheet.getLastRowNum(); i++) {</span>
+<span class="nc" id="L555">            Row row = sheet.getRow(i);</span>
+<span class="nc bnc" id="L556" title="All 4 branches missed.">            if (row == null || isRowEmpty(row)) continue;</span>
+
+<span class="nc" id="L558">            String id = getCellValue(row, columns.getOrDefault(&quot;id&quot;, 0));</span>
+<span class="nc" id="L559">            String name = getCellValue(row, columns.getOrDefault(&quot;name&quot;, columns.getOrDefault(&quot;nom&quot;, 1)));</span>
+<span class="nc" id="L560">            String voltage = getCellValue(row, columns.getOrDefault(&quot;voltage&quot;, columns.getOrDefault(&quot;tension&quot;, -1)));</span>
+<span class="nc" id="L561">            String substation = getCellValue(row, columns.getOrDefault(&quot;substation&quot;, columns.getOrDefault(&quot;poste&quot;, -1)));</span>
+
+<span class="nc bnc" id="L563" title="All 4 branches missed.">            if (id == null || id.isEmpty()) {</span>
+<span class="nc" id="L564">                id = &quot;VL_&quot; + i;</span>
+            }
+
+<span class="nc" id="L567">            Resource voltageLevel = model.createResource(BASE_URI + &quot;VoltageLevel/&quot; + sanitizeId(id));</span>
+<span class="nc" id="L568">            voltageLevel.addProperty(RDF.type, model.createResource(cimNamespace + &quot;VoltageLevel&quot;));</span>
+
+<span class="nc bnc" id="L570" title="All 4 branches missed.">            if (name != null &amp;&amp; !name.isEmpty()) {</span>
+<span class="nc" id="L571">                voltageLevel.addProperty(model.createProperty(cimNamespace + &quot;IdentifiedObject.name&quot;),</span>
+<span class="nc" id="L572">                        model.createLiteral(name));</span>
+            }
+
+<span class="nc bnc" id="L575" title="All 4 branches missed.">            if (voltage != null &amp;&amp; !voltage.isEmpty()) {</span>
+                try {
+<span class="nc" id="L577">                    double voltageValue = Double.parseDouble(voltage.replaceAll(&quot;[^0-9.]&quot;, &quot;&quot;));</span>
+<span class="nc" id="L578">                    Resource baseVoltage = model.createResource(BASE_URI + &quot;BaseVoltage/&quot; + (int)voltageValue + &quot;kV&quot;);</span>
+<span class="nc" id="L579">                    baseVoltage.addProperty(RDF.type, model.createResource(cimNamespace + &quot;BaseVoltage&quot;));</span>
+<span class="nc" id="L580">                    baseVoltage.addLiteral(model.createProperty(cimNamespace + &quot;BaseVoltage.nominalVoltage&quot;), voltageValue);</span>
+
+<span class="nc" id="L582">                    voltageLevel.addProperty(model.createProperty(cimNamespace + &quot;VoltageLevel.BaseVoltage&quot;), baseVoltage);</span>
+<span class="nc" id="L583">                } catch (NumberFormatException e) {</span>
+<span class="nc" id="L584">                    log.warn(&quot;Invalid voltage value: {}&quot;, voltage);</span>
+<span class="nc" id="L585">                }</span>
+            }
+
+<span class="nc bnc" id="L588" title="All 4 branches missed.">            if (substation != null &amp;&amp; !substation.isEmpty()) {</span>
+<span class="nc" id="L589">                Resource substationRes = model.createResource(BASE_URI + &quot;Substation/&quot; + sanitizeId(substation));</span>
+<span class="nc" id="L590">                voltageLevel.addProperty(model.createProperty(cimNamespace + &quot;VoltageLevel.Substation&quot;), substationRes);</span>
+            }
+
+<span class="nc" id="L593">            count++;</span>
+        }
+
+<span class="nc" id="L596">        return count;</span>
+    }
+
+    private void createLineTerminals(Model model, Resource line, String lineId, String fromBus, String toBus) {
+<span class="nc" id="L600">        Resource terminal1 = model.createResource(BASE_URI + &quot;Terminal/&quot; + sanitizeId(lineId) + &quot;_T1&quot;);</span>
+<span class="nc" id="L601">        terminal1.addProperty(RDF.type, model.createResource(cimNamespace + &quot;Terminal&quot;));</span>
+<span class="nc" id="L602">        terminal1.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConductingEquipment&quot;), line);</span>
+<span class="nc" id="L603">        terminal1.addLiteral(model.createProperty(cimNamespace + &quot;Terminal.sequenceNumber&quot;), 1);</span>
+
+<span class="nc bnc" id="L605" title="All 4 branches missed.">        if (fromBus != null &amp;&amp; !fromBus.isEmpty()) {</span>
+<span class="nc" id="L606">            String cn1Id = sanitizeId(fromBus) + &quot;_CN&quot;;</span>
+<span class="nc" id="L607">            Resource cn1 = model.getResource(BASE_URI + &quot;ConnectivityNode/&quot; + cn1Id);</span>
+
+<span class="nc bnc" id="L609" title="All 4 branches missed.">            if (cn1 == null || !cn1.hasProperty(RDF.type)) {</span>
+<span class="nc" id="L610">                cn1 = model.createResource(BASE_URI + &quot;ConnectivityNode/&quot; + cn1Id);</span>
+<span class="nc" id="L611">                cn1.addProperty(RDF.type, model.createResource(cimNamespace + &quot;ConnectivityNode&quot;));</span>
+<span class="nc" id="L612">                log.debug(&quot;Created ConnectivityNode: {}&quot;, cn1Id);</span>
+            }
+
+<span class="nc" id="L615">            terminal1.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConnectivityNode&quot;), cn1);</span>
+<span class="nc" id="L616">            log.debug(&quot;Connected line {} terminal 1 to ConnectivityNode {} (bus: {})&quot;, lineId, cn1.getLocalName(), fromBus);</span>
+<span class="nc" id="L617">        } else {</span>
+<span class="nc" id="L618">            log.warn(&quot;Line {} has no 'from' bus specified&quot;, lineId);</span>
+        }
+
+<span class="nc" id="L621">        Resource terminal2 = model.createResource(BASE_URI + &quot;Terminal/&quot; + sanitizeId(lineId) + &quot;_T2&quot;);</span>
+<span class="nc" id="L622">        terminal2.addProperty(RDF.type, model.createResource(cimNamespace + &quot;Terminal&quot;));</span>
+<span class="nc" id="L623">        terminal2.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConductingEquipment&quot;), line);</span>
+<span class="nc" id="L624">        terminal2.addLiteral(model.createProperty(cimNamespace + &quot;Terminal.sequenceNumber&quot;), 2);</span>
+
+<span class="nc bnc" id="L626" title="All 4 branches missed.">        if (toBus != null &amp;&amp; !toBus.isEmpty()) {</span>
+<span class="nc" id="L627">            String cn2Id = sanitizeId(toBus) + &quot;_CN&quot;;</span>
+<span class="nc" id="L628">            Resource cn2 = model.getResource(BASE_URI + &quot;ConnectivityNode/&quot; + cn2Id);</span>
+
+<span class="nc bnc" id="L630" title="All 4 branches missed.">            if (cn2 == null || !cn2.hasProperty(RDF.type)) {</span>
+<span class="nc" id="L631">                cn2 = model.createResource(BASE_URI + &quot;ConnectivityNode/&quot; + cn2Id);</span>
+<span class="nc" id="L632">                cn2.addProperty(RDF.type, model.createResource(cimNamespace + &quot;ConnectivityNode&quot;));</span>
+<span class="nc" id="L633">                log.debug(&quot;Created ConnectivityNode: {}&quot;, cn2Id);</span>
+            }
+
+<span class="nc" id="L636">            terminal2.addProperty(model.createProperty(cimNamespace + &quot;Terminal.ConnectivityNode&quot;), cn2);</span>
+<span class="nc" id="L637">            log.debug(&quot;Connected line {} terminal 2 to ConnectivityNode {} (bus: {})&quot;, lineId, cn2.getLocalName(), toBus);</span>
+<span class="nc" id="L638">        } else {</span>
+<span class="nc" id="L639">            log.warn(&quot;Line {} has no 'to' bus specified&quot;, lineId);</span>
+        }
+<span class="nc" id="L641">    }</span>
+
+    private Map&lt;String, Integer&gt; getColumnMapping(Sheet sheet) {
+<span class="nc" id="L644">        Map&lt;String, Integer&gt; mapping = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L645">        Row headerRow = sheet.getRow(0);</span>
+
+<span class="nc bnc" id="L647" title="All 2 branches missed.">        if (headerRow == null) {</span>
+<span class="nc" id="L648">            log.warn(&quot;No header row found in sheet: {}&quot;, sheet.getSheetName());</span>
+<span class="nc" id="L649">            return mapping;</span>
+        }
+
+<span class="nc" id="L652">        log.debug(&quot;Reading header row from sheet: {}&quot;, sheet.getSheetName());</span>
+<span class="nc bnc" id="L653" title="All 2 branches missed.">        for (int i = 0; i &lt; headerRow.getLastCellNum(); i++) {</span>
+<span class="nc" id="L654">            Cell cell = headerRow.getCell(i);</span>
+<span class="nc bnc" id="L655" title="All 2 branches missed.">            if (cell != null) {</span>
+<span class="nc" id="L656">                String rawValue = getCellValue(headerRow, i);</span>
+<span class="nc bnc" id="L657" title="All 4 branches missed.">                if (rawValue != null &amp;&amp; !rawValue.isEmpty()) {</span>
+<span class="nc" id="L658">                    String name = rawValue.toLowerCase().trim()</span>
+<span class="nc" id="L659">                            .replaceAll(&quot;\\s+&quot;, &quot;_&quot;)</span>
+<span class="nc" id="L660">                            .replaceAll(&quot;[^a-z0-9_]&quot;, &quot;&quot;);</span>
+<span class="nc" id="L661">                    mapping.put(name, i);</span>
+                    // Also map without underscores for flexible header matching
+<span class="nc" id="L663">                    String nameNoUnderscore = name.replace(&quot;_&quot;, &quot;&quot;);</span>
+<span class="nc bnc" id="L664" title="All 2 branches missed.">                    if (!nameNoUnderscore.equals(name)) {</span>
+<span class="nc" id="L665">                        mapping.put(nameNoUnderscore, i);</span>
+                    }
+<span class="nc" id="L667">                    log.trace(&quot;Mapped column '{}' (normalized: '{}') to index {}&quot;, rawValue, name, i);</span>
+                }
+            }
+        }
+
+<span class="nc" id="L672">        log.info(&quot;Column mapping for sheet '{}': {} columns found - {}&quot;,</span>
+<span class="nc" id="L673">                sheet.getSheetName(), mapping.size(), mapping.keySet());</span>
+<span class="nc" id="L674">        return mapping;</span>
+    }
+
+    private String getCellValue(Row row, int colIndex) {
+<span class="nc bnc" id="L678" title="All 4 branches missed.">        if (colIndex &lt; 0 || row == null) return null;</span>
+
+<span class="nc" id="L680">        Cell cell = row.getCell(colIndex);</span>
+<span class="nc bnc" id="L681" title="All 2 branches missed.">        if (cell == null) return null;</span>
+
+<span class="nc bnc" id="L683" title="All 5 branches missed.">        return switch (cell.getCellType()) {</span>
+<span class="nc" id="L684">            case STRING -&gt; cell.getStringCellValue().trim();</span>
+            case NUMERIC -&gt; {
+<span class="nc" id="L686">                double value = cell.getNumericCellValue();</span>
+<span class="nc bnc" id="L687" title="All 2 branches missed.">                if (value == (long) value) {</span>
+<span class="nc" id="L688">                    yield String.valueOf((long) value);</span>
+                } else {
+<span class="nc" id="L690">                    yield String.valueOf(value);</span>
+                }
+            }
+<span class="nc" id="L693">            case BOOLEAN -&gt; String.valueOf(cell.getBooleanCellValue());</span>
+            case FORMULA -&gt; {
+                try {
+<span class="nc" id="L696">                    yield String.valueOf(cell.getNumericCellValue());</span>
+<span class="nc" id="L697">                } catch (Exception e) {</span>
+<span class="nc" id="L698">                    yield cell.getStringCellValue();</span>
+                }
+            }
+<span class="nc" id="L701">            default -&gt; null;</span>
+        };
+    }
+
+    private boolean isRowEmpty(Row row) {
+<span class="nc bnc" id="L706" title="All 2 branches missed.">        if (row == null) return true;</span>
+
+<span class="nc bnc" id="L708" title="All 2 branches missed.">        for (int i = 0; i &lt; row.getLastCellNum(); i++) {</span>
+<span class="nc" id="L709">            Cell cell = row.getCell(i);</span>
+<span class="nc bnc" id="L710" title="All 4 branches missed.">            if (cell != null &amp;&amp; cell.getCellType() != CellType.BLANK) {</span>
+<span class="nc" id="L711">                String value = getCellValue(row, i);</span>
+<span class="nc bnc" id="L712" title="All 4 branches missed.">                if (value != null &amp;&amp; !value.isEmpty()) {</span>
+<span class="nc" id="L713">                    return false;</span>
+                }
+            }
+        }
+<span class="nc" id="L717">        return true;</span>
+    }
+
+    private String sanitizeId(String id) {
+<span class="nc bnc" id="L721" title="All 2 branches missed.">        if (id == null) return &quot;unknown&quot;;</span>
+<span class="nc" id="L722">        return id.replaceAll(&quot;[^a-zA-Z0-9_-]&quot;, &quot;_&quot;)</span>
+<span class="nc" id="L723">                .replaceAll(&quot;_+&quot;, &quot;_&quot;)</span>
+<span class="nc" id="L724">                .replaceAll(&quot;^_|_$&quot;, &quot;&quot;);</span>
+    }
+
+<span class="nc" id="L727">    @lombok.Builder</span>
+<span class="nc bnc" id="L728" title="All 40 branches missed.">    @lombok.Data</span>
+    public static class ImportResult {
+<span class="nc" id="L730">        private boolean success;</span>
+<span class="nc" id="L731">        private String fileName;</span>
+<span class="nc" id="L732">        private int entitiesImported;</span>
+<span class="nc" id="L733">        private long triplesCreated;</span>
+<span class="nc" id="L734">        private List&lt;String&gt; sheetsProcessed;</span>
+<span class="nc" id="L735">        private List&lt;String&gt; errors;</span>
+<span class="nc" id="L736">        private long executionTimeMs;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

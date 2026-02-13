@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShaclValidationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CIM-SemanticGraph-Platform</a> &gt; <a href="index.source.html" class="el_package">com.cim.semanticgraph.service</a> &gt; <span class="el_source">ShaclValidationService.java</span></div><h1>ShaclValidationService.java</h1><pre class="source lang-java linenums">package com.cim.semanticgraph.service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.jena.graph.Graph;
+import org.apache.jena.rdf.model.*;
+import org.apache.jena.shacl.ShaclValidator;
+import org.apache.jena.shacl.Shapes;
+import org.apache.jena.shacl.ValidationReport;
+import org.apache.jena.shacl.validation.ReportEntry;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Service;
+
+import jakarta.annotation.PostConstruct;
+import java.io.InputStream;
+import java.util.*;
+
+<span class="nc" id="L19">@Slf4j</span>
+@Service
+<span class="nc" id="L21">@RequiredArgsConstructor</span>
+public class ShaclValidationService {
+
+    private final JenaService jenaService;
+
+    @Value(&quot;${shacl.shapes-path:classpath:shacl/cim-shapes.ttl}&quot;)
+    private String shapesPath;
+
+    private Shapes shapes;
+<span class="nc" id="L30">    private boolean shapesLoaded = false;</span>
+
+    @PostConstruct
+    public void init() {
+<span class="nc" id="L34">        loadShapes();</span>
+<span class="nc" id="L35">    }</span>
+
+    private void loadShapes() {
+        try {
+<span class="nc" id="L39">            ClassPathResource resource = new ClassPathResource(&quot;shacl/cim-shapes.ttl&quot;);</span>
+<span class="nc bnc" id="L40" title="All 2 branches missed.">            if (resource.exists()) {</span>
+<span class="nc" id="L41">                try (InputStream is = resource.getInputStream()) {</span>
+<span class="nc" id="L42">                    Model shapesModel = ModelFactory.createDefaultModel();</span>
+<span class="nc" id="L43">                    shapesModel.read(is, null, &quot;TURTLE&quot;);</span>
+<span class="nc" id="L44">                    Graph shapesGraph = shapesModel.getGraph();</span>
+<span class="nc" id="L45">                    shapes = Shapes.parse(shapesGraph);</span>
+<span class="nc" id="L46">                    shapesLoaded = true;</span>
+<span class="nc" id="L47">                    log.info(&quot;SHACL shapes loaded successfully from {}&quot;, shapesPath);</span>
+                }
+            } else {
+<span class="nc" id="L50">                shapes = createDefaultCimShapes();</span>
+<span class="nc" id="L51">                shapesLoaded = true;</span>
+<span class="nc" id="L52">                log.info(&quot;Using default CIM SHACL shapes&quot;);</span>
+            }
+<span class="nc" id="L54">        } catch (Exception e) {</span>
+<span class="nc" id="L55">            log.warn(&quot;Could not load SHACL shapes: {}. Using default shapes.&quot;, e.getMessage());</span>
+<span class="nc" id="L56">            shapes = createDefaultCimShapes();</span>
+<span class="nc" id="L57">            shapesLoaded = true;</span>
+<span class="nc" id="L58">        }</span>
+<span class="nc" id="L59">    }</span>
+
+    public ValidationResult validateGraph() {
+<span class="nc" id="L62">        log.info(&quot;Starting SHACL validation of knowledge graph&quot;);</span>
+<span class="nc" id="L63">        long startTime = System.currentTimeMillis();</span>
+
+<span class="nc bnc" id="L65" title="All 4 branches missed.">        if (!shapesLoaded || shapes == null) {</span>
+<span class="nc" id="L66">            return ValidationResult.builder()</span>
+<span class="nc" id="L67">                    .valid(false)</span>
+<span class="nc" id="L68">                    .errorCount(1)</span>
+<span class="nc" id="L69">                    .warningCount(0)</span>
+<span class="nc" id="L70">                    .violations(List.of(new Violation(</span>
+                            &quot;SHAPES_ERROR&quot;,
+                            &quot;SHACL shapes not loaded&quot;,
+                            &quot;ERROR&quot;,
+                            null, null
+                    )))
+<span class="nc" id="L76">                    .executionTimeMs(System.currentTimeMillis() - startTime)</span>
+<span class="nc" id="L77">                    .build();</span>
+        }
+
+        try {
+<span class="nc" id="L81">            Model model = jenaService.getModelCopy();</span>
+
+<span class="nc bnc" id="L83" title="All 4 branches missed.">            if (model == null || model.isEmpty()) {</span>
+<span class="nc" id="L84">                return ValidationResult.builder()</span>
+<span class="nc" id="L85">                        .valid(true)</span>
+<span class="nc" id="L86">                        .errorCount(0)</span>
+<span class="nc" id="L87">                        .warningCount(0)</span>
+<span class="nc" id="L88">                        .violations(List.of())</span>
+<span class="nc" id="L89">                        .message(&quot;Knowledge graph is empty - nothing to validate&quot;)</span>
+<span class="nc" id="L90">                        .executionTimeMs(System.currentTimeMillis() - startTime)</span>
+<span class="nc" id="L91">                        .build();</span>
+            }
+
+<span class="nc" id="L94">            ValidationReport report = ShaclValidator.get().validate(shapes, model.getGraph());</span>
+
+<span class="nc" id="L96">            List&lt;Violation&gt; violations = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L97">            int errorCount = 0;</span>
+<span class="nc" id="L98">            int warningCount = 0;</span>
+
+<span class="nc bnc" id="L100" title="All 2 branches missed.">            for (ReportEntry entry : report.getEntries()) {</span>
+<span class="nc" id="L101">                String severity = getSeverity(entry);</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">                if (&quot;ERROR&quot;.equals(severity)) {</span>
+<span class="nc" id="L103">                    errorCount++;</span>
+                } else {
+<span class="nc" id="L105">                    warningCount++;</span>
+                }
+
+<span class="nc" id="L108">                violations.add(new Violation(</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">                        entry.resultPath() != null ? entry.resultPath().toString() : &quot;Unknown&quot;,</span>
+<span class="nc" id="L110">                        entry.message(),</span>
+                        severity,
+<span class="nc bnc" id="L112" title="All 2 branches missed.">                        entry.focusNode() != null ? entry.focusNode().toString() : null,</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">                        entry.value() != null ? entry.value().toString() : null</span>
+                ));
+<span class="nc" id="L115">            }</span>
+
+<span class="nc" id="L117">            long executionTime = System.currentTimeMillis() - startTime;</span>
+<span class="nc" id="L118">            log.info(&quot;SHACL validation completed in {} ms. Valid: {}, Errors: {}, Warnings: {}&quot;,</span>
+<span class="nc" id="L119">                    executionTime, report.conforms(), errorCount, warningCount);</span>
+
+<span class="nc" id="L121">            return ValidationResult.builder()</span>
+<span class="nc" id="L122">                    .valid(report.conforms())</span>
+<span class="nc" id="L123">                    .errorCount(errorCount)</span>
+<span class="nc" id="L124">                    .warningCount(warningCount)</span>
+<span class="nc" id="L125">                    .violations(violations)</span>
+<span class="nc" id="L126">                    .triplesValidated(model.size())</span>
+<span class="nc" id="L127">                    .executionTimeMs(executionTime)</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">                    .message(report.conforms() ? &quot;All constraints satisfied&quot; :</span>
+<span class="nc" id="L129">                            errorCount + &quot; errors and &quot; + warningCount + &quot; warnings found&quot;)</span>
+<span class="nc" id="L130">                    .build();</span>
+
+<span class="nc" id="L132">        } catch (Exception e) {</span>
+<span class="nc" id="L133">            log.error(&quot;Error during SHACL validation&quot;, e);</span>
+<span class="nc" id="L134">            return ValidationResult.builder()</span>
+<span class="nc" id="L135">                    .valid(false)</span>
+<span class="nc" id="L136">                    .errorCount(1)</span>
+<span class="nc" id="L137">                    .violations(List.of(new Violation(</span>
+                            &quot;VALIDATION_ERROR&quot;,
+<span class="nc" id="L139">                            e.getMessage(),</span>
+                            &quot;ERROR&quot;,
+                            null, null
+                    )))
+<span class="nc" id="L143">                    .executionTimeMs(System.currentTimeMillis() - startTime)</span>
+<span class="nc" id="L144">                    .build();</span>
+        }
+    }
+
+    public ValidationResult validateModel(Model model) {
+<span class="nc" id="L149">        log.info(&quot;Validating model against SHACL constraints&quot;);</span>
+<span class="nc" id="L150">        long startTime = System.currentTimeMillis();</span>
+
+<span class="nc bnc" id="L152" title="All 4 branches missed.">        if (!shapesLoaded || shapes == null) {</span>
+<span class="nc" id="L153">            return ValidationResult.builder()</span>
+<span class="nc" id="L154">                    .valid(false)</span>
+<span class="nc" id="L155">                    .errorCount(1)</span>
+<span class="nc" id="L156">                    .violations(List.of(new Violation(</span>
+                            &quot;SHAPES_ERROR&quot;,
+                            &quot;SHACL shapes not loaded&quot;,
+                            &quot;ERROR&quot;,
+                            null, null
+                    )))
+<span class="nc" id="L162">                    .executionTimeMs(System.currentTimeMillis() - startTime)</span>
+<span class="nc" id="L163">                    .build();</span>
+        }
+
+        try {
+<span class="nc" id="L167">            ValidationReport report = ShaclValidator.get().validate(shapes, model.getGraph());</span>
+
+<span class="nc" id="L169">            List&lt;Violation&gt; violations = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L170">            int errorCount = 0;</span>
+<span class="nc" id="L171">            int warningCount = 0;</span>
+
+<span class="nc bnc" id="L173" title="All 2 branches missed.">            for (ReportEntry entry : report.getEntries()) {</span>
+<span class="nc" id="L174">                String severity = getSeverity(entry);</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">                if (&quot;ERROR&quot;.equals(severity)) {</span>
+<span class="nc" id="L176">                    errorCount++;</span>
+                } else {
+<span class="nc" id="L178">                    warningCount++;</span>
+                }
+
+<span class="nc" id="L181">                violations.add(new Violation(</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">                        entry.resultPath() != null ? entry.resultPath().toString() : &quot;Unknown&quot;,</span>
+<span class="nc" id="L183">                        entry.message(),</span>
+                        severity,
+<span class="nc bnc" id="L185" title="All 2 branches missed.">                        entry.focusNode() != null ? entry.focusNode().toString() : null,</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">                        entry.value() != null ? entry.value().toString() : null</span>
+                ));
+<span class="nc" id="L188">            }</span>
+
+<span class="nc" id="L190">            return ValidationResult.builder()</span>
+<span class="nc" id="L191">                    .valid(report.conforms())</span>
+<span class="nc" id="L192">                    .errorCount(errorCount)</span>
+<span class="nc" id="L193">                    .warningCount(warningCount)</span>
+<span class="nc" id="L194">                    .violations(violations)</span>
+<span class="nc" id="L195">                    .triplesValidated(model.size())</span>
+<span class="nc" id="L196">                    .executionTimeMs(System.currentTimeMillis() - startTime)</span>
+<span class="nc" id="L197">                    .build();</span>
+
+<span class="nc" id="L199">        } catch (Exception e) {</span>
+<span class="nc" id="L200">            log.error(&quot;Error validating model&quot;, e);</span>
+<span class="nc" id="L201">            return ValidationResult.builder()</span>
+<span class="nc" id="L202">                    .valid(false)</span>
+<span class="nc" id="L203">                    .errorCount(1)</span>
+<span class="nc" id="L204">                    .violations(List.of(new Violation(</span>
+                            &quot;VALIDATION_ERROR&quot;,
+<span class="nc" id="L206">                            e.getMessage(),</span>
+                            &quot;ERROR&quot;,
+                            null, null
+                    )))
+<span class="nc" id="L210">                    .executionTimeMs(System.currentTimeMillis() - startTime)</span>
+<span class="nc" id="L211">                    .build();</span>
+        }
+    }
+
+    private String getSeverity(ReportEntry entry) {
+<span class="nc bnc" id="L216" title="All 2 branches missed.">        if (entry.severity() != null) {</span>
+<span class="nc" id="L217">            String severity = entry.severity().toString().toLowerCase();</span>
+<span class="nc bnc" id="L218" title="All 2 branches missed.">            if (severity.contains(&quot;violation&quot;)) return &quot;ERROR&quot;;</span>
+<span class="nc bnc" id="L219" title="All 2 branches missed.">            if (severity.contains(&quot;warning&quot;)) return &quot;WARNING&quot;;</span>
+<span class="nc bnc" id="L220" title="All 2 branches missed.">            if (severity.contains(&quot;info&quot;)) return &quot;INFO&quot;;</span>
+        }
+<span class="nc" id="L222">        return &quot;ERROR&quot;;</span>
+    }
+
+    private Shapes createDefaultCimShapes() {
+<span class="nc" id="L226">        log.info(&quot;Creating default CIM SHACL shapes&quot;);</span>
+
+<span class="nc" id="L228">        String shapesStr = &quot;&quot;&quot;</span>
+            @prefix sh: &lt;http://www.w3.org/ns/shacl#&gt; .
+            @prefix cim: &lt;http://iec.ch/TC57/CIM100#&gt; .
+            @prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .
+            @prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
+            @prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+
+            # IdentifiedObject must have a name
+            cim:IdentifiedObjectShape
+                a sh:NodeShape ;
+                sh:targetClass cim:IdentifiedObject ;
+                sh:property [
+                    sh:path cim:IdentifiedObject.name ;
+                    sh:minCount 0 ;
+                    sh:maxCount 1 ;
+                    sh:datatype xsd:string ;
+                    sh:message &quot;IdentifiedObject should have a name&quot; ;
+                    sh:severity sh:Warning ;
+                ] .
+
+            # Substation constraints
+            cim:SubstationShape
+                a sh:NodeShape ;
+                sh:targetClass cim:Substation ;
+                sh:property [
+                    sh:path cim:IdentifiedObject.name ;
+                    sh:minCount 1 ;
+                    sh:message &quot;Substation must have a name&quot; ;
+                    sh:severity sh:Violation ;
+                ] ;
+                sh:property [
+                    sh:path cim:Substation.Region ;
+                    sh:minCount 0 ;
+                    sh:maxCount 1 ;
+                    sh:message &quot;Substation should belong to a Region&quot; ;
+                    sh:severity sh:Warning ;
+                ] .
+
+            # VoltageLevel constraints
+            cim:VoltageLevelShape
+                a sh:NodeShape ;
+                sh:targetClass cim:VoltageLevel ;
+                sh:property [
+                    sh:path cim:VoltageLevel.BaseVoltage ;
+                    sh:minCount 0 ;
+                    sh:message &quot;VoltageLevel should have a BaseVoltage&quot; ;
+                    sh:severity sh:Warning ;
+                ] ;
+                sh:property [
+                    sh:path cim:VoltageLevel.Substation ;
+                    sh:minCount 0 ;
+                    sh:message &quot;VoltageLevel should belong to a Substation&quot; ;
+                    sh:severity sh:Warning ;
+                ] .
+
+            # Terminal constraints
+            cim:TerminalShape
+                a sh:NodeShape ;
+                sh:targetClass cim:Terminal ;
+                sh:property [
+                    sh:path cim:Terminal.ConductingEquipment ;
+                    sh:minCount 1 ;
+                    sh:message &quot;Terminal must be connected to ConductingEquipment&quot; ;
+                    sh:severity sh:Violation ;
+                ] ;
+                sh:property [
+                    sh:path cim:Terminal.ConnectivityNode ;
+                    sh:minCount 0 ;
+                    sh:maxCount 1 ;
+                    sh:message &quot;Terminal should have a ConnectivityNode&quot; ;
+                    sh:severity sh:Warning ;
+                ] .
+
+            # ACLineSegment constraints
+            cim:ACLineSegmentShape
+                a sh:NodeShape ;
+                sh:targetClass cim:ACLineSegment ;
+                sh:property [
+                    sh:path cim:Conductor.length ;
+                    sh:minCount 0 ;
+                    sh:message &quot;ACLineSegment should have a length&quot; ;
+                    sh:severity sh:Warning ;
+                ] ;
+                sh:property [
+                    sh:path cim:ACLineSegment.r ;
+                    sh:minCount 0 ;
+                    sh:message &quot;ACLineSegment should have resistance&quot; ;
+                    sh:severity sh:Warning ;
+                ] .
+
+            # GeneratingUnit constraints
+            cim:GeneratingUnitShape
+                a sh:NodeShape ;
+                sh:targetClass cim:GeneratingUnit ;
+                sh:property [
+                    sh:path cim:GeneratingUnit.maxOperatingP ;
+                    sh:minCount 0 ;
+                    sh:nodeKind sh:Literal ;
+                    sh:message &quot;GeneratingUnit should have maxOperatingP&quot; ;
+                    sh:severity sh:Warning ;
+                ] ;
+                sh:property [
+                    sh:path cim:GeneratingUnit.minOperatingP ;
+                    sh:minCount 0 ;
+                    sh:nodeKind sh:Literal ;
+                    sh:message &quot;GeneratingUnit should have minOperatingP&quot; ;
+                    sh:severity sh:Warning ;
+                ] .
+
+            # BaseVoltage constraints
+            cim:BaseVoltageShape
+                a sh:NodeShape ;
+                sh:targetClass cim:BaseVoltage ;
+                sh:property [
+                    sh:path cim:BaseVoltage.nominalVoltage ;
+                    sh:minCount 1 ;
+                    sh:message &quot;BaseVoltage must have a nominalVoltage&quot; ;
+                    sh:severity sh:Violation ;
+                ] .
+            &quot;&quot;&quot;;
+
+        try {
+<span class="nc" id="L350">            Model shapesModel = ModelFactory.createDefaultModel();</span>
+<span class="nc" id="L351">            shapesModel.read(new java.io.StringReader(shapesStr), null, &quot;TURTLE&quot;);</span>
+<span class="nc" id="L352">            return Shapes.parse(shapesModel.getGraph());</span>
+<span class="nc" id="L353">        } catch (Exception e) {</span>
+<span class="nc" id="L354">            log.error(&quot;Error creating default shapes: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L355">            return null;</span>
+        }
+    }
+
+    public List&lt;String&gt; getAvailableShapes() {
+<span class="nc bnc" id="L360" title="All 2 branches missed.">        if (shapes == null) return List.of();</span>
+
+<span class="nc" id="L362">        List&lt;String&gt; shapeNames = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L363">        shapes.forEach(shape -&gt; {</span>
+<span class="nc bnc" id="L364" title="All 2 branches missed.">            if (shape.getShapeNode() != null) {</span>
+<span class="nc" id="L365">                shapeNames.add(shape.getShapeNode().toString());</span>
+            }
+<span class="nc" id="L367">        });</span>
+<span class="nc" id="L368">        return shapeNames;</span>
+    }
+
+<span class="nc" id="L371">    @lombok.Builder</span>
+<span class="nc bnc" id="L372" title="All 34 branches missed.">    @lombok.Data</span>
+    public static class ValidationResult {
+<span class="nc" id="L374">        private boolean valid;</span>
+<span class="nc" id="L375">        private int errorCount;</span>
+<span class="nc" id="L376">        private int warningCount;</span>
+<span class="nc" id="L377">        private List&lt;Violation&gt; violations;</span>
+<span class="nc" id="L378">        private long triplesValidated;</span>
+<span class="nc" id="L379">        private long executionTimeMs;</span>
+<span class="nc" id="L380">        private String message;</span>
+    }
+
+<span class="nc" id="L383">    @lombok.AllArgsConstructor</span>
+<span class="nc bnc" id="L384" title="All 46 branches missed.">    @lombok.Data</span>
+    public static class Violation {
+<span class="nc" id="L386">        private String path;</span>
+<span class="nc" id="L387">        private String message;</span>
+<span class="nc" id="L388">        private String severity;</span>
+<span class="nc" id="L389">        private String focusNode;</span>
+<span class="nc" id="L390">        private String value;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
