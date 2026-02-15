@@ -13,3 +13,4 @@ powerflow-service/app/__pycache__/
 backend/target/site/jacoco/**/*.html
 backend/target/site/jacoco/**/*.css
 examples/cim test/*.html
+backend/.env
