@@ -133,10 +133,14 @@ public class LoadFlowService {
                     response = pandapowerService.calculate(network, method.name());
                     response.setTargetBusId(targetBusId);
                 } else {
-                    log.warn("Pandapower service unavailable. Falling back to DC solver.");
+                    log.warn("══════════════════════════════════════════════════════");
+                    log.warn("Pandapower service is NOT available at configured URL.");
+                    log.warn("Requested method: {} - Falling back to simplified DC solver.", method);
+                    log.warn("Results may be less accurate. Start the powerflow-service for full AC/OPF support.");
+                    log.warn("══════════════════════════════════════════════════════");
                     SimplifiedLoadFlowSolver.LoadFlowResult solverResult = loadFlowSolver.solve(network);
                     response = buildResponse(network, solverResult, targetBusId);
-                    response.setCalculationMethod("SIMPLIFIED_DC (fallback from " + method + ")");
+                    response.setCalculationMethod("SIMPLIFIED_DC (fallback - pandapower unavailable, requested: " + method + ")");
                 }
             }
 

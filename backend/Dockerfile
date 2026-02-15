@@ -33,7 +33,7 @@ RUN apk add --no-cache curl
 
 # Create app user and data directories
 RUN addgroup -S spring && adduser -S spring -G spring && \
-    mkdir -p /app/data/tdb2 /app/logs /app/uploads && \
+    mkdir -p /app/logs /app/uploads && \
     chown -R spring:spring /app
 
 # Copy built JAR from builder stage
@@ -55,7 +55,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # Environment variables with defaults
 ENV JAVA_OPTS="-Xms512m -Xmx2g" \
     SPRING_PROFILES_ACTIVE="docker" \
-    TDB2_LOCATION="/app/data/tdb2" \
+    JENA_STORAGE_MODE="remote" \
     LOGS_PATH="/app/logs"
 
 # Run the application

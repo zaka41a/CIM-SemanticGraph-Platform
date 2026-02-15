@@ -1,7 +1,47 @@
 version: '3.8'
 
 services:
-  # Backend API Service
+  # Apache Jena Fuseki - SPARQL Triple Store
+  fuseki:
+    image: stain/jena-fuseki:latest
+    container_name: cim-fuseki
+    ports:
+      - "3030:3030"
+    environment:
+      - ADMIN_PASSWORD=admin
+      - FUSEKI_DATASET_1=cim
+    volumes:
+      - fuseki-data:/fuseki
+    networks:
+      - cim-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3030/$/ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Power Flow Microservice (Python/Pandapower)
+  powerflow:
+    build:
+      context: ../powerflow-service
+      dockerfile: Dockerfile
+    image: cim-powerflow-service:latest
+    container_name: cim-powerflow
+    ports:
+      - "8000:8000"
+    networks:
+      - cim-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # Backend API Service (Spring Boot)
   cim-backend:
     build:
       context: .
@@ -14,62 +54,66 @@ services:
       # Spring Boot Configuration
       - SPRING_PROFILES_ACTIVE=docker
       - SERVER_PORT=8080
-      
-      # Database Configuration
-      - TDB2_LOCATION=/app/data/tdb2
-      
+
+      # Jena Fuseki Configuration (remote)
+      - JENA_STORAGE_MODE=remote
+      - JENA_FUSEKI_REMOTE_URL=http://fuseki:3030
+      - JENA_FUSEKI_DATASET=cim
+
+      # Power Flow Service
+      - POWERFLOW_SERVICE_URL=http://powerflow:8000
+
       # Logging Configuration
       - LOGS_PATH=/app/logs
       - LOGGING_LEVEL_ROOT=INFO
       - LOGGING_LEVEL_COM_CIM=DEBUG
-      
+
       # Groq AI Configuration
       - GROQ_API_KEY=${GROQ_API_KEY:-your-groq-api-key-here}
       - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
       - GROQ_BASE_URL=https://api.groq.com/openai/v1
-      
+
       # Ollama Configuration (fallback)
       - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_MODEL=llama3.2
-      
+
       # Security Configuration
       - SECURITY_USER_NAME=admin
       - SECURITY_USER_PASSWORD=admin123
-      
+
       # CORS Configuration
       - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:5174
-      
+
       # File Upload Configuration
       - SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=100MB
       - SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE=100MB
-      
+
       # Memory Configuration
       - JAVA_OPTS=-Xms512m -Xmx2g
-    
+
     volumes:
-      # Persistent storage for TDB2 database
-      - tdb2-data:/app/data/tdb2
       # Persistent storage for logs
       - logs-data:/app/logs
       # Persistent storage for uploaded files
       - uploads-data:/app/uploads
-    
+
     networks:
       - cim-network
-    
+
+    depends_on:
+      fuseki:
+        condition: service_healthy
+      powerflow:
+        condition: service_healthy
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
-    
-    restart: unless-stopped
 
-    # Groq is used as primary LLM, Ollama is optional fallback
-    # depends_on:
-    #   ollama:
-    #     condition: service_healthy
+    restart: unless-stopped
 
   # Ollama Service (Local LLM - Fallback)
   ollama:
@@ -91,18 +135,18 @@ services:
 
 # Named Volumes for Data Persistence
 volumes:
-  tdb2-data:
-    name: cim-tdb2-data
+  fuseki-data:
+    name: cim-fuseki-data
     driver: local
-  
+
   logs-data:
     name: cim-logs-data
     driver: local
-  
+
   uploads-data:
     name: cim-uploads-data
     driver: local
-  
+
   ollama-data:
     name: cim-ollama-data
     driver: local

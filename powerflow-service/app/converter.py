@@ -13,6 +13,14 @@ def convert_to_pandapower(network: NetworkInput) -> tuple[pp.pandapowerNet, dict
     Returns:
         Tuple of (pandapower network, mapping from original bus ID to pandapower bus index)
     """
+    # Validate that at least one slack bus exists (required for power flow convergence)
+    slack_buses = [b for b in network.buses if b.type == BusType.SLACK]
+    if not slack_buses:
+        raise ValueError(
+            "Network has no slack bus (reference bus). "
+            "At least one bus must be of type SLACK for power flow calculation."
+        )
+
     net = pp.create_empty_network(name=network.name, f_hz=50.0, sn_mva=network.baseMva)
     bus_id_to_pp_idx: dict[str, int] = {}
 
@@ -41,8 +49,8 @@ def convert_to_pandapower(network: NetworkInput) -> tuple[pp.pandapowerNet, dict
                 name=f"ExtGrid_{bus.name}",
             )
 
-        # PV bus -> generator
-        if bus.type == BusType.PV and bus.generationMw > 0:
+        # PV bus -> generator (always create, even with P=0, to maintain voltage control)
+        if bus.type == BusType.PV:
             vm_pu = bus.voltageMagnitude if bus.voltageMagnitude > 0 else 1.0
             pp.create_gen(
                 net,

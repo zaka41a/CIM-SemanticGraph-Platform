@@ -64,6 +64,7 @@ async def calculate(request: PowerFlowRequest):
             iterations=iterations,
             exec_time_ms=exec_time_ms,
             method=request.method.value,
+            tolerance=request.tolerance,
         )
 
         return response
@@ -89,6 +90,7 @@ def build_response(
     iterations: int,
     exec_time_ms: int,
     method: str,
+    tolerance: float = 1e-6,
 ) -> PowerFlowResponse:
     """Build the PowerFlowResponse from pandapower results."""
 
@@ -267,7 +269,7 @@ def build_response(
     return PowerFlowResponse(
         converged=converged,
         iterations=iterations,
-        tolerance=_safe_float(net.res_bus.at[0, "vm_pu"]) if len(net.res_bus) > 0 else 0.0,
+        tolerance=tolerance,
         executionTimeMs=exec_time_ms,
         calculationMethod=method,
         busResults=bus_results,
