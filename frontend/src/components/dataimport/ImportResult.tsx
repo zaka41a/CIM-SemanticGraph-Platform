@@ -1,4 +1,5 @@
-import { CheckCircle, XCircle, AlertTriangle, Database, Sparkles, Zap, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle, Database, Sparkles, Zap, Clock, LayoutDashboard, ShieldCheck, MessageSquare, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ImportResultProps {
   result: any;
@@ -6,6 +7,8 @@ interface ImportResultProps {
 }
 
 export const ImportResult = ({ result, error }: ImportResultProps) => {
+  const navigate = useNavigate();
+
   if (error) {
     return (
       <div className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
@@ -18,9 +21,6 @@ export const ImportResult = ({ result, error }: ImportResultProps) => {
   }
 
   if (!result) return null;
-
-  // Debug: log the result structure
-  console.log('Import result structure:', result);
 
   // Extract values with proper fallback
   const originalTriples = result.statistics?.originalTriples ??
@@ -133,6 +133,37 @@ export const ImportResult = ({ result, error }: ImportResultProps) => {
               )}
             </div>
           )}
+
+          {/* Next steps */}
+          <div className="mt-5 pt-4 border-t border-primary-700/30">
+            <p className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wider">Next Steps</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-700/50 hover:bg-primary-700 border border-primary-600/50 hover:border-accent-500/50 text-sm text-neutral-300 hover:text-white transition-all"
+              >
+                <LayoutDashboard size={15} className="text-accent-400" />
+                View Dashboard
+                <ArrowRight size={13} className="text-neutral-500" />
+              </button>
+              <button
+                onClick={() => navigate('/validation')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-700/50 hover:bg-primary-700 border border-primary-600/50 hover:border-emerald-500/50 text-sm text-neutral-300 hover:text-white transition-all"
+              >
+                <ShieldCheck size={15} className="text-emerald-400" />
+                Run SHACL Validation
+                <ArrowRight size={13} className="text-neutral-500" />
+              </button>
+              <button
+                onClick={() => navigate('/chat')}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-700/50 hover:bg-primary-700 border border-primary-600/50 hover:border-violet-500/50 text-sm text-neutral-300 hover:text-white transition-all"
+              >
+                <MessageSquare size={15} className="text-violet-400" />
+                Ask GraphRAG
+                <ArrowRight size={13} className="text-neutral-500" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

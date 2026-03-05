@@ -3,6 +3,7 @@ package com.cim.semanticgraph.controller;
 import com.cim.semanticgraph.dto.GraphRAGResponse;
 import com.cim.semanticgraph.model.ChatHistory;
 import com.cim.semanticgraph.service.ChatHistoryService;
+import com.cim.semanticgraph.service.ClaudeAgentService;
 import com.cim.semanticgraph.service.GraphRAGService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,8 +13,11 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
@@ -26,8 +30,82 @@ import java.util.UUID;
 @Tag(name = "GraphRAG", description = "Graph Retrieval-Augmented Generation with LLM")
 public class GraphRAGController {
 
-    private final GraphRAGService graphRAGService;
+    private final GraphRAGService    graphRAGService;
     private final ChatHistoryService chatHistoryService;
+    private final ClaudeAgentService claudeAgentService;
+
+    /**
+     * Streaming SSE endpoint — uses Claude claude-sonnet-4-6 Agent with Tool Calling.
+     * Falls back to standard GraphRAG if Claude is not configured.
+     *
+     * SSE event types:
+     *   tool_call   → Claude is calling a tool
+     *   tool_result → Tool execution completed
+     *   text        → Final answer text
+     *   done        → Stream complete (includes sources + confidence)
+     *   error       → Unrecoverable error
+     */
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "Stream answer (SSE)", description = "Stream Claude Agent response via Server-Sent Events")
+    public Flux<ServerSentEvent<String>> streamQuery(
+            @RequestParam String question,
+            @RequestParam(defaultValue = "") String sessionId) {
+
+        log.info("SSE stream request: question='{}', session='{}'", question, sessionId);
+
+        if (question == null || question.isBlank()) {
+            return Flux.just(ServerSentEvent.<String>builder()
+                    .data("{\"type\":\"error\",\"message\":\"question parameter is required\"}")
+                    .build());
+        }
+
+        String sid = sessionId.isBlank() ? UUID.randomUUID().toString() : sessionId;
+
+        if (!claudeAgentService.isConfigured()) {
+            // Fallback: run standard query and emit as single text event
+            return Flux.<String>create(sink -> {
+                try {
+                    GraphRAGResponse resp = graphRAGService.processQuery(question, sid);
+                    sink.next("{\"type\":\"text\",\"text\":" +
+                              "\"" + escapeJson(resp.getAnswer()) + "\"}");
+                    sink.next("{\"type\":\"done\",\"sources\":[],\"confidence\":"
+                              + resp.getConfidence() + ",\"execution_time_ms\":"
+                              + resp.getExecutionTimeMs() + "}");
+                } catch (Exception e) {
+                    sink.next("{\"type\":\"error\",\"message\":\"" + escapeJson(e.getMessage()) + "\"}");
+                } finally {
+                    sink.complete();
+                }
+            }).map(data -> ServerSentEvent.<String>builder().data(data).build());
+        }
+
+        // Stream via Claude, but if it emits an API-unavailable error, fall back to Groq/Ollama
+        return claudeAgentService.processQueryStreaming(question, sid)
+                .flatMap(data -> {
+                    // Detect Claude credit-exhausted error and switch to fallback stream
+                    if (data.contains("\"type\":\"error\"") && data.contains("unavailable")) {
+                        log.warn("Claude unavailable in stream — switching to GraphRAG fallback");
+                        return Flux.<String>create(sink -> {
+                            try {
+                                GraphRAGResponse resp = graphRAGService.processQuery(question, sid);
+                                sink.next("{\"type\":\"text\",\"text\":\"" + escapeJson(resp.getAnswer()) + "\"}");
+                                sink.next("{\"type\":\"done\",\"sources\":[],\"confidence\":"
+                                        + resp.getConfidence() + ",\"execution_time_ms\":"
+                                        + resp.getExecutionTimeMs() + "}");
+                            } catch (Exception e) {
+                                sink.next("{\"type\":\"error\",\"message\":\"" + escapeJson(e.getMessage()) + "\"}");
+                            } finally {
+                                sink.complete();
+                            }
+                        });
+                    }
+                    return Flux.just(data);
+                })
+                .map(data -> ServerSentEvent.<String>builder().data(data).build())
+                .onErrorReturn(ServerSentEvent.<String>builder()
+                        .data("{\"type\":\"error\",\"message\":\"Stream error\"}")
+                        .build());
+    }
 
     @PostMapping("/ask")
     @Operation(summary = "Ask question", description = "Ask a natural language question about the power network")
@@ -45,7 +123,17 @@ public class GraphRAGController {
                 sessionId = UUID.randomUUID().toString();
             }
 
-            GraphRAGResponse response = graphRAGService.processQuery(request.getQuestion(), sessionId);
+            GraphRAGResponse response;
+            if (claudeAgentService.isConfigured()) {
+                response = claudeAgentService.processQuery(request.getQuestion(), sessionId);
+                // Fallback to Groq/Ollama if Claude API is unavailable (credits exhausted, etc.)
+                if (isApiUnavailable(response.getAnswer())) {
+                    log.warn("Claude API unavailable, falling back to GraphRAGService (Groq/Ollama)");
+                    response = graphRAGService.processQuery(request.getQuestion(), sessionId);
+                }
+            } else {
+                response = graphRAGService.processQuery(request.getQuestion(), sessionId);
+            }
 
             return ResponseEntity.ok(response);
 
@@ -163,5 +251,22 @@ public class GraphRAGController {
     @AllArgsConstructor
     public static class ImpactRequest {
         private String equipmentId;
+    }
+
+    /** Returns true if the answer indicates Claude API is unavailable (credits, quota, etc.) */
+    private boolean isApiUnavailable(String answer) {
+        if (answer == null) return true;
+        return answer.startsWith("❌ Agent error:") ||
+               answer.contains("credit balance is too low") ||
+               answer.contains("quota") ||
+               answer.contains("API unavailable");
+    }
+
+    private static String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
     }
 }

@@ -12,6 +12,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    strictPort: false, // fallback to next available port if 3000 is busy
     proxy: {
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:8080',

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Activity, CheckCircle2, XCircle, AlertTriangle,
-  Database, Zap, Loader2, RefreshCw, TrendingUp,
-  AlertCircle, Info, BarChart3, Network, Cable, Plug, CircleDot
+  Database, Zap, Loader2, RefreshCw,
+  Cable, Plug, CircleDot, Wrench, ArrowRight, BarChart3
 } from 'lucide-react';
 import { apiService } from '@/services/api';
 
@@ -28,7 +29,79 @@ interface DiagnosticResult {
   warnings: Array<{ code: string; message: string }>;
 }
 
+// Compact ratio bar — shows X/total connected
+const RatioBar = ({
+  label, icon: Icon, connected, total, color,
+}: {
+  label: string; icon: React.ElementType;
+  connected: number; total: number; color: string;
+}) => {
+  const pct = total > 0 ? Math.round((connected / total) * 100) : 0;
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="flex items-center gap-1.5 text-neutral-400">
+          <Icon size={13} className={color} /> {label}
+        </span>
+        <span className="font-mono font-semibold text-white">
+          {connected}<span className="text-neutral-500">/{total}</span>
+        </span>
+      </div>
+      <div className="h-1.5 rounded-full bg-primary-700/50 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${
+            pct === 100 ? 'bg-emerald-400' : pct >= 70 ? 'bg-yellow-400' : 'bg-red-400'
+          }`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="text-right text-[10px] text-neutral-500">{pct}% connected</div>
+    </div>
+  );
+};
+
+// Power balance visual
+const PowerBalance = ({ gen, load }: { gen: number; load: number }) => {
+  const imbalance = gen - load;
+  const max = Math.max(gen, load, 1);
+  const genPct  = Math.min((gen  / max) * 100, 100);
+  const loadPct = Math.min((load / max) * 100, 100);
+  const balanced = Math.abs(imbalance) < 50;
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="flex items-center gap-1.5 text-emerald-400"><Zap size={12} /> Generation</span>
+          <span className="font-mono font-bold text-white">{gen.toFixed(1)} MW</span>
+        </div>
+        <div className="h-2 rounded-full bg-primary-700/50 overflow-hidden">
+          <div className="h-full rounded-full bg-emerald-400 transition-all duration-700" style={{ width: `${genPct}%` }} />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="flex items-center gap-1.5 text-orange-400"><Plug size={12} /> Load</span>
+          <span className="font-mono font-bold text-white">{load.toFixed(1)} MW</span>
+        </div>
+        <div className="h-2 rounded-full bg-primary-700/50 overflow-hidden">
+          <div className="h-full rounded-full bg-orange-400 transition-all duration-700" style={{ width: `${loadPct}%` }} />
+        </div>
+      </div>
+      <div className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold border ${
+        balanced
+          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+          : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+      }`}>
+        <span>Imbalance</span>
+        <span className="font-mono">{imbalance > 0 ? '+' : ''}{imbalance.toFixed(1)} MW</span>
+      </div>
+    </div>
+  );
+};
+
 const Diagnostics = () => {
+  const navigate = useNavigate();
   const [diagnostics, setDiagnostics] = useState<DiagnosticResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastRun, setLastRun] = useState<Date | null>(null);
@@ -46,332 +119,267 @@ const Diagnostics = () => {
     }
   };
 
-  useEffect(() => {
-    runDiagnostics();
-  }, []);
+  useEffect(() => { runDiagnostics(); }, []);
 
-  const getStatusBanner = (status: string) => {
-    switch (status) {
-      case 'OK': return { bg: 'from-emerald-500/10 to-green-500/5', border: 'border-emerald-500/30', icon: CheckCircle2, color: 'text-emerald-400', label: 'Healthy' };
-      case 'WARNING': return { bg: 'from-yellow-500/10 to-amber-500/5', border: 'border-yellow-500/30', icon: AlertTriangle, color: 'text-yellow-400', label: 'Warning' };
-      case 'ERROR': return { bg: 'from-red-500/10 to-orange-500/5', border: 'border-red-500/30', icon: XCircle, color: 'text-red-400', label: 'Critical' };
-      default: return { bg: 'from-primary-500/10 to-primary-500/5', border: 'border-primary-500/30', icon: Info, color: 'text-neutral-400', label: 'Unknown' };
-    }
+  const statusConfig = {
+    OK:      { border: 'border-emerald-500/30', iconBg: 'bg-emerald-500/20', icon: CheckCircle2, color: 'text-emerald-400', label: 'Healthy',  dot: 'bg-emerald-400' },
+    WARNING: { border: 'border-yellow-500/30',  iconBg: 'bg-yellow-500/20',  icon: AlertTriangle, color: 'text-yellow-400', label: 'Warning',  dot: 'bg-yellow-400' },
+    ERROR:   { border: 'border-red-500/30',     iconBg: 'bg-red-500/20',     icon: XCircle,       color: 'text-red-400',    label: 'Critical', dot: 'bg-red-400' },
   };
 
-  const banner = diagnostics ? getStatusBanner(diagnostics.status) : null;
-  const StatusIcon = banner?.icon || Info;
+  const cfg = diagnostics ? (statusConfig[diagnostics.status as keyof typeof statusConfig] ?? statusConfig.WARNING) : null;
+  const hasIssues = (diagnostics?.errors?.length ?? 0) + (diagnostics?.warnings?.length ?? 0) > 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Page Header */}
+
+      {/* Header */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-800/50 via-primary-900/50 to-primary-950/50 p-8 border border-primary-700/30">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent-500/5 rounded-full blur-3xl"></div>
-        <div className="relative z-10 flex items-center justify-between">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl" />
+        <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl shadow-lg shadow-accent-500/20">
               <Activity size={28} className="text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white mb-1">Network Diagnostics</h1>
-              <p className="text-neutral-300">
-                Comprehensive network health check and issue identification
+              <h1 className="text-3xl font-bold text-white">Network Diagnostics</h1>
+              <p className="text-neutral-400 text-sm mt-0.5">
+                {lastRun
+                  ? `Last run: ${lastRun.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}`
+                  : 'Comprehensive network health check'}
               </p>
             </div>
           </div>
-          <button
-            onClick={runDiagnostics}
-            disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-xl font-semibold shadow-lg shadow-accent-500/20 transition-all duration-200 hover:shadow-xl active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" size={20} />
-                <span>Running...</span>
-              </>
-            ) : (
-              <>
-                <RefreshCw size={20} />
-                <span>Run Diagnostics</span>
-              </>
+          <div className="flex items-center gap-3">
+            {/* Fix CTA */}
+            {hasIssues && (
+              <button
+                onClick={() => navigate('/data-fixer')}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-700/50 hover:bg-primary-700 border border-primary-600/50 hover:border-accent-500/50 text-sm text-neutral-300 hover:text-white transition-all"
+              >
+                <Wrench size={16} className="text-accent-400" />
+                Fix Issues
+                <ArrowRight size={14} className="text-neutral-500" />
+              </button>
             )}
-          </button>
+            <button
+              onClick={runDiagnostics}
+              disabled={loading}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-xl font-semibold shadow-lg shadow-accent-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? <><Loader2 className="animate-spin" size={18} /><span>Running...</span></> : <><RefreshCw size={18} /><span>Run Diagnostics</span></>}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Status Card */}
-      {diagnostics && banner && (
-        <div className={`rounded-2xl border ${banner.border} overflow-hidden bg-white/[0.03] backdrop-blur-xl`}>
-          <div className={`p-6 bg-gradient-to-r ${banner.bg} border-b ${banner.border}`}>
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-xl ${
-                diagnostics.status === 'OK' ? 'bg-emerald-500/20' :
-                diagnostics.status === 'WARNING' ? 'bg-yellow-500/20' :
-                'bg-red-500/20'
-              }`}>
-                <StatusIcon size={32} className={banner.color} />
+      {/* Loading */}
+      {loading && !diagnostics && (
+        <div className="card py-20 text-center">
+          <Loader2 size={40} className="text-accent-400 animate-spin mx-auto mb-4" />
+          <p className="text-neutral-400">Running network analysis...</p>
+        </div>
+      )}
+
+      {diagnostics && cfg && (
+        <>
+          {/* Status Banner */}
+          <div className={`card overflow-hidden border ${cfg.border}`}>
+            <div className="p-5 flex items-center gap-4">
+              <div className={`p-3 rounded-xl ${cfg.iconBg}`}>
+                <cfg.icon size={28} className={cfg.color} />
               </div>
               <div className="flex-1">
-                <h2 className="text-2xl font-bold text-white mb-1">
-                  Network Status: <span className={banner.color}>{banner.label}</span>
-                </h2>
-                <p className="text-neutral-300">{diagnostics.message}</p>
-                {lastRun && (
-                  <p className="text-xs text-neutral-500 mt-2">
-                    Last run: {lastRun.toLocaleString()}
-                  </p>
-                )}
+                <div className="flex items-center gap-3 mb-0.5">
+                  <span className={`w-2 h-2 rounded-full ${cfg.dot} animate-pulse`} />
+                  <h2 className="text-lg font-bold text-white">
+                    {cfg.label} — {diagnostics.message}
+                  </h2>
+                </div>
+                <p className="text-xs text-neutral-500">
+                  {diagnostics.totalTriples.toLocaleString()} triples ·{' '}
+                  {diagnostics.errors.length} error{diagnostics.errors.length !== 1 ? 's' : ''} ·{' '}
+                  {diagnostics.warnings.length} warning{diagnostics.warnings.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <div className="flex gap-3 text-center">
+                <div className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20">
+                  <div className="text-2xl font-black text-red-400">{diagnostics.errors.length}</div>
+                  <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Errors</div>
+                </div>
+                <div className="px-4 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                  <div className="text-2xl font-black text-yellow-400">{diagnostics.warnings.length}</div>
+                  <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Warnings</div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Statistics Grid */}
-          <div className="p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="p-4 bg-primary-800/30 rounded-xl border border-accent-500/20 hover:border-accent-500/40 transition-colors">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 bg-accent-500/20 rounded-lg">
-                    <Database size={18} className="text-accent-400" />
-                  </div>
-                  <span className="text-sm text-neutral-400">Total Triples</span>
-                </div>
-                <div className="text-2xl font-bold text-accent-400">
-                  {diagnostics.totalTriples.toLocaleString()}
-                </div>
-              </div>
+          {/* Main grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-              <div className="p-4 bg-primary-800/30 rounded-xl border border-accent-500/20 hover:border-accent-500/40 transition-colors">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 bg-accent-500/20 rounded-lg">
-                    <CircleDot size={18} className="text-accent-400" />
-                  </div>
-                  <span className="text-sm text-neutral-400">Buses</span>
-                </div>
-                <div className="text-2xl font-bold text-accent-400">
-                  {diagnostics.busCount}
-                </div>
-              </div>
+            {/* Left: Stat cards + issues */}
+            <div className="xl:col-span-2 space-y-6">
 
-              <div className="p-4 bg-primary-800/30 rounded-xl border border-accent-500/20 hover:border-accent-500/40 transition-colors">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 bg-accent-500/20 rounded-lg">
-                    <Cable size={18} className="text-accent-400" />
-                  </div>
-                  <span className="text-sm text-neutral-400">Branches</span>
-                </div>
-                <div className="text-2xl font-bold text-accent-400">
-                  {diagnostics.branchCount}
-                  {diagnostics.branchCount > 0 && (
-                    <span className="text-sm text-neutral-500 ml-1 font-normal">
-                      ({diagnostics.connectedBranchCount} connected)
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-4 bg-primary-800/30 rounded-xl border border-emerald-500/20 hover:border-emerald-500/40 transition-colors">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="p-1.5 bg-emerald-500/20 rounded-lg">
-                    <TrendingUp size={18} className="text-emerald-400" />
-                  </div>
-                  <span className="text-sm text-neutral-400">Generation</span>
-                </div>
-                <div className="text-2xl font-bold text-emerald-400">
-                  {diagnostics.totalGenerationMw.toFixed(1)} MW
-                </div>
-              </div>
-            </div>
-
-            {/* Detailed Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative overflow-hidden rounded-xl bg-primary-800/30 border border-primary-700/30">
-                <div className="p-5">
-                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <BarChart3 size={20} className="text-accent-400" />
-                    Network Components
-                  </h3>
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between items-center py-2 border-b border-primary-700/20">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 bg-emerald-500/10 rounded"><Zap size={14} className="text-emerald-400" /></div>
-                        <span className="text-neutral-400">Generators</span>
-                      </div>
-                      <span className="text-white font-medium">
-                        {diagnostics.generatorCount}
-                        <span className="text-neutral-500 ml-1">({diagnostics.connectedGeneratorCount} connected)</span>
-                      </span>
+              {/* KPI row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: 'Triples', value: diagnostics.totalTriples.toLocaleString(), icon: Database, color: 'text-accent-400', bg: 'bg-accent-500/10 border-accent-500/20' },
+                  { label: 'Buses',   value: diagnostics.busCount,    icon: CircleDot, color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
+                  { label: 'Branches', value: diagnostics.branchCount, icon: Cable,    color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/20' },
+                  { label: 'Generators', value: diagnostics.generatorCount, icon: Zap, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+                ].map(({ label, value, icon: Icon, color, bg }) => (
+                  <div key={label} className={`p-4 rounded-xl border ${bg} bg-primary-800/20`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Icon size={15} className={color} />
+                      <span className="text-xs text-neutral-400">{label}</span>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b border-primary-700/20">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 bg-accent-500/10 rounded"><Plug size={14} className="text-accent-400" /></div>
-                        <span className="text-neutral-400">Loads</span>
-                      </div>
-                      <span className="text-white font-medium">
-                        {diagnostics.loadCount}
-                        <span className="text-neutral-500 ml-1">({diagnostics.connectedLoadCount} connected)</span>
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1 bg-accent-500/10 rounded"><TrendingUp size={14} className="text-accent-400" /></div>
-                        <span className="text-neutral-400">Total Load</span>
-                      </div>
-                      <span className="text-white font-semibold">
-                        {diagnostics.totalLoadMw.toFixed(2)} MW
-                      </span>
-                    </div>
+                    <div className={`text-2xl font-black ${color}`}>{value}</div>
                   </div>
-                </div>
+                ))}
               </div>
 
-              <div className="relative overflow-hidden rounded-xl bg-primary-800/30 border border-primary-700/30">
-                <div className="p-5">
-                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <AlertCircle size={20} className="text-yellow-400" />
-                    Issues
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-red-500/5 rounded-lg border border-red-500/20">
-                      <div className="flex items-center gap-2">
-                        <XCircle size={18} className="text-red-400" />
-                        <span className="text-sm text-neutral-300">Errors</span>
-                      </div>
-                      <span className="text-xl font-bold text-red-400">{diagnostics.errors.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-yellow-500/5 rounded-lg border border-yellow-500/20">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle size={18} className="text-yellow-400" />
-                        <span className="text-sm text-neutral-300">Warnings</span>
-                      </div>
-                      <span className="text-xl font-bold text-yellow-400">{diagnostics.warnings.length}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Errors */}
-      {diagnostics && diagnostics.errors.length > 0 && (
-        <div className="card relative overflow-hidden">
-          <div className="p-6 border-b border-red-500/20 bg-red-500/5">
-            <h2 className="text-xl font-bold text-red-400 flex items-center gap-2">
-              <XCircle size={24} />
-              Critical Errors
-              <span className="ml-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30">
-                {diagnostics.errors.length}
-              </span>
-            </h2>
-          </div>
-          <div className="p-6 space-y-3">
-            {diagnostics.errors.map((error, index) => (
-              <div
-                key={index}
-                className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl hover:bg-red-500/10 transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-red-500/20 rounded-lg flex-shrink-0">
+              {/* Errors */}
+              {diagnostics.errors.length > 0 && (
+                <div className="card overflow-hidden">
+                  <div className="px-5 py-4 border-b border-red-500/20 bg-red-500/5 flex items-center gap-3">
                     <XCircle size={18} className="text-red-400" />
+                    <h2 className="font-bold text-red-400">Critical Errors</h2>
+                    <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                      {diagnostics.errors.length}
+                    </span>
                   </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-red-300 mb-1">{error.code}</div>
-                    <div className="text-sm text-neutral-300 leading-relaxed">{error.message}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Warnings */}
-      {diagnostics && diagnostics.warnings.length > 0 && (
-        <div className="card relative overflow-hidden">
-          <div className="p-6 border-b border-yellow-500/20 bg-yellow-500/5">
-            <h2 className="text-xl font-bold text-yellow-400 flex items-center gap-2">
-              <AlertTriangle size={24} />
-              Warnings
-              <span className="ml-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-                {diagnostics.warnings.length}
-              </span>
-            </h2>
-          </div>
-          <div className="p-6 space-y-3">
-            {diagnostics.warnings.map((warning, index) => (
-              <div
-                key={index}
-                className="p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-xl hover:bg-yellow-500/10 transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-yellow-500/20 rounded-lg flex-shrink-0">
-                    <AlertTriangle size={18} className="text-yellow-400" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-yellow-300 mb-1">{warning.code}</div>
-                    <div className="text-sm text-neutral-300 leading-relaxed">{warning.message}</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Network Details */}
-      {diagnostics && (
-        <div className="card relative overflow-hidden">
-          <div className="p-6 border-b border-primary-700/30 bg-gradient-to-r from-primary-800/30 to-transparent">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-accent-500/20 rounded-lg">
-                <Network size={20} className="text-accent-400" />
-              </div>
-              <h2 className="text-xl font-bold text-white">Network Details</h2>
-            </div>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {[
-                { title: 'Buses', ids: diagnostics.busIds, icon: CircleDot },
-                { title: 'Lines', ids: diagnostics.lineIds, icon: Cable },
-                { title: 'Generators', ids: diagnostics.generatorIds, icon: Zap },
-                { title: 'Loads', ids: diagnostics.loadIds, icon: Plug },
-              ].map(({ title, ids, icon: Icon }) => {
-                const c = { badge: 'bg-accent-500/20 text-accent-400 border-accent-500/30', iconBg: 'bg-accent-500/10', iconText: 'text-accent-400' };
-                return (
-                  <div key={title}>
-                    <h3 className="text-base font-semibold text-white mb-3 flex items-center gap-2">
-                      <div className={`p-1.5 ${c.iconBg} rounded-lg`}>
-                        <Icon size={16} className={c.iconText} />
+                  <div className="divide-y divide-primary-700/20">
+                    {diagnostics.errors.map((error, i) => (
+                      <div key={i} className="flex items-start gap-3 px-5 py-4 hover:bg-red-500/5 transition-colors">
+                        <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black font-mono bg-red-500/20 text-red-400 border border-red-500/30 mt-0.5">
+                          {error.code}
+                        </span>
+                        <p className="text-sm text-neutral-300 leading-relaxed">{error.message}</p>
                       </div>
-                      {title}
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${c.badge} border`}>
-                        {ids.length}
-                      </span>
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {ids.slice(0, 10).map((id, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1.5 bg-primary-800/40 text-neutral-300 rounded-lg text-xs font-mono border border-primary-700/30 hover:border-accent-500/30 transition-colors"
-                        >
-                          {id}
-                        </span>
-                      ))}
-                      {ids.length > 10 && (
-                        <span className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${c.badge} border`}>
-                          +{ids.length - 10} more
-                        </span>
-                      )}
-                    </div>
+                    ))}
                   </div>
-                );
-              })}
+                </div>
+              )}
+
+              {/* Warnings */}
+              {diagnostics.warnings.length > 0 && (
+                <div className="card overflow-hidden">
+                  <div className="px-5 py-4 border-b border-yellow-500/20 bg-yellow-500/5 flex items-center gap-3">
+                    <AlertTriangle size={18} className="text-yellow-400" />
+                    <h2 className="font-bold text-yellow-400">Warnings</h2>
+                    <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                      {diagnostics.warnings.length}
+                    </span>
+                  </div>
+                  <div className="divide-y divide-primary-700/20">
+                    {diagnostics.warnings.map((w, i) => (
+                      <div key={i} className="flex items-start gap-3 px-5 py-4 hover:bg-yellow-500/5 transition-colors">
+                        <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black font-mono bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 mt-0.5">
+                          {w.code}
+                        </span>
+                        <p className="text-sm text-neutral-300 leading-relaxed">{w.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* All clear */}
+              {diagnostics.errors.length === 0 && diagnostics.warnings.length === 0 && (
+                <div className="card py-12 text-center">
+                  <CheckCircle2 size={40} className="text-emerald-400 mx-auto mb-3" />
+                  <p className="text-white font-semibold mb-1">No issues detected</p>
+                  <p className="text-sm text-neutral-400">Your CIM network data is consistent and complete.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Connectivity + Power balance */}
+            <div className="space-y-6">
+
+              {/* Connectivity ratios */}
+              <div className="card overflow-hidden">
+                <div className="px-5 py-4 border-b border-primary-700/30 flex items-center gap-3">
+                  <BarChart3 size={16} className="text-accent-400" />
+                  <h3 className="font-bold text-white text-sm">Connectivity</h3>
+                </div>
+                <div className="p-5 space-y-5">
+                  <RatioBar
+                    label="Branches"
+                    icon={Cable}
+                    connected={diagnostics.connectedBranchCount}
+                    total={diagnostics.branchCount}
+                    color="text-blue-400"
+                  />
+                  <RatioBar
+                    label="Generators"
+                    icon={Zap}
+                    connected={diagnostics.connectedGeneratorCount}
+                    total={diagnostics.generatorCount}
+                    color="text-emerald-400"
+                  />
+                  <RatioBar
+                    label="Loads"
+                    icon={Plug}
+                    connected={diagnostics.connectedLoadCount}
+                    total={diagnostics.loadCount}
+                    color="text-orange-400"
+                  />
+                </div>
+              </div>
+
+              {/* Power balance */}
+              <div className="card overflow-hidden">
+                <div className="px-5 py-4 border-b border-primary-700/30 flex items-center gap-3">
+                  <Activity size={16} className="text-accent-400" />
+                  <h3 className="font-bold text-white text-sm">Power Balance</h3>
+                </div>
+                <div className="p-5">
+                  <PowerBalance gen={diagnostics.totalGenerationMw} load={diagnostics.totalLoadMw} />
+                </div>
+              </div>
+
+              {/* Entity counts */}
+              <div className="card overflow-hidden">
+                <div className="px-5 py-4 border-b border-primary-700/30 flex items-center gap-3">
+                  <Database size={16} className="text-accent-400" />
+                  <h3 className="font-bold text-white text-sm">Entities</h3>
+                </div>
+                <div className="divide-y divide-primary-700/20">
+                  {[
+                    { label: 'Buses',       count: diagnostics.busIds.length,       icon: CircleDot, color: 'text-violet-400' },
+                    { label: 'Lines',       count: diagnostics.lineIds.length,       icon: Cable,     color: 'text-blue-400' },
+                    { label: 'Generators',  count: diagnostics.generatorIds.length,  icon: Zap,       color: 'text-emerald-400' },
+                    { label: 'Loads',       count: diagnostics.loadIds.length,       icon: Plug,      color: 'text-orange-400' },
+                  ].map(({ label, count, icon: Icon, color }) => (
+                    <div key={label} className="flex items-center justify-between px-5 py-3">
+                      <span className="flex items-center gap-2 text-sm text-neutral-400">
+                        <Icon size={14} className={color} /> {label}
+                      </span>
+                      <span className={`text-sm font-bold font-mono ${color}`}>{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA to Data Fixer */}
+              {hasIssues && (
+                <button
+                  onClick={() => navigate('/data-fixer')}
+                  className="w-full flex items-center gap-3 px-5 py-4 rounded-xl bg-accent-500/10 hover:bg-accent-500/20 border border-accent-500/30 hover:border-accent-500/50 transition-all text-left group"
+                >
+                  <Wrench size={20} className="text-accent-400 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-white">Fix detected issues</p>
+                    <p className="text-xs text-neutral-400">Run automated SPARQL corrections</p>
+                  </div>
+                  <ArrowRight size={16} className="text-neutral-500 group-hover:text-accent-400 transition-colors" />
+                </button>
+              )}
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

@@ -8,6 +8,8 @@ export const useDataImport = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [excelAnalysis, setExcelAnalysis] = useState<any>(null);
+  const [showMappingModal, setShowMappingModal] = useState(false);
 
   const handleImport = async () => {
     if (!file) return;
@@ -43,10 +45,48 @@ export const useDataImport = () => {
     }
   };
 
+  const handleAnalyzeAndMap = async () => {
+    if (!file) return;
+    setError(null);
+    setIsUploading(true);
+    try {
+      const analysis = await apiService.analyzeExcel(file);
+      setExcelAnalysis(analysis);
+      setShowMappingModal(true);
+    } catch (err: any) {
+      setError(err.message || 'Failed to analyze file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleImportWithMapping = async (mapping: Record<string, Record<string, string>>) => {
+    if (!file) return;
+    setIsUploading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const response = await apiService.importExcelWithMapping(file, mapping);
+      setResult(response);
+      setShowMappingModal(false);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('cim_data_imported', {
+          detail: { importType, fileName: file.name }
+        }));
+      }, 1000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to import data');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const reset = () => {
     setFile(null);
     setResult(null);
     setError(null);
+    setExcelAnalysis(null);
+    setShowMappingModal(false);
   };
 
   return {
@@ -56,10 +96,15 @@ export const useDataImport = () => {
     isUploading,
     result,
     error,
+    excelAnalysis,
+    showMappingModal,
     setFile,
     setFormat,
     setImportType,
     handleImport,
+    handleAnalyzeAndMap,
+    handleImportWithMapping,
+    setShowMappingModal,
     reset,
   };
 };

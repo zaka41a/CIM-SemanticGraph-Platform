@@ -12,8 +12,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -24,6 +27,7 @@ public class GraphRAGService {
     private final OllamaService ollamaService;
     private final GroqService groqService;
     private final EmbeddingService embeddingService;
+    private final QdrantService qdrantService;
     private final GraphTraverser graphTraverser;
     private final ContextBuilder contextBuilder;
     private final ChatHistoryService chatHistoryService;
@@ -37,6 +41,9 @@ public class GraphRAGService {
 
     @Value("${graphrag.context.max-triples}")
     private int maxTriples;
+
+    @Value("${graphrag.retrieval.similarity-threshold:0.35}")
+    private double similarityThreshold;
 
     @Value("${groq.api.model:${ollama.api.model:unknown}}")
     private String llmModel;
@@ -220,10 +227,88 @@ public class GraphRAGService {
     private List<String> findRelevantEntities(String question) {
         log.debug("Finding relevant entities for: {}", question);
 
+        // --- Primary path: Semantic vector search via Qdrant ---
+        if (qdrantService.isAvailable() && qdrantService.countPoints() > 0) {
+            try {
+                float[] queryEmbedding = embeddingService.generateEmbedding(question);
+                List<QdrantService.SearchResult> results =
+                        qdrantService.search(queryEmbedding, topK, similarityThreshold);
+
+                if (!results.isEmpty()) {
+                    List<String> entities = results.stream()
+                            .map(QdrantService.SearchResult::getUri)
+                            .filter(Objects::nonNull)
+                            .distinct()
+                            .toList();
+
+                    log.info("Vector search found {} entities (top score: {})",
+                            entities.size(),
+                            String.format("%.3f", results.get(0).score()));
+
+                    return entities;
+                }
+
+                log.warn("Vector search returned no results above threshold {}, falling back to keyword search",
+                        similarityThreshold);
+            } catch (Exception e) {
+                log.warn("Vector search error, falling back to keyword search: {}", e.getMessage());
+            }
+        } else if (!qdrantService.isAvailable()) {
+            log.info("Qdrant not available, using keyword search");
+        } else {
+            log.info("Qdrant index is empty (run a CIM import to index entities), using keyword search");
+        }
+
+        // --- Fallback path: Keyword-based SPARQL search ---
+        return findEntitiesByKeywords(question);
+    }
+
+    // Maps natural language terms → CIM class names for type-based lookup
+    private static final Map<String, List<String>> CIM_TYPE_MAP;
+    static {
+        CIM_TYPE_MAP = new LinkedHashMap<>();
+        CIM_TYPE_MAP.put("substation", List.of("Substation"));
+        CIM_TYPE_MAP.put("substations", List.of("Substation"));
+        CIM_TYPE_MAP.put("poste", List.of("Substation"));
+        CIM_TYPE_MAP.put("postes", List.of("Substation"));
+        CIM_TYPE_MAP.put("umspannwerk", List.of("Substation"));
+        CIM_TYPE_MAP.put("line", List.of("ACLineSegment"));
+        CIM_TYPE_MAP.put("lines", List.of("ACLineSegment"));
+        CIM_TYPE_MAP.put("ligne", List.of("ACLineSegment"));
+        CIM_TYPE_MAP.put("lignes", List.of("ACLineSegment"));
+        CIM_TYPE_MAP.put("transmission", List.of("ACLineSegment"));
+        CIM_TYPE_MAP.put("cable", List.of("ACLineSegment"));
+        CIM_TYPE_MAP.put("transformer", List.of("PowerTransformer"));
+        CIM_TYPE_MAP.put("transformers", List.of("PowerTransformer"));
+        CIM_TYPE_MAP.put("transfo", List.of("PowerTransformer"));
+        CIM_TYPE_MAP.put("transformateur", List.of("PowerTransformer"));
+        CIM_TYPE_MAP.put("generator", List.of("GeneratingUnit", "SynchronousMachine"));
+        CIM_TYPE_MAP.put("generators", List.of("GeneratingUnit", "SynchronousMachine"));
+        CIM_TYPE_MAP.put("generation", List.of("GeneratingUnit", "SynchronousMachine"));
+        CIM_TYPE_MAP.put("generateur", List.of("GeneratingUnit", "SynchronousMachine"));
+        CIM_TYPE_MAP.put("load", List.of("EnergyConsumer"));
+        CIM_TYPE_MAP.put("loads", List.of("EnergyConsumer"));
+        CIM_TYPE_MAP.put("charge", List.of("EnergyConsumer"));
+        CIM_TYPE_MAP.put("consumption", List.of("EnergyConsumer"));
+        CIM_TYPE_MAP.put("bus", List.of("BusbarSection", "ConnectivityNode"));
+        CIM_TYPE_MAP.put("buses", List.of("BusbarSection", "ConnectivityNode"));
+        CIM_TYPE_MAP.put("busbar", List.of("BusbarSection"));
+        CIM_TYPE_MAP.put("node", List.of("ConnectivityNode"));
+        CIM_TYPE_MAP.put("nodes", List.of("ConnectivityNode"));
+        CIM_TYPE_MAP.put("equipment", List.of("ConductingEquipment"));
+        CIM_TYPE_MAP.put("voltage", List.of("VoltageLevel", "BaseVoltage"));
+        CIM_TYPE_MAP.put("network", List.of("Substation", "ACLineSegment", "PowerTransformer"));
+        CIM_TYPE_MAP.put("reseau", List.of("Substation", "ACLineSegment", "PowerTransformer"));
+        CIM_TYPE_MAP.put("netz", List.of("Substation", "ACLineSegment", "PowerTransformer"));
+    }
+
+    private List<String> findEntitiesByKeywords(String question) {
         String[] keywords = extractKeywords(question);
         List<String> entities = new ArrayList<>();
 
+        // Strategy 1: URI/literal string contains (original)
         for (String keyword : keywords) {
+            if (keyword.length() < 3) continue;
             String sparql = """
                 SELECT DISTINCT ?s WHERE {
                     ?s ?p ?o .
@@ -234,21 +319,71 @@ public class GraphRAGService {
                 }
                 LIMIT %d
                 """.formatted(keyword, keyword, topK);
-
             try {
                 List<Map<String, String>> results = jenaService.executeSparqlSelect(sparql);
                 for (Map<String, String> row : results) {
                     String entity = row.get("s");
-                    if (entity != null && !entities.contains(entity)) {
-                        entities.add(entity);
-                    }
+                    if (entity != null && !entities.contains(entity)) entities.add(entity);
                 }
             } catch (Exception e) {
-                log.warn("Error searching for keyword '{}': {}", keyword, e.getMessage());
+                log.warn("URI/literal search for '{}' failed: {}", keyword, e.getMessage());
             }
         }
 
-        log.info("Found {} relevant entities", entities.size());
+        // Strategy 2: IdentifiedObject.name label search
+        for (String keyword : keywords) {
+            if (keyword.length() < 3) continue;
+            String sparql = """
+                PREFIX cim: <%s>
+                SELECT DISTINCT ?s WHERE {
+                    ?s cim:IdentifiedObject.name ?name .
+                    FILTER(CONTAINS(LCASE(?name), LCASE("%s")))
+                }
+                LIMIT %d
+                """.formatted(cimNamespace, keyword, topK);
+            try {
+                List<Map<String, String>> results = jenaService.executeSparqlSelect(sparql);
+                for (Map<String, String> row : results) {
+                    String entity = row.get("s");
+                    if (entity != null && !entities.contains(entity)) entities.add(entity);
+                }
+            } catch (Exception e) {
+                log.warn("Label search for '{}' failed: {}", keyword, e.getMessage());
+            }
+        }
+
+        // Strategy 3: CIM type-based lookup when entities still sparse
+        if (entities.size() < topK) {
+            for (String keyword : keywords) {
+                List<String> cimTypes = CIM_TYPE_MAP.get(keyword.toLowerCase());
+                if (cimTypes == null) continue;
+                for (String cimType : cimTypes) {
+                    String sparql = """
+                        PREFIX cim: <%s>
+                        SELECT DISTINCT ?s WHERE {
+                            ?s a cim:%s .
+                        }
+                        LIMIT %d
+                        """.formatted(cimNamespace, cimType, topK);
+                    try {
+                        List<Map<String, String>> results = jenaService.executeSparqlSelect(sparql);
+                        for (Map<String, String> row : results) {
+                            String entity = row.get("s");
+                            if (entity != null && !entities.contains(entity)) entities.add(entity);
+                        }
+                        if (!results.isEmpty()) {
+                            log.info("Type-based search for '{}' (cim:{}) found {} entities",
+                                    keyword, cimType, results.size());
+                        }
+                    } catch (Exception e) {
+                        log.warn("Type-based search for cim:{} failed: {}", cimType, e.getMessage());
+                    }
+                }
+            }
+        }
+
+        log.info("Keyword search total: {} relevant entities for keywords: {}",
+                entities.size(), String.join(", ", keywords));
         return entities;
     }
 
@@ -584,7 +719,14 @@ public class GraphRAGService {
 
     private GraphRAGResponse handleLoadFlowRequest(String question, String sessionId, long startTime) {
         try {
-            String targetBusId = extractTargetBus(question);
+            // Primary: semantic search via Qdrant (Python service)
+            String targetBusId = loadFlowService.findBusForQuestion(question);
+
+            // Fallback: regex extraction if semantic search unavailable
+            if (targetBusId == null) {
+                log.info("Semantic bus search unavailable, falling back to regex extraction");
+                targetBusId = extractTargetBus(question);
+            }
 
             if (targetBusId != null) {
                 log.info("Executing load flow calculation for bus: {} (extracted from question: '{}')", targetBusId, question);
@@ -612,6 +754,7 @@ public class GraphRAGService {
             }
 
             if (targetBusId != null && lfResult.getBusResults() != null) {
+                final String finalTargetBusId = targetBusId;
                 String normalizedTargetId = targetBusId.toUpperCase().replace("_CN", "");
                 log.debug("Searching for target bus: {} (normalized: {})", targetBusId, normalizedTargetId);
 
@@ -625,7 +768,7 @@ public class GraphRAGService {
                                    busName.contains(normalizedTargetId) ||
                                    normalizedTargetId.contains(busName);
                             if (matches) {
-                                log.debug("Found matching bus: {} (ID: {}, Name: {})", targetBusId, busId, busName);
+                                log.debug("Found matching bus: {} (ID: {}, Name: {})", finalTargetBusId, busId, busName);
                             }
                             return matches;
                         })

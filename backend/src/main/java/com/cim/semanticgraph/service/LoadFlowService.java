@@ -28,6 +28,15 @@ public class LoadFlowService {
     private final JenaService jenaService;
     private final PandapowerService pandapowerService;
 
+    /**
+     * Resolve a natural language question to a bus ID using Qdrant semantic search.
+     * Delegates to the Python powerflow service's /find-bus endpoint.
+     * Returns null if the service is unavailable or no match found.
+     */
+    public String findBusForQuestion(String question) {
+        return pandapowerService.findBusSemantic(question);
+    }
+
     public LoadFlowResponse calculateLoadFlow() {
         return calculateLoadFlow(null, CalculationMethod.DC);
     }

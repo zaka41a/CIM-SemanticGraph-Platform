@@ -97,6 +97,47 @@ public class PandapowerService {
     }
 
     /**
+     * Call Python /find-bus to resolve a natural language question to a CIM bus ID.
+     * Uses Qdrant semantic search (BusbarSection / TopologicalNode / ConnectivityNode).
+     *
+     * @param question  Natural language query, e.g. "voltage at Berlin 380kV"
+     * @return  The bus ID string, or null if not found / service unavailable
+     */
+    public String findBusSemantic(String question) {
+        if (question == null || question.isBlank()) return null;
+
+        try {
+            Map<String, String> requestBody = Map.of("question", question);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<Map<String, String>> entity = new HttpEntity<>(requestBody, headers);
+
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    serviceUrl + "/find-bus",
+                    HttpMethod.POST,
+                    entity,
+                    Map.class
+            );
+
+            Map<?, ?> body = response.getBody();
+            if (body != null && Boolean.TRUE.equals(body.get("found"))) {
+                String busId = (String) body.get("busId");
+                double score = body.get("score") instanceof Number n ? n.doubleValue() : 0.0;
+                log.info("Semantic bus search: '{}' → '{}' (score={})",
+                        question, busId, String.format("%.3f", score));
+                return busId;
+            }
+
+            log.info("Semantic bus search returned no match for: '{}'", question);
+            return null;
+
+        } catch (Exception e) {
+            log.warn("Semantic bus search failed (powerflow service unavailable?): {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Serialize NetworkModel to the JSON format expected by the Python service.
      * Matches the Python NetworkInput Pydantic model.
      */

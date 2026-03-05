@@ -2,9 +2,11 @@ package com.cim.semanticgraph.controller;
 
 import com.cim.semanticgraph.dto.ValidationResult;
 import com.cim.semanticgraph.model.ImportHistory;
+import com.cim.semanticgraph.service.CIMIndexingService;
 import com.cim.semanticgraph.service.CimTransformerService;
 import com.cim.semanticgraph.service.ImportHistoryService;
 import com.cim.semanticgraph.service.JenaService;
+import com.cim.semanticgraph.service.QdrantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,8 @@ public class CimController {
     private final CimTransformerService cimTransformerService;
     private final JenaService jenaService;
     private final ImportHistoryService importHistoryService;
+    private final CIMIndexingService cimIndexingService;
+    private final QdrantService qdrantService;
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Import CIM data", description = "Import CIM data from XML or RDF file")
@@ -76,12 +80,17 @@ public class CimController {
 
             log.info("Import successful. Stats: {}", stats);
 
+            // Trigger async vector indexing to Qdrant (non-blocking)
+            cimIndexingService.indexAllEntitiesAsync();
+            log.info("Async CIM entity indexing to Qdrant triggered");
+
             Map<String, Object> response = new HashMap<>();
             response.put("status", "success");
             response.put("message", "CIM data imported successfully");
             response.put("filename", file.getOriginalFilename());
             response.put("statistics", stats);
             response.put("historyId", historyRecord.getId());
+            response.put("indexing", "Vector indexing started in background");
 
             return ResponseEntity.ok(response);
 
@@ -180,10 +189,11 @@ public class CimController {
 
         try {
             jenaService.clearKnowledgeGraph();
+            qdrantService.clearCollection();
 
             return ResponseEntity.ok(Map.of(
                     "status", "success",
-                    "message", "Knowledge graph cleared successfully"
+                    "message", "Knowledge graph and vector index cleared successfully"
             ));
 
         } catch (Exception e) {
@@ -215,6 +225,44 @@ public class CimController {
         });
 
         return ResponseEntity.ok(formats);
+    }
+
+    @GetMapping("/indexing-status")
+    @Operation(summary = "Vector indexing status", description = "Get Qdrant vector DB indexing status")
+    public ResponseEntity<Map<String, Object>> getIndexingStatus() {
+        Map<String, Object> status = new HashMap<>();
+        try {
+            boolean qdrantAvailable = qdrantService.isAvailable();
+            long pointCount = qdrantAvailable ? qdrantService.countPoints() : 0;
+            status.put("qdrantAvailable", qdrantAvailable);
+            status.put("indexedEntities", pointCount);
+            status.put("collectionName", "cim_entities");
+            status.put("status", qdrantAvailable ? "CONNECTED" : "DISCONNECTED");
+            return ResponseEntity.ok(status);
+        } catch (Exception e) {
+            status.put("qdrantAvailable", false);
+            status.put("indexedEntities", 0);
+            status.put("status", "ERROR");
+            status.put("error", e.getMessage());
+            return ResponseEntity.ok(status);
+        }
+    }
+
+    @PostMapping("/reindex")
+    @Operation(summary = "Re-index all entities", description = "Trigger re-indexing of all CIM entities into Qdrant")
+    public ResponseEntity<Map<String, Object>> reindexEntities() {
+        try {
+            cimIndexingService.indexAllEntitiesAsync();
+            return ResponseEntity.ok(Map.of(
+                    "status", "started",
+                    "message", "Re-indexing of CIM entities started in background"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "status", "error",
+                    "message", e.getMessage()
+            ));
+        }
     }
 
     @GetMapping("/health")

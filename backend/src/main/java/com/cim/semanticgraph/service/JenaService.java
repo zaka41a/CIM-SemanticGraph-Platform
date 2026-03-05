@@ -431,7 +431,7 @@ public class JenaService {
             }
         }
 
-        log.debug("Getting model copy from embedded TDB2");
+        log.debug("Getting model copy from embedded in-memory dataset");
         dataset.begin(ReadWrite.READ);
         try {
             Model copy = ModelFactory.createDefaultModel();
@@ -450,7 +450,6 @@ public class JenaService {
         return dataset.getDefaultModel();
     }
 
-    @Cacheable("triple-count")
     public long getTripleCount() {
         if (jenaConfig.isRemoteMode() && rdfConnection != null) {
             try {

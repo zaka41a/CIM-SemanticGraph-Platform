@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +27,50 @@ public class ExcelController {
 
     private final ExcelImportService excelImportService;
     private final ImportHistoryService importHistoryService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // ─── Analyze Excel structure without importing ─────────────────────────────
+
+    @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Analyze Excel file",
+               description = "Returns sheet structure, detected types, and unrecognized columns — without importing")
+    public ResponseEntity<?> analyzeExcel(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
+        try {
+            ExcelImportService.ExcelAnalysis analysis = excelImportService.analyzeExcel(file);
+            return ResponseEntity.ok(analysis);
+        } catch (Exception e) {
+            log.error("Excel analysis failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Analysis failed: " + e.getMessage()));
+        }
+    }
+
+    // ─── Import with user-provided column mapping ──────────────────────────────
+
+    @PostMapping(value = "/import-with-mapping", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Import Excel with custom column mapping",
+               description = "Import an Excel file using user-provided column-name mappings for unrecognized columns")
+    public ResponseEntity<?> importWithMapping(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("mapping") String mappingJson) {
+
+        if (file.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Map<String, String>> mappings =
+                    objectMapper.readValue(mappingJson, Map.class);
+            ExcelImportService.ImportResult result =
+                    excelImportService.importExcelWithMapping(file, mappings);
+            return result.isSuccess()
+                    ? ResponseEntity.ok(result)
+                    : ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).body(result);
+        } catch (Exception e) {
+            log.error("Import-with-mapping failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Import failed: " + e.getMessage()));
+        }
+    }
 
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Import Excel file",

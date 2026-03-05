@@ -227,6 +227,25 @@ class ApiService {
     return response.data;
   }
 
+  async analyzeExcel(file: File): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await this.client.post('/excel/analyze', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async importExcelWithMapping(file: File, mapping: Record<string, Record<string, string>>): Promise<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mapping', JSON.stringify(mapping));
+    const response = await this.client.post('/excel/import-with-mapping', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
   async getExcelFormat(): Promise<any> {
     const response = await this.client.get('/excel/format');
     return response.data;
@@ -274,6 +293,28 @@ class ApiService {
     const response = await this.client.get('/reports/statistics', {
       responseType: 'blob',
     });
+    return response.data;
+  }
+
+  // Qdrant / Vector DB APIs
+  async getIndexingStatus(): Promise<{
+    qdrantAvailable: boolean;
+    indexedEntities: number;
+    collectionName: string;
+    status: string;
+  }> {
+    const response = await this.client.get('/cim/indexing-status');
+    return response.data;
+  }
+
+  async reindexEntities(): Promise<{ status: string; message: string }> {
+    const response = await this.client.post('/cim/reindex');
+    return response.data;
+  }
+
+  // Powerflow health check
+  async getPowerflowHealth(): Promise<{ status: string; [key: string]: any }> {
+    const response = await this.client.get('/loadflow/health');
     return response.data;
   }
 }

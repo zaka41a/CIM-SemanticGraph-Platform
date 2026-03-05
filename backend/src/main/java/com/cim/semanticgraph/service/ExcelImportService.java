@@ -58,25 +58,26 @@ public class ExcelImportService {
                     int count = 0;
                     long triplesBefore = model.size();
 
-                    if (sheetNameLower.contains("substation") || sheetNameLower.contains("poste")) {
+                    String detectedType = detectSheetType(sheetNameLower, sheet);
+                    if ("substation".equals(detectedType)) {
                         log.info("Detected as Substations sheet");
                         count = importSubstations(sheet, model);
-                    } else if (sheetNameLower.contains("bus") || sheetNameLower.contains("noeud") || sheetNameLower.contains("jeu")) {
+                    } else if ("bus".equals(detectedType)) {
                         log.info("Detected as Buses sheet");
                         count = importBuses(sheet, model);
-                    } else if (sheetNameLower.contains("line") || sheetNameLower.contains("ligne")) {
+                    } else if ("line".equals(detectedType)) {
                         log.info("Detected as Lines sheet");
                         count = importLines(sheet, model);
-                    } else if (sheetNameLower.contains("transformer") || sheetNameLower.contains("transfo")) {
+                    } else if ("transformer".equals(detectedType)) {
                         log.info("Detected as Transformers sheet");
                         count = importTransformers(sheet, model);
-                    } else if (sheetNameLower.contains("generator") || sheetNameLower.contains("generateur") || sheetNameLower.contains("production")) {
+                    } else if ("generator".equals(detectedType)) {
                         log.info("Detected as Generators sheet");
                         count = importGenerators(sheet, model);
-                    } else if (sheetNameLower.contains("load") || sheetNameLower.contains("charge") || sheetNameLower.contains("consommation")) {
+                    } else if ("load".equals(detectedType)) {
                         log.info("Detected as Loads sheet");
                         count = importLoads(sheet, model);
-                    } else if (sheetNameLower.contains("voltage") || sheetNameLower.contains("tension")) {
+                    } else if ("voltage".equals(detectedType)) {
                         log.info("Detected as Voltage Levels sheet");
                         count = importVoltageLevels(sheet, model);
                     } else {
@@ -640,6 +641,49 @@ public class ExcelImportService {
         }
     }
 
+    /**
+     * Detects the type of a sheet by name keywords first, then by column headers as fallback.
+     */
+    private String detectSheetType(String sheetNameLower, Sheet sheet) {
+        // Name-based detection (expanded with German, Dutch, Spanish, Italian variants)
+        if (sheetNameLower.matches(".*\\b(substation|substat|poste|postes|umspannwerk|umspannstation|substatie|unterwerk|station)\\b.*"))
+            return "substation";
+        if (sheetNameLower.matches(".*\\b(bus|buses|busbar|noeud|noeuds|jeu|sammelschiene|knooppunt|sbarra)\\b.*"))
+            return "bus";
+        if (sheetNameLower.matches(".*\\b(line|lines|ligne|lignes|leitung|leitungen|linie|linies|lijn|linea|lineas)\\b.*"))
+            return "line";
+        if (sheetNameLower.matches(".*\\b(transformer|transformers|transfo|transformateur|transformateurs|trafo|trafos|transformator)\\b.*"))
+            return "transformer";
+        if (sheetNameLower.matches(".*\\b(generator|generators|gen|generation|generateur|generateurs|erzeuger|erzeugung|centrale)\\b.*"))
+            return "generator";
+        if (sheetNameLower.matches(".*\\b(load|loads|charge|charges|consommation|last|lasten|verbruik|carga)\\b.*"))
+            return "load";
+        if (sheetNameLower.matches(".*\\b(voltage|tension|spannungsebene|spannung|spanning|voltaje)\\b.*"))
+            return "voltage";
+
+        // Column-header-based fallback detection
+        Map<String, Integer> cols = getColumnMapping(sheet);
+        if (cols.containsKey("hv_bus") || cols.containsKey("lv_bus") || cols.containsKey("rated_s")
+                || cols.containsKey("hvbus") || cols.containsKey("lvbus") || cols.containsKey("rateds"))
+            return "transformer";
+        if (cols.containsKey("max_p") || cols.containsKey("min_p") || cols.containsKey("maxp")
+                || cols.containsKey("minp") || cols.containsKey("pmax") || cols.containsKey("pmin"))
+            return "generator";
+        if (cols.containsKey("from") || cols.containsKey("to") || cols.containsKey("from_bus")
+                || cols.containsKey("to_bus") || cols.containsKey("de") || cols.containsKey("vers")
+                || cols.containsKey("von") || cols.containsKey("nach"))
+            return "line";
+        if (cols.containsKey("substation") || cols.containsKey("poste") || cols.containsKey("region"))
+            return (cols.containsKey("voltage") || cols.containsKey("tension") || cols.containsKey("spannung"))
+                    ? "bus" : "substation";
+        if ((cols.containsKey("p") || cols.containsKey("mw")) && cols.containsKey("bus"))
+            return "load";
+        if (cols.containsKey("bus") || cols.containsKey("voltage") || cols.containsKey("tension"))
+            return "bus";
+
+        return null; // unrecognized
+    }
+
     private Map<String, Integer> getColumnMapping(Sheet sheet) {
         Map<String, Integer> mapping = new HashMap<>();
         Row headerRow = sheet.getRow(0);
@@ -648,6 +692,55 @@ public class ExcelImportService {
             log.warn("No header row found in sheet: {}", sheet.getSheetName());
             return mapping;
         }
+
+        // Alias map: many column names → canonical key used in import methods
+        Map<String, String> ALIASES = new HashMap<>();
+        // ID aliases
+        ALIASES.put("identifier", "id"); ALIASES.put("key", "id"); ALIASES.put("uuid", "id");
+        ALIASES.put("code", "id"); ALIASES.put("nummer", "id"); ALIASES.put("numero", "id");
+        // Name aliases
+        ALIASES.put("nom", "name"); ALIASES.put("bezeichnung", "name"); ALIASES.put("beschreibung", "name");
+        ALIASES.put("label", "name"); ALIASES.put("title", "name"); ALIASES.put("bezeichner", "name");
+        // Region aliases
+        ALIASES.put("area", "region"); ALIASES.put("zone", "region"); ALIASES.put("gebiet", "region");
+        ALIASES.put("bereich", "region"); ALIASES.put("region", "region");
+        // Voltage aliases
+        ALIASES.put("tension", "voltage"); ALIASES.put("spannung", "voltage"); ALIASES.put("kv", "voltage");
+        ALIASES.put("nominal_voltage", "voltage"); ALIASES.put("nominalvoltage", "voltage");
+        ALIASES.put("base_voltage", "voltage"); ALIASES.put("basevoltage", "voltage");
+        ALIASES.put("vn_kv", "voltage"); ALIASES.put("vnom", "voltage");
+        // Substation aliases
+        ALIASES.put("poste", "substation"); ALIASES.put("umspannwerk", "substation");
+        ALIASES.put("substationid", "substation"); ALIASES.put("station", "substation");
+        // Bus aliases
+        ALIASES.put("noeud", "bus"); ALIASES.put("node", "bus"); ALIASES.put("busbar", "bus");
+        ALIASES.put("sammelschiene", "bus"); ALIASES.put("knotenpunkt", "bus");
+        // From/To bus aliases
+        ALIASES.put("from_bus", "from"); ALIASES.put("frombus", "from"); ALIASES.put("bus_from", "from");
+        ALIASES.put("de", "from"); ALIASES.put("von", "from"); ALIASES.put("start", "from");
+        ALIASES.put("startbus", "from"); ALIASES.put("startnode", "from");
+        ALIASES.put("to_bus", "to"); ALIASES.put("tobus", "to"); ALIASES.put("bus_to", "to");
+        ALIASES.put("vers", "to"); ALIASES.put("nach", "to"); ALIASES.put("end", "to");
+        ALIASES.put("endbus", "to"); ALIASES.put("endnode", "to");
+        // Line parameters
+        ALIASES.put("longueur", "length"); ALIASES.put("laenge", "length"); ALIASES.put("len", "length");
+        ALIASES.put("resistance", "r"); ALIASES.put("reactance", "x");
+        // Transformer HV/LV bus
+        ALIASES.put("hv_bus", "hv_bus"); ALIASES.put("hvbus", "hv_bus"); ALIASES.put("bus_hv", "hv_bus");
+        ALIASES.put("ht", "hv_bus"); ALIASES.put("high_voltage_bus", "hv_bus"); ALIASES.put("os_bus", "hv_bus");
+        ALIASES.put("lv_bus", "lv_bus"); ALIASES.put("lvbus", "lv_bus"); ALIASES.put("bus_lv", "lv_bus");
+        ALIASES.put("bt", "lv_bus"); ALIASES.put("low_voltage_bus", "lv_bus"); ALIASES.put("us_bus", "lv_bus");
+        ALIASES.put("rated_s", "rated_s"); ALIASES.put("rateds", "rated_s"); ALIASES.put("puissance", "rated_s");
+        ALIASES.put("sn_mva", "rated_s"); ALIASES.put("snmva", "rated_s"); ALIASES.put("mva", "rated_s");
+        // Generator power
+        ALIASES.put("max_p", "max_p"); ALIASES.put("maxp", "max_p"); ALIASES.put("pmax", "max_p");
+        ALIASES.put("p_max_mw", "max_p"); ALIASES.put("pmaxmw", "max_p"); ALIASES.put("max_mw", "max_p");
+        ALIASES.put("min_p", "min_p"); ALIASES.put("minp", "min_p"); ALIASES.put("pmin", "min_p");
+        ALIASES.put("p_min_mw", "min_p"); ALIASES.put("pminmw", "min_p"); ALIASES.put("min_mw", "min_p");
+        ALIASES.put("p_mw", "p"); ALIASES.put("pmw", "p"); ALIASES.put("active_power", "p");
+        ALIASES.put("mw", "p"); ALIASES.put("activepuissance", "p");
+        ALIASES.put("q_mvar", "q"); ALIASES.put("qmvar", "q"); ALIASES.put("reactive_power", "q");
+        ALIASES.put("mvar", "q"); ALIASES.put("reactivepuissance", "q");
 
         log.debug("Reading header row from sheet: {}", sheet.getSheetName());
         for (int i = 0; i < headerRow.getLastCellNum(); i++) {
@@ -663,6 +756,15 @@ public class ExcelImportService {
                     String nameNoUnderscore = name.replace("_", "");
                     if (!nameNoUnderscore.equals(name)) {
                         mapping.put(nameNoUnderscore, i);
+                    }
+                    // Apply alias mappings so callers get canonical keys
+                    String canonical = ALIASES.get(name);
+                    if (canonical != null && !mapping.containsKey(canonical)) {
+                        mapping.put(canonical, i);
+                    }
+                    String canonicalNoUnderscore = ALIASES.get(nameNoUnderscore);
+                    if (canonicalNoUnderscore != null && !mapping.containsKey(canonicalNoUnderscore)) {
+                        mapping.put(canonicalNoUnderscore, i);
                     }
                     log.trace("Mapped column '{}' (normalized: '{}') to index {}", rawValue, name, i);
                 }
@@ -722,6 +824,428 @@ public class ExcelImportService {
         return id.replaceAll("[^a-zA-Z0-9_-]", "_")
                 .replaceAll("_+", "_")
                 .replaceAll("^_|_$", "");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Excel Analysis — returns sheet structure without importing
+    // ─────────────────────────────────────────────────────────────────────
+
+    public ExcelAnalysis analyzeExcel(MultipartFile file) throws IOException {
+        try (InputStream is = file.getInputStream();
+             Workbook workbook = new XSSFWorkbook(is)) {
+
+            List<SheetAnalysis> sheets = new ArrayList<>();
+            Map<String, String> allAliases = buildAliasMap();
+
+            for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+                Sheet sheet = workbook.getSheetAt(i);
+                String sheetName = sheet.getSheetName();
+                String detected = detectSheetType(sheetName.toLowerCase().trim(), sheet);
+
+                Row headerRow = sheet.getRow(0);
+                List<String> rawColumns = new ArrayList<>();
+                Map<String, String> recognized = new LinkedHashMap<>();
+                List<String> unknown = new ArrayList<>();
+
+                if (headerRow != null) {
+                    for (int c = 0; c < headerRow.getLastCellNum(); c++) {
+                        String raw = getCellValue(headerRow, c);
+                        if (raw == null || raw.isBlank()) continue;
+                        rawColumns.add(raw);
+
+                        String norm = raw.toLowerCase().trim()
+                                .replaceAll("\\s+", "_").replaceAll("[^a-z0-9_]", "");
+                        String canonical = allAliases.getOrDefault(norm,
+                                allAliases.get(norm.replace("_", "")));
+                        if (canonical != null) {
+                            recognized.put(raw, canonical);
+                        } else if (!norm.isEmpty()) {
+                            unknown.add(raw);
+                        }
+                    }
+                }
+
+                sheets.add(SheetAnalysis.builder()
+                        .sheetName(sheetName)
+                        .detectedType(detected)
+                        .rawColumns(rawColumns)
+                        .recognizedColumns(recognized)
+                        .unknownColumns(unknown)
+                        .rowCount(Math.max(0, sheet.getLastRowNum()))
+                        .build());
+            }
+
+            return ExcelAnalysis.builder()
+                    .fileName(file.getOriginalFilename())
+                    .sheets(sheets)
+                    .build();
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Import with custom column mapping
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Import Excel with user-provided column mappings.
+     * @param customMappings  map of sheetName → {rawColumnName → canonicalKey}
+     *                        e.g. {"Lines": {"Leitungsname": "name", "Anfang": "from"}}
+     */
+    public ImportResult importExcelWithMapping(
+            MultipartFile file,
+            Map<String, Map<String, String>> customMappings) throws IOException {
+
+        // Inject custom mappings into the alias table temporarily
+        Map<String, String> extraAliases = new HashMap<>();
+        if (customMappings != null) {
+            customMappings.values().forEach(sheetMap ->
+                    sheetMap.forEach((raw, canonical) -> {
+                        String norm = raw.toLowerCase().trim()
+                                .replaceAll("\\s+", "_").replaceAll("[^a-z0-9_]", "");
+                        extraAliases.put(norm, canonical);
+                        extraAliases.put(norm.replace("_", ""), canonical);
+                    }));
+        }
+
+        // Also inject sheet-type overrides if provided
+        Map<String, String> sheetTypeOverrides = new HashMap<>();
+        if (customMappings != null) {
+            customMappings.forEach((sheetName, colMap) -> {
+                String typeHint = colMap.remove("__sheet_type__");
+                if (typeHint != null) sheetTypeOverrides.put(sheetName.toLowerCase(), typeHint);
+            });
+        }
+
+        return importExcelInternal(file, extraAliases, sheetTypeOverrides);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Internal import with optional extra aliases / sheet-type overrides
+    // ─────────────────────────────────────────────────────────────────────
+
+    private ImportResult importExcelInternal(
+            MultipartFile file,
+            Map<String, String> extraAliases,
+            Map<String, String> sheetTypeOverrides) throws IOException {
+
+        log.info("Importing Excel file (with custom mapping): {}", file.getOriginalFilename());
+        long startTime = System.currentTimeMillis();
+
+        try (InputStream is = file.getInputStream();
+             Workbook workbook = new XSSFWorkbook(is)) {
+
+            Model model = ModelFactory.createDefaultModel();
+            model.setNsPrefix("cim", cimNamespace);
+            model.setNsPrefix("rdf", RDF.getURI());
+            model.setNsPrefix("rdfs", RDFS.getURI());
+
+            int totalEntities = 0;
+            List<String> importedSheets = new ArrayList<>();
+            List<String> errors = new ArrayList<>();
+
+            for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+                Sheet sheet = workbook.getSheetAt(i);
+                String sheetName = sheet.getSheetName();
+                String sheetNameLower = sheetName.toLowerCase().trim();
+
+                try {
+                    long triplesBefore = model.size();
+                    String detectedType = sheetTypeOverrides.containsKey(sheetNameLower)
+                            ? sheetTypeOverrides.get(sheetNameLower)
+                            : detectSheetType(sheetNameLower, sheet);
+
+                    if (detectedType == null) {
+                        log.warn("Skipping unrecognized sheet: '{}'", sheetName);
+                        continue;
+                    }
+
+                    // Build augmented column mapping
+                    Map<String, Integer> colMap = getColumnMappingWithExtras(sheet, extraAliases);
+
+                    int count = switch (detectedType) {
+                        case "substation"  -> importSubstationsWithMap(sheet, model, colMap);
+                        case "bus"         -> importBusesWithMap(sheet, model, colMap);
+                        case "line"        -> importLinesWithMap(sheet, model, colMap);
+                        case "transformer" -> importTransformersWithMap(sheet, model, colMap);
+                        case "generator"   -> importGeneratorsWithMap(sheet, model, colMap);
+                        case "load"        -> importLoadsWithMap(sheet, model, colMap);
+                        case "voltage"     -> importVoltageLevels(sheet, model);
+                        default -> 0;
+                    };
+
+                    if (count > 0) {
+                        totalEntities += count;
+                        importedSheets.add(sheetName + " (" + count + " entities)");
+                    }
+                    log.info("Sheet '{}' ({}): {} entities, {} triples added",
+                            sheetName, detectedType, count, model.size() - triplesBefore);
+
+                } catch (Exception e) {
+                    String err = "Error in sheet " + sheetName + ": " + e.getMessage();
+                    log.error(err, e);
+                    errors.add(err);
+                }
+            }
+
+            if (model.size() > 0) {
+                jenaService.addModel(model);
+                log.info("Added {} triples to knowledge graph", model.size());
+            } else {
+                errors.add("No triples were created. Check column mappings and file format.");
+            }
+
+            long elapsed = System.currentTimeMillis() - startTime;
+            return ImportResult.builder()
+                    .success(errors.isEmpty() && model.size() > 0)
+                    .fileName(file.getOriginalFilename())
+                    .entitiesImported(totalEntities)
+                    .triplesCreated(model.size())
+                    .sheetsProcessed(importedSheets)
+                    .errors(errors)
+                    .executionTimeMs(elapsed)
+                    .build();
+        }
+    }
+
+    /** Build column mapping with extra user-provided aliases injected. */
+    private Map<String, Integer> getColumnMappingWithExtras(Sheet sheet, Map<String, String> extraAliases) {
+        Map<String, Integer> mapping = new HashMap<>();
+        Row headerRow = sheet.getRow(0);
+        if (headerRow == null) return mapping;
+
+        Map<String, String> aliases = buildAliasMap();
+        aliases.putAll(extraAliases); // user mappings override defaults
+
+        for (int i = 0; i < headerRow.getLastCellNum(); i++) {
+            String raw = getCellValue(headerRow, i);
+            if (raw == null || raw.isBlank()) continue;
+            String norm = raw.toLowerCase().trim()
+                    .replaceAll("\\s+", "_").replaceAll("[^a-z0-9_]", "");
+            mapping.put(norm, i);
+            String normNoUnd = norm.replace("_", "");
+            if (!normNoUnd.equals(norm)) mapping.put(normNoUnd, i);
+            String canonical = aliases.getOrDefault(norm, aliases.get(normNoUnd));
+            if (canonical != null) mapping.putIfAbsent(canonical, i);
+        }
+        return mapping;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // "With map" wrappers — importX methods that accept a pre-built colMap
+    // ─────────────────────────────────────────────────────────────────────
+
+    private int importSubstationsWithMap(Sheet sheet, Model model, Map<String, Integer> columns) {
+        int count = 0;
+        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            Row row = sheet.getRow(i);
+            if (row == null || isRowEmpty(row)) continue;
+            String id   = getCellValue(row, columns.getOrDefault("id", 0));
+            String name = getCellValue(row, columns.getOrDefault("name", columns.getOrDefault("nom", 1)));
+            if (id == null || id.isEmpty()) id = "SUB_" + i;
+            Resource sub = model.createResource(BASE_URI + "Substation/" + sanitizeId(id));
+            sub.addProperty(RDF.type, model.createResource(cimNamespace + "Substation"));
+            if (name != null && !name.isEmpty())
+                sub.addProperty(model.createProperty(cimNamespace + "IdentifiedObject.name"), model.createLiteral(name));
+            String region = getCellValue(row, columns.getOrDefault("region", -1));
+            if (region != null && !region.isEmpty()) {
+                Resource r = model.createResource(BASE_URI + "SubGeographicalRegion/" + sanitizeId(region));
+                r.addProperty(RDF.type, model.createResource(cimNamespace + "SubGeographicalRegion"));
+                sub.addProperty(model.createProperty(cimNamespace + "Substation.Region"), r);
+            }
+            count++;
+        }
+        return count;
+    }
+
+    private int importBusesWithMap(Sheet sheet, Model model, Map<String, Integer> columns) {
+        int count = 0;
+        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            Row row = sheet.getRow(i);
+            if (row == null || isRowEmpty(row)) continue;
+            String id      = getCellValue(row, columns.getOrDefault("id", 0));
+            String name    = getCellValue(row, columns.getOrDefault("name", 1));
+            String voltage = getCellValue(row, columns.getOrDefault("voltage", -1));
+            String sub     = getCellValue(row, columns.getOrDefault("substation", -1));
+            if (id == null || id.isEmpty()) id = "BUS_" + i;
+            Resource bus = model.createResource(BASE_URI + "BusbarSection/" + sanitizeId(id));
+            bus.addProperty(RDF.type, model.createResource(cimNamespace + "BusbarSection"));
+            if (name != null && !name.isEmpty())
+                bus.addProperty(model.createProperty(cimNamespace + "IdentifiedObject.name"), model.createLiteral(name));
+            if (voltage != null && !voltage.isEmpty()) {
+                Resource vl = model.createResource(BASE_URI + "VoltageLevel/" + sanitizeId(id) + "_VL");
+                vl.addProperty(RDF.type, model.createResource(cimNamespace + "VoltageLevel"));
+                try { vl.addProperty(model.createProperty(cimNamespace + "VoltageLevel.BaseVoltage"),
+                        model.createTypedLiteral(Double.parseDouble(voltage)));
+                } catch (NumberFormatException ignored) {}
+                bus.addProperty(model.createProperty(cimNamespace + "Equipment.EquipmentContainer"), vl);
+            }
+            if (sub != null && !sub.isEmpty()) {
+                Resource subRes = model.createResource(BASE_URI + "Substation/" + sanitizeId(sub));
+                bus.addProperty(model.createProperty(cimNamespace + "Equipment.EquipmentContainer"), subRes);
+            }
+            count++;
+        }
+        return count;
+    }
+
+    private int importLinesWithMap(Sheet sheet, Model model, Map<String, Integer> columns) {
+        int count = 0;
+        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            Row row = sheet.getRow(i);
+            if (row == null || isRowEmpty(row)) continue;
+            String id   = getCellValue(row, columns.getOrDefault("id", 0));
+            String name = getCellValue(row, columns.getOrDefault("name", 1));
+            String from = getCellValue(row, columns.getOrDefault("from", -1));
+            String to   = getCellValue(row, columns.getOrDefault("to", -1));
+            String r    = getCellValue(row, columns.getOrDefault("r", -1));
+            String x    = getCellValue(row, columns.getOrDefault("x", -1));
+            if (id == null || id.isEmpty()) id = "LINE_" + i;
+            Resource line = model.createResource(BASE_URI + "ACLineSegment/" + sanitizeId(id));
+            line.addProperty(RDF.type, model.createResource(cimNamespace + "ACLineSegment"));
+            if (name != null && !name.isEmpty())
+                line.addProperty(model.createProperty(cimNamespace + "IdentifiedObject.name"), model.createLiteral(name));
+            if (from != null && !from.isEmpty()) {
+                Resource t1 = model.createResource(BASE_URI + "Terminal/" + sanitizeId(id) + "_T1");
+                t1.addProperty(RDF.type, model.createResource(cimNamespace + "Terminal"));
+                t1.addProperty(model.createProperty(cimNamespace + "Terminal.ConnectivityNode"),
+                        model.createResource(BASE_URI + "ConnectivityNode/" + sanitizeId(from) + "_CN"));
+                line.addProperty(model.createProperty(cimNamespace + "ConductingEquipment.Terminals"), t1);
+            }
+            if (to != null && !to.isEmpty()) {
+                Resource t2 = model.createResource(BASE_URI + "Terminal/" + sanitizeId(id) + "_T2");
+                t2.addProperty(RDF.type, model.createResource(cimNamespace + "Terminal"));
+                t2.addProperty(model.createProperty(cimNamespace + "Terminal.ConnectivityNode"),
+                        model.createResource(BASE_URI + "ConnectivityNode/" + sanitizeId(to) + "_CN"));
+                line.addProperty(model.createProperty(cimNamespace + "ConductingEquipment.Terminals"), t2);
+            }
+            try { if (r != null && !r.isEmpty()) line.addProperty(model.createProperty(cimNamespace + "ACLineSegment.r"), model.createTypedLiteral(Double.parseDouble(r))); } catch (NumberFormatException ignored) {}
+            try { if (x != null && !x.isEmpty()) line.addProperty(model.createProperty(cimNamespace + "ACLineSegment.x"), model.createTypedLiteral(Double.parseDouble(x))); } catch (NumberFormatException ignored) {}
+            count++;
+        }
+        return count;
+    }
+
+    private int importTransformersWithMap(Sheet sheet, Model model, Map<String, Integer> columns) {
+        int count = 0;
+        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            Row row = sheet.getRow(i);
+            if (row == null || isRowEmpty(row)) continue;
+            String id    = getCellValue(row, columns.getOrDefault("id", 0));
+            String name  = getCellValue(row, columns.getOrDefault("name", 1));
+            String hvBus = getCellValue(row, columns.getOrDefault("hv_bus", -1));
+            String lvBus = getCellValue(row, columns.getOrDefault("lv_bus", -1));
+            String rated = getCellValue(row, columns.getOrDefault("rated_s", -1));
+            if (id == null || id.isEmpty()) id = "TRAFO_" + i;
+            Resource trafo = model.createResource(BASE_URI + "PowerTransformer/" + sanitizeId(id));
+            trafo.addProperty(RDF.type, model.createResource(cimNamespace + "PowerTransformer"));
+            if (name != null && !name.isEmpty())
+                trafo.addProperty(model.createProperty(cimNamespace + "IdentifiedObject.name"), model.createLiteral(name));
+            if (hvBus != null && !hvBus.isEmpty()) {
+                Resource w = model.createResource(BASE_URI + "PowerTransformerEnd/" + sanitizeId(id) + "_HV");
+                w.addProperty(RDF.type, model.createResource(cimNamespace + "PowerTransformerEnd"));
+                w.addProperty(model.createProperty(cimNamespace + "TransformerEnd.Terminal"),
+                        model.createResource(BASE_URI + "Terminal/" + sanitizeId(id) + "_T1"));
+                trafo.addProperty(model.createProperty(cimNamespace + "PowerTransformer.PowerTransformerEnd"), w);
+            }
+            if (lvBus != null && !lvBus.isEmpty()) {
+                Resource w = model.createResource(BASE_URI + "PowerTransformerEnd/" + sanitizeId(id) + "_LV");
+                w.addProperty(RDF.type, model.createResource(cimNamespace + "PowerTransformerEnd"));
+                w.addProperty(model.createProperty(cimNamespace + "TransformerEnd.Terminal"),
+                        model.createResource(BASE_URI + "Terminal/" + sanitizeId(id) + "_T2"));
+                trafo.addProperty(model.createProperty(cimNamespace + "PowerTransformer.PowerTransformerEnd"), w);
+            }
+            try { if (rated != null && !rated.isEmpty()) trafo.addProperty(model.createProperty(cimNamespace + "PowerTransformer.ratedS"), model.createTypedLiteral(Double.parseDouble(rated))); } catch (NumberFormatException ignored) {}
+            count++;
+        }
+        return count;
+    }
+
+    private int importGeneratorsWithMap(Sheet sheet, Model model, Map<String, Integer> columns) {
+        int count = 0;
+        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            Row row = sheet.getRow(i);
+            if (row == null || isRowEmpty(row)) continue;
+            String id   = getCellValue(row, columns.getOrDefault("id", 0));
+            String name = getCellValue(row, columns.getOrDefault("name", 1));
+            String maxP = getCellValue(row, columns.getOrDefault("max_p", -1));
+            String minP = getCellValue(row, columns.getOrDefault("min_p", -1));
+            if (id == null || id.isEmpty()) id = "GEN_" + i;
+            Resource gen = model.createResource(BASE_URI + "GeneratingUnit/" + sanitizeId(id));
+            gen.addProperty(RDF.type, model.createResource(cimNamespace + "GeneratingUnit"));
+            if (name != null && !name.isEmpty())
+                gen.addProperty(model.createProperty(cimNamespace + "IdentifiedObject.name"), model.createLiteral(name));
+            try { if (maxP != null && !maxP.isEmpty()) gen.addProperty(model.createProperty(cimNamespace + "GeneratingUnit.maxOperatingP"), model.createTypedLiteral(Double.parseDouble(maxP))); } catch (NumberFormatException ignored) {}
+            try { if (minP != null && !minP.isEmpty()) gen.addProperty(model.createProperty(cimNamespace + "GeneratingUnit.minOperatingP"), model.createTypedLiteral(Double.parseDouble(minP))); } catch (NumberFormatException ignored) {}
+            count++;
+        }
+        return count;
+    }
+
+    private int importLoadsWithMap(Sheet sheet, Model model, Map<String, Integer> columns) {
+        int count = 0;
+        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            Row row = sheet.getRow(i);
+            if (row == null || isRowEmpty(row)) continue;
+            String id   = getCellValue(row, columns.getOrDefault("id", 0));
+            String name = getCellValue(row, columns.getOrDefault("name", 1));
+            String p    = getCellValue(row, columns.getOrDefault("p", -1));
+            String q    = getCellValue(row, columns.getOrDefault("q", -1));
+            if (id == null || id.isEmpty()) id = "LOAD_" + i;
+            Resource load = model.createResource(BASE_URI + "EnergyConsumer/" + sanitizeId(id));
+            load.addProperty(RDF.type, model.createResource(cimNamespace + "EnergyConsumer"));
+            if (name != null && !name.isEmpty())
+                load.addProperty(model.createProperty(cimNamespace + "IdentifiedObject.name"), model.createLiteral(name));
+            try { if (p != null && !p.isEmpty()) load.addProperty(model.createProperty(cimNamespace + "EnergyConsumer.pfixed"), model.createTypedLiteral(Double.parseDouble(p))); } catch (NumberFormatException ignored) {}
+            try { if (q != null && !q.isEmpty()) load.addProperty(model.createProperty(cimNamespace + "EnergyConsumer.qfixed"), model.createTypedLiteral(Double.parseDouble(q))); } catch (NumberFormatException ignored) {}
+            count++;
+        }
+        return count;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Shared alias map (extracted so analyzeExcel can use it too)
+    // ─────────────────────────────────────────────────────────────────────
+
+    private Map<String, String> buildAliasMap() {
+        Map<String, String> a = new HashMap<>();
+        a.put("identifier","id"); a.put("key","id"); a.put("uuid","id"); a.put("code","id"); a.put("nummer","id"); a.put("numero","id");
+        a.put("nom","name"); a.put("bezeichnung","name"); a.put("beschreibung","name"); a.put("label","name"); a.put("title","name");
+        a.put("area","region"); a.put("zone","region"); a.put("gebiet","region"); a.put("bereich","region"); a.put("region","region");
+        a.put("tension","voltage"); a.put("spannung","voltage"); a.put("kv","voltage"); a.put("nominal_voltage","voltage");
+        a.put("base_voltage","voltage"); a.put("vn_kv","voltage"); a.put("vnom","voltage"); a.put("nominalvoltage","voltage"); a.put("basevoltage","voltage");
+        a.put("poste","substation"); a.put("umspannwerk","substation"); a.put("substationid","substation"); a.put("station","substation");
+        a.put("noeud","bus"); a.put("node","bus"); a.put("busbar","bus"); a.put("sammelschiene","bus"); a.put("knotenpunkt","bus");
+        a.put("from_bus","from"); a.put("frombus","from"); a.put("bus_from","from"); a.put("de","from"); a.put("von","from"); a.put("start","from"); a.put("startbus","from");
+        a.put("to_bus","to"); a.put("tobus","to"); a.put("bus_to","to"); a.put("vers","to"); a.put("nach","to"); a.put("end","to"); a.put("endbus","to");
+        a.put("longueur","length"); a.put("laenge","length"); a.put("len","length"); a.put("resistance","r"); a.put("reactance","x");
+        a.put("hv_bus","hv_bus"); a.put("hvbus","hv_bus"); a.put("bus_hv","hv_bus"); a.put("ht","hv_bus"); a.put("os_bus","hv_bus"); a.put("high_voltage_bus","hv_bus");
+        a.put("lv_bus","lv_bus"); a.put("lvbus","lv_bus"); a.put("bus_lv","lv_bus"); a.put("bt","lv_bus"); a.put("us_bus","lv_bus"); a.put("low_voltage_bus","lv_bus");
+        a.put("rated_s","rated_s"); a.put("rateds","rated_s"); a.put("puissance","rated_s"); a.put("sn_mva","rated_s"); a.put("snmva","rated_s"); a.put("mva","rated_s");
+        a.put("max_p","max_p"); a.put("maxp","max_p"); a.put("pmax","max_p"); a.put("p_max_mw","max_p"); a.put("max_mw","max_p");
+        a.put("min_p","min_p"); a.put("minp","min_p"); a.put("pmin","min_p"); a.put("p_min_mw","min_p"); a.put("min_mw","min_p");
+        a.put("p_mw","p"); a.put("pmw","p"); a.put("active_power","p"); a.put("mw","p");
+        a.put("q_mvar","q"); a.put("qmvar","q"); a.put("reactive_power","q"); a.put("mvar","q");
+        return a;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Data classes
+    // ─────────────────────────────────────────────────────────────────────
+
+    @lombok.Builder @lombok.Data
+    public static class ExcelAnalysis {
+        private String fileName;
+        private List<SheetAnalysis> sheets;
+    }
+
+    @lombok.Builder @lombok.Data
+    public static class SheetAnalysis {
+        private String sheetName;
+        private String detectedType;
+        private List<String> rawColumns;
+        private Map<String, String> recognizedColumns;  // raw → canonical
+        private List<String> unknownColumns;
+        private int rowCount;
     }
 
     @lombok.Builder

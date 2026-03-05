@@ -158,3 +158,21 @@ class PowerFlowResponse(BaseModel):
     violations: List[Violation]
     targetBusId: Optional[str] = None
     networkId: str
+
+
+# --- Semantic Bus Search Models ---
+
+class BusSearchRequest(BaseModel):
+    question: str = Field(..., description="Natural language query, e.g. 'voltage at Berlin 380kV'")
+
+
+class BusSearchResponse(BaseModel):
+    found: bool
+    busId: Optional[str] = None
+    label: Optional[str] = None
+    cimType: Optional[str] = None
+    uri: Optional[str] = None
+    score: Optional[float] = None
+    method: Optional[str] = None   # "semantic"
+    question: str
+    message: str

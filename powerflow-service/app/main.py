@@ -12,9 +12,12 @@ from .models import (
     Violation,
     BusType,
     BranchType,
+    BusSearchRequest,
+    BusSearchResponse,
 )
 from .converter import convert_to_pandapower
 from .solver import run_power_flow
+from . import semantic_bus_finder
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,7 +35,53 @@ async def health():
         "status": "healthy",
         "service": "powerflow",
         "pandapower_version": pp.__version__,
+        "semantic_search": semantic_bus_finder.is_available(),
     }
+
+
+@app.post("/find-bus", response_model=BusSearchResponse)
+async def find_bus(request: BusSearchRequest):
+    """
+    Find the best matching CIM bus for a natural language question.
+
+    Uses Qdrant vector search (filtered to BusbarSection, TopologicalNode,
+    ConnectivityNode) to return the most semantically relevant bus ID.
+
+    Example:
+        POST /find-bus
+        {"question": "voltage at Berlin 380kV substation"}
+        → {"found": true, "busId": "BUS_BERLIN_380", "score": 0.87, ...}
+    """
+    if not request.question.strip():
+        raise HTTPException(status_code=400, detail="question must not be empty")
+
+    match = semantic_bus_finder.find_bus(request.question)
+
+    if match:
+        return BusSearchResponse(
+            found=True,
+            busId=match.bus_id,
+            label=match.label,
+            cimType=match.cim_type,
+            uri=match.uri,
+            score=round(match.score, 4),
+            method=match.method,
+            question=request.question,
+            message=f"Bus '{match.label or match.bus_id}' found (score={match.score:.3f})",
+        )
+
+    # Semantic search unavailable or no match above threshold
+    available = semantic_bus_finder.is_available()
+    message = (
+        "No bus found above similarity threshold. Try rephrasing the question."
+        if available
+        else "Semantic search not available — configure OPENAI_API_KEY and Qdrant."
+    )
+    return BusSearchResponse(
+        found=False,
+        question=request.question,
+        message=message,
+    )
 
 
 @app.post("/calculate", response_model=PowerFlowResponse)

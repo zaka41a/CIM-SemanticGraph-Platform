@@ -22,7 +22,7 @@ spring:
   security:
     user:
       name: admin
-      password: admin123  # Change in production!
+      password: admin123
 
 server:
   port: 8080
@@ -42,6 +42,8 @@ jena:
   fuseki:
     remote-url: ${JENA_FUSEKI_REMOTE_URL:http://localhost:3030}
     dataset-name: ${JENA_FUSEKI_DATASET:cim}
+    username: ${JENA_FUSEKI_USERNAME:admin}
+    password: ${JENA_FUSEKI_PASSWORD:admin}
   reasoning:
     enabled: true
     reasoner-type: OWL_MEM_RULE_INF
@@ -68,15 +70,27 @@ cim:
     rdfs: http://www.w3.org/2000/01/rdf-schema#
     owl: http://www.w3.org/2002/07/owl#
 
+openai:
+  api:
+    key: ${OPENAI_API_KEY:}
+    base-url: https://api.openai.com/v1
+    embedding-model: text-embedding-3-small
+    embedding-dimension: 1536
+
+qdrant:
+  url: ${QDRANT_URL:http://localhost:6333}
+  collection-name: cim_entities
+  vector-size: 1536
+
 graphrag:
   embedding:
-    model: text-embedding-ada-002
+    model: text-embedding-3-small
     dimension: 1536
     cache-enabled: true
   retrieval:
-    top-k: 5
+    top-k: 10
     max-depth: 3
-    similarity-threshold: 0.7
+    similarity-threshold: 0.35
   context:
     max-triples: 500
     include-inference: true
@@ -85,6 +99,14 @@ graphrag:
     strategy: BIDIRECTIONAL
     max-hops: 3
     filter-by-type: true
+
+claude:
+  api:
+    key: ${CLAUDE_API_KEY:}
+    model: ${CLAUDE_MODEL:claude-sonnet-4-6}
+    max-tokens: 4096
+  agent:
+    max-tool-rounds: 5
 
 groq:
   api:
@@ -202,6 +224,7 @@ app:
   cors:
     allowed-origins:
       - http://localhost:3000
+      - http://localhost:3001
       - http://localhost:5173
     allowed-methods:
       - GET

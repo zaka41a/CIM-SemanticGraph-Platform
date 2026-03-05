@@ -55,7 +55,7 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - SERVER_PORT=8080
 
-      # Jena Fuseki Configuration (remote)
+      # Jena Fuseki Configuration
       - JENA_STORAGE_MODE=remote
       - JENA_FUSEKI_REMOTE_URL=http://fuseki:3030
       - JENA_FUSEKI_DATASET=cim
@@ -67,6 +67,12 @@ services:
       - LOGS_PATH=/app/logs
       - LOGGING_LEVEL_ROOT=INFO
       - LOGGING_LEVEL_COM_CIM=DEBUG
+
+      # OpenAI Configuration (Embeddings)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+
+      # Qdrant Vector DB Configuration
+      - QDRANT_URL=http://qdrant:6333
 
       # Groq AI Configuration
       - GROQ_API_KEY=${GROQ_API_KEY:-your-groq-api-key-here}
@@ -105,6 +111,8 @@ services:
         condition: service_healthy
       powerflow:
         condition: service_healthy
+      qdrant:
+        condition: service_healthy
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
@@ -113,6 +121,25 @@ services:
       retries: 5
       start_period: 60s
 
+    restart: unless-stopped
+
+  # Qdrant - Professional Vector Database
+  qdrant:
+    image: qdrant/qdrant:v1.7.4
+    container_name: cim-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - cim-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   # Ollama Service (Local LLM - Fallback)
@@ -149,6 +176,10 @@ volumes:
 
   ollama-data:
     name: cim-ollama-data
+    driver: local
+
+  qdrant-data:
+    name: cim-qdrant-data
     driver: local
 
 # Network Configuration

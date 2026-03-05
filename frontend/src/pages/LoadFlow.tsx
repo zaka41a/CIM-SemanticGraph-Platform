@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { AlertTriangle, BarChart3, Activity, ArrowRight, ArrowUpDown, GitBranch } from 'lucide-react';
+import { AlertTriangle, BarChart3, Activity, ArrowRight, ArrowUpDown, GitBranch, Map, Table2 } from 'lucide-react';
 import { LoadFlowHeader } from '@/components/loadflow/LoadFlowHeader';
 import { CalculationInfo } from '@/components/loadflow/CalculationInfo';
 import { LoadFlowStats } from '@/components/loadflow/LoadFlowStats';
 import { BusTable } from '@/components/loadflow/BusTable';
 import { ViolationsList } from '@/components/loadflow/ViolationsList';
+import { NetworkTopologyMap } from '@/components/loadflow/NetworkTopologyMap';
 import { useLoadFlow } from '@/hooks/useLoadFlow';
 import api from '@/services/api';
 
@@ -214,6 +215,7 @@ const LoadFlow = () => {
     key: string;
     direction: 'asc' | 'desc';
   } | null>(null);
+  const [activeTab, setActiveTab] = useState<'tables' | 'topology'>('topology');
 
   const {
     isCalculating, results, error, calculateLoadFlow,
@@ -324,17 +326,59 @@ const LoadFlow = () => {
 
           <LoadFlowStats statistics={results.statistics} />
 
-          <ViolationsList violations={results.violations} />
-
-          <BusTable
-            buses={getSortedBuses()}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-          />
-
-          {results.branchResults && results.branchResults.length > 0 && (
-            <BranchTable branches={results.branchResults} />
+          {results.violations && results.violations.length > 0 && (
+            <ViolationsList violations={results.violations} />
           )}
+
+          {/* Tab switcher */}
+          <div className="card overflow-hidden">
+            <div className="flex border-b border-primary-700/30">
+              <button
+                onClick={() => setActiveTab('topology')}
+                className={`flex items-center gap-2 px-6 py-3.5 text-sm font-medium transition-all border-b-2 ${
+                  activeTab === 'topology'
+                    ? 'border-accent-500 text-accent-400 bg-accent-500/5'
+                    : 'border-transparent text-neutral-400 hover:text-white hover:bg-primary-800/30'
+                }`}
+              >
+                <Map size={16} />
+                Network Topology Map
+              </button>
+              <button
+                onClick={() => setActiveTab('tables')}
+                className={`flex items-center gap-2 px-6 py-3.5 text-sm font-medium transition-all border-b-2 ${
+                  activeTab === 'tables'
+                    ? 'border-accent-500 text-accent-400 bg-accent-500/5'
+                    : 'border-transparent text-neutral-400 hover:text-white hover:bg-primary-800/30'
+                }`}
+              >
+                <Table2 size={16} />
+                Bus & Branch Tables
+              </button>
+            </div>
+
+            {activeTab === 'topology' && (
+              <div className="p-4">
+                <NetworkTopologyMap
+                  buses={results.busResults || []}
+                  branches={results.branchResults || []}
+                />
+              </div>
+            )}
+
+            {activeTab === 'tables' && (
+              <div className="p-4 space-y-6">
+                <BusTable
+                  buses={getSortedBuses()}
+                  sortConfig={sortConfig}
+                  onSort={handleSort}
+                />
+                {results.branchResults && results.branchResults.length > 0 && (
+                  <BranchTable branches={results.branchResults} />
+                )}
+              </div>
+            )}
+          </div>
           </>
         )}
     </div>

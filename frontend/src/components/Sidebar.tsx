@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   MessageSquare,
@@ -12,6 +13,7 @@ import {
   Wrench,
   BarChart3
 } from 'lucide-react';
+import { apiService } from '@/services/api';
 
 // Section separator component
 const SectionLabel = ({ label }: { label: string }) => (
@@ -20,36 +22,94 @@ const SectionLabel = ({ label }: { label: string }) => (
   </div>
 );
 
+type ServiceStatus = 'ok' | 'error' | 'checking';
+
+interface Services {
+  backend: ServiceStatus;
+  fuseki: ServiceStatus;
+  llm: ServiceStatus;
+}
+
+const StatusDot = ({ status, label }: { status: ServiceStatus; label: string }) => {
+  const colors: Record<ServiceStatus, string> = {
+    ok:       'bg-emerald-400',
+    error:    'bg-red-400',
+    checking: 'bg-yellow-400 animate-pulse',
+  };
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className={`w-1.5 h-1.5 rounded-full ${colors[status]}`} />
+      <span className="text-xs text-neutral-500">{label}</span>
+    </div>
+  );
+};
+
 const Sidebar = () => {
-  // Logical workflow order:
-  // 1. Overview (Dashboard)
-  // 2. Data Management (Import → Validate → Fix → Diagnostics)
-  // 3. Analysis (Statistics → Load Flow)
-  // 4. Query (Chat → SPARQL → History)
+  const [services, setServices] = useState<Services>({
+    backend: 'checking',
+    fuseki:  'checking',
+    llm:     'checking',
+  });
+
+  useEffect(() => {
+    const check = async () => {
+      // Backend health
+      try {
+        const health = await apiService.getSystemHealth();
+        setServices(prev => ({
+          ...prev,
+          backend: health?.status === 'healthy' || health?.status === 'degraded' ? 'ok' : 'error',
+        }));
+      } catch {
+        setServices(prev => ({ ...prev, backend: 'error', fuseki: 'error' }));
+        return;
+      }
+
+      // Fuseki/Jena — statistics endpoint requires Jena to be up
+      try {
+        await apiService.getStatistics();
+        setServices(prev => ({ ...prev, fuseki: 'ok' }));
+      } catch {
+        setServices(prev => ({ ...prev, fuseki: 'error' }));
+      }
+
+      // LLM (Groq/Claude) — powerflow or indexing status as proxy
+      try {
+        await apiService.getIndexingStatus();
+        setServices(prev => ({ ...prev, llm: 'ok' }));
+      } catch {
+        setServices(prev => ({ ...prev, llm: 'error' }));
+      }
+    };
+
+    check();
+    const interval = setInterval(check, 30_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const sections = [
     {
       label: 'Data Management',
       items: [
-        { path: '/import', icon: Database, label: 'Data Import' },
-        { path: '/validation', icon: ShieldCheck, label: 'SHACL Validation' },
-        { path: '/data-fixer', icon: Wrench, label: 'Data Fixer' },
-        { path: '/diagnostics', icon: Activity, label: 'Diagnostics' },
+        { path: '/import',      icon: Database,    label: 'Data Import' },
+        { path: '/validation',  icon: ShieldCheck, label: 'SHACL Validation' },
+        { path: '/data-fixer',  icon: Wrench,      label: 'Data Fixer' },
+        { path: '/diagnostics', icon: Activity,    label: 'Diagnostics' },
       ]
     },
     {
       label: 'Analysis',
       items: [
         { path: '/statistics', icon: BarChart3, label: 'Statistics' },
-        { path: '/load-flow', icon: Zap, label: 'Load Flow' },
+        { path: '/load-flow',  icon: Zap,       label: 'Load Flow' },
       ]
     },
     {
       label: 'Query',
       items: [
-        { path: '/chat', icon: MessageSquare, label: 'GraphRAG Chat' },
-        { path: '/sparql', icon: Code, label: 'SPARQL Editor' },
-        { path: '/history', icon: HistoryIcon, label: 'History' },
+        { path: '/chat',    icon: MessageSquare,  label: 'GraphRAG Chat' },
+        { path: '/sparql',  icon: Code,           label: 'SPARQL Editor' },
+        { path: '/history', icon: HistoryIcon,    label: 'History' },
       ]
     },
   ];
@@ -137,7 +197,14 @@ const Sidebar = () => {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-primary-700/50">
+      <div className="p-4 border-t border-primary-700/50 space-y-3">
+        {/* Service status */}
+        <div className="px-1 flex items-center gap-4">
+          <StatusDot status={services.backend} label="API" />
+          <StatusDot status={services.fuseki}  label="Fuseki" />
+          <StatusDot status={services.llm}     label="LLM" />
+        </div>
+
         <NavLink
           to="/settings"
           className={({ isActive }) =>

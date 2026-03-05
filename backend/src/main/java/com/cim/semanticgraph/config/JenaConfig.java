@@ -21,6 +21,9 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.Authenticator;
+import java.net.PasswordAuthentication;
+import java.net.http.HttpClient;
 
 @Slf4j
 @Configuration
@@ -46,6 +49,12 @@ public class JenaConfig {
 
     @Value("${jena.fuseki.dataset-name:cim}")
     private String fusekiDatasetName;
+
+    @Value("${jena.fuseki.username:admin}")
+    private String fusekiUsername;
+
+    @Value("${jena.fuseki.password:admin}")
+    private String fusekiPassword;
 
     private final ResourceLoader resourceLoader;
     private Dataset dataset;
@@ -90,13 +99,23 @@ public class JenaConfig {
 
         String base = fusekiRemoteUrl.endsWith("/") ? fusekiRemoteUrl : fusekiRemoteUrl + "/";
         String endpoint = base + fusekiDatasetName;
-        log.info("Connecting to remote Fuseki endpoint: {}", endpoint);
+        log.info("Connecting to remote Fuseki endpoint: {} (user: {})", endpoint, fusekiUsername);
+
+        HttpClient httpClient = HttpClient.newBuilder()
+                .authenticator(new Authenticator() {
+                    @Override
+                    protected PasswordAuthentication getPasswordAuthentication() {
+                        return new PasswordAuthentication(fusekiUsername, fusekiPassword.toCharArray());
+                    }
+                })
+                .build();
 
         rdfConnection = RDFConnectionRemote.newBuilder()
                 .destination(endpoint)
                 .queryEndpoint(endpoint + "/query")
                 .updateEndpoint(endpoint + "/update")
                 .gspEndpoint(endpoint + "/data")
+                .httpClient(httpClient)
                 .build();
 
         return rdfConnection;

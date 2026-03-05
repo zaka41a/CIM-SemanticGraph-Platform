@@ -1,14 +1,15 @@
-import { Upload, FileText, Code, FileSpreadsheet, Table, Lightbulb } from 'lucide-react';
+import { Upload, FileText, Code, FileSpreadsheet, Table, Lightbulb, FileCode2, Share2, Code2, Leaf, Search } from 'lucide-react';
 import { FileUploader } from '@/components/dataimport/FileUploader';
 import { FormatSelector } from '@/components/dataimport/FormatSelector';
 import { ImportResult } from '@/components/dataimport/ImportResult';
+import { ExcelMappingModal } from '@/components/dataimport/ExcelMappingModal';
 import { useDataImport } from '@/hooks/useDataImport';
 
 const formats = [
-  { name: 'CIM/XML', icon: Code, color: 'from-rose-500 to-pink-500' },
-  { name: 'CIM/RDF', icon: FileText, color: 'from-rose-500 to-pink-500' },
-  { name: 'RDF/XML', icon: FileText, color: 'from-rose-500 to-pink-500' },
-  { name: 'TURTLE', icon: FileText, color: 'from-rose-500 to-pink-500' }
+  { name: 'CIM/XML',  icon: FileCode2, color: 'from-blue-500 to-indigo-600' },
+  { name: 'CIM/RDF',  icon: Share2,    color: 'from-violet-500 to-purple-600' },
+  { name: 'RDF/XML',  icon: Code2,     color: 'from-orange-500 to-amber-600' },
+  { name: 'TURTLE',   icon: Leaf,      color: 'from-emerald-500 to-green-600' },
 ];
 
 const excelSheets = [
@@ -32,6 +33,11 @@ const DataImport = () => {
     setFormat,
     setImportType,
     handleImport,
+    handleAnalyzeAndMap,
+    excelAnalysis,
+    showMappingModal,
+    setShowMappingModal,
+    handleImportWithMapping,
   } = useDataImport();
 
   return (
@@ -142,28 +148,49 @@ const DataImport = () => {
               />
             </div>
 
-            <button
-              onClick={handleImport}
-              disabled={!file || isUploading}
-              className="w-full py-4 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 disabled:from-neutral-600 disabled:to-neutral-700 disabled:cursor-not-allowed text-white rounded-xl transition-all font-semibold shadow-lg shadow-accent-500/20 hover:shadow-xl active:scale-[0.98] flex items-center justify-center gap-3"
-            >
-              {isUploading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Importing...
-                </>
-              ) : (
-                <>
-                  <Upload size={20} />
-                  Import to Knowledge Graph
-                </>
+            <div className="flex gap-3">
+              {importType === 'excel' && (
+                <button
+                  onClick={handleAnalyzeAndMap}
+                  disabled={!file || isUploading}
+                  className="flex-1 py-4 bg-primary-700/50 hover:bg-primary-700 border border-primary-600/50 hover:border-accent-500/50 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl transition-all font-semibold flex items-center justify-center gap-3"
+                >
+                  <Search size={20} />
+                  Analyze &amp; Map Columns
+                </button>
               )}
-            </button>
+              <button
+                onClick={handleImport}
+                disabled={!file || isUploading}
+                className="flex-1 py-4 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 disabled:from-neutral-600 disabled:to-neutral-700 disabled:cursor-not-allowed text-white rounded-xl transition-all font-semibold shadow-lg shadow-accent-500/20 hover:shadow-xl active:scale-[0.98] flex items-center justify-center gap-3"
+              >
+                {isUploading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={20} />
+                    Import to Knowledge Graph
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <ImportResult result={result} error={error} />
+
+      {showMappingModal && excelAnalysis && (
+        <ExcelMappingModal
+          analysis={excelAnalysis}
+          onClose={() => setShowMappingModal(false)}
+          onImport={handleImportWithMapping}
+          isImporting={isUploading}
+        />
+      )}
     </div>
   );
 };
