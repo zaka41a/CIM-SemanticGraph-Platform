@@ -158,40 +158,40 @@ This platform provides:
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                  Frontend Layer (React + TypeScript)               │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌─────────────┐  │
-│  │ LandingPage│  │ Dashboard  │  │ Graph View │  │GraphRAG Chat│  │
-│  │            │  │ 8 StatCards│  │ Cytoscape  │  │ SSE Stream  │  │
-│  └────────────┘  └────────────┘  └────────────┘  └─────────────┘  │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌─────────────┐  │
-│  │ Data Import│  │SPARQL Edit.│  │  LoadFlow  │  │  Settings   │  │
-│  │+MappingModal│ │            │  │+Topology Map│  │             │  │
-│  └────────────┘  └────────────┘  └────────────┘  └─────────────┘  │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌─────────────┐   │
+│  │ LandingPage│  │ Dashboard  │  │ Graph View │  │GraphRAG Chat│   │
+│  │            │  │ 8 StatCards│  │ Cytoscape  │  │ SSE Stream  │   │
+│  └────────────┘  └────────────┘  └────────────┘  └─────────────┘   │
+│  ┌─────────────┐  ┌────────────┐  ┌─────────────┐  ┌─────────────  │
+│  │ Data Import │  │SPARQL Edit.│  │  LoadFlow   │  │  Settings   │ │
+│  │+MappingModal│  │            │  │+Topology Map│  │             │ │
+│  └─────────────┘  └────────────┘  └─────────────┘  └─────────────┘ │
 └───────────────────────────┬────────────────────────────────────────┘
                             │ REST / SSE
-┌───────────────────────────┴────────────────────────────────────────┐
-│                Backend Layer (Spring Boot 3.2)                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                    REST Controllers                         │   │
-│  │  CimController  ExcelController  GraphRAGController         │   │
-│  │  LoadFlowController  SparqlController  ShaclController      │   │
+┌───────────────────────────┴───────────────────────────────────────┐
+│                Backend Layer (Spring Boot 3.2)                    │
+│  ┌────────────────────────────────────────────────────────────┐   │
+│  │                    REST Controllers                        │   │
+│  │  CimController  ExcelController  GraphRAGController        │   │
+│  │  LoadFlowController  SparqlController  ShaclController     │   │
 │  └──────────┬──────────────────────┬──────────────────────────┘   │
 │             │                      │                              │
-│  ┌──────────┴──────────┐  ┌────────┴──────────────┐              │
-│  │  ClaudeAgentService │  │   GraphRAGService      │              │
-│  │  5 native tools     │  │   Context building     │              │
-│  │  SSE streaming      │  │   LLM fallback chain   │              │
-│  └──────────┬──────────┘  └───────────────────────┘              │
+│  ┌──────────┴──────────┐  ┌────────┴──────────────┐               │
+│  │  ClaudeAgentService │  │   GraphRAGService     │               │
+│  │  5 native tools     │  │   Context building    │               │
+│  │  SSE streaming      │  │   LLM fallback chain  │               │
+│  └──────────┬──────────┘  └───────────────────────┘               │
 │             │                                                     │
 │  ┌──────────┴──────────────────────────────────────────────────┐  │
-│  │  CIMIndexingService   QdrantService   EmbeddingService       │  │
-│  │  Auto-index on import  Vector upsert  OpenAI embeddings      │  │
+│  │  CIMIndexingService   QdrantService   EmbeddingService      │  │
+│  │  Auto-index on import  Vector upsert  OpenAI embeddings     │  │
 │  └──────────┬──────────────────────────────────────────────────┘  │
 │             │                                                     │
 │  ┌──────────┴────────────────────────────────────────────────┐    │
 │  │   Apache Jena Fuseki (Embedded TDB2, port 3030)           │    │
 │  │   SPARQL 1.1 · OWL reasoning · CIM ontology               │    │
 │  └───────────────────────────────────────────────────────────┘    │
-└────────────────────────────────────────────────────────────────────┘
+└───────────────────────────────────────────────────────────────────┘
            │                          │
   ┌────────┴────────┐        ┌────────┴────────────┐
   │  Qdrant (6333)  │        │  Powerflow (8000)   │
