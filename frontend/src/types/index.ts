@@ -95,6 +95,16 @@ export interface GraphData {
 }
 
 // Chat Message Types
+export interface ToolCallEvent {
+  tool: string;
+  input: Record<string, any>;
+}
+
+export interface ToolResultEvent {
+  tool: string;
+  chars: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -102,6 +112,12 @@ export interface ChatMessage {
   timestamp: Date;
   sources?: string[];
   confidence?: number;
+  executionTimeMs?: number;
+  streaming?: boolean;
+  toolCalls?: ToolCallEvent[];
+  toolResults?: Record<string, number>;
+  feedback?: 'up' | 'down' | null;
+  followUpSuggestions?: string[];
 }
 
 // Sample Query Type

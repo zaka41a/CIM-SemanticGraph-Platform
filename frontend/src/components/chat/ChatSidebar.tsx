@@ -1,4 +1,5 @@
-import { Plus, MessageSquare, Trash2, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, MessageSquare, Trash2, Sparkles, Search } from 'lucide-react';
 
 interface ChatSession {
   id: string;
@@ -21,9 +22,16 @@ export const ChatSidebar = ({
   onSelectSession,
   onDeleteSession,
 }: ChatSidebarProps) => {
+  const [search, setSearch] = useState('');
+
+  const filtered = search.trim()
+    ? sessions.filter(s => s.title.toLowerCase().includes(search.toLowerCase()))
+    : sessions;
+
   return (
     <div className="w-72 bg-primary-900 border-r border-primary-700/30 flex flex-col">
-      <div className="p-4 border-b border-primary-700/30">
+      {/* New chat */}
+      <div className="p-4 border-b border-primary-700/30 space-y-3">
         <button
           onClick={onCreateNew}
           className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 rounded-xl transition-all font-medium text-white shadow-lg shadow-accent-500/20"
@@ -31,36 +39,45 @@ export const ChatSidebar = ({
           <Plus className="w-5 h-5" />
           New Chat
         </button>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search conversations…"
+            className="w-full pl-8 pr-3 py-2 bg-primary-800/60 border border-primary-700/40 rounded-lg text-xs text-neutral-300 placeholder-neutral-600 focus:outline-none focus:border-accent-500/40 transition-all"
+          />
+        </div>
       </div>
 
+      {/* Session list */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-3 space-y-1">
-          {sessions.length === 0 ? (
-            <div className="text-center text-neutral-400 py-8 text-sm">
-              No chat history
+          {filtered.length === 0 ? (
+            <div className="text-center text-neutral-500 py-8 text-sm">
+              {search ? 'No results' : 'No chat history'}
             </div>
           ) : (
-            sessions.map((session) => (
+            filtered.map((session) => (
               <div
                 key={session.id}
-                className={`group w-full flex items-start gap-3 p-3 rounded-lg transition-all ${
+                className={`group w-full flex items-start gap-3 p-3 rounded-lg transition-all cursor-pointer ${
                   sessionId === session.id
                     ? 'bg-primary-800 text-white border border-accent-500/30'
                     : 'hover:bg-primary-800/50 text-neutral-300'
                 }`}
+                onClick={() => onSelectSession(session.id)}
               >
-                <button
-                  onClick={() => onSelectSession(session.id)}
-                  className="flex-1 flex items-start gap-3 text-left min-w-0"
-                >
-                  <MessageSquare className="w-4 h-4 flex-shrink-0 mt-0.5 text-accent-400" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{session.title}</p>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      {session.timestamp.toLocaleDateString()}
-                    </p>
-                  </div>
-                </button>
+                <MessageSquare className="w-4 h-4 flex-shrink-0 mt-0.5 text-accent-400" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{session.title}</p>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    {session.timestamp.toLocaleDateString()}
+                  </p>
+                </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -76,10 +93,11 @@ export const ChatSidebar = ({
         </div>
       </div>
 
+      {/* Footer */}
       <div className="p-4 border-t border-primary-700/30 text-xs text-neutral-500">
         <div className="flex items-center gap-2">
           <Sparkles className="w-3 h-3 text-accent-400" />
-          GraphRAG + LLM
+          Claude Agent + GraphRAG
         </div>
       </div>
     </div>

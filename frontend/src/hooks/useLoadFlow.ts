@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiService } from '@/services/api';
+import { storageGet, storageSet, storageRemove } from '@/utils/storage';
 import type { LoadFlowMethodInfo, CalculationMethod } from '@/types';
 
 interface LoadFlowResponse {
@@ -32,61 +33,39 @@ export const useLoadFlow = () => {
   useEffect(() => {
     apiService.getAvailableMethods()
       .then((methods) => {
-        if (methods && methods.length > 0) {
-          setAvailableMethods(methods);
-        }
+        if (methods && methods.length > 0) setAvailableMethods(methods);
       })
       .catch((err) => {
         console.warn('Could not fetch available methods:', err);
       });
   }, []);
 
-  // Restore results from localStorage on load
+  // Restore results from storage on load
   useEffect(() => {
-    const savedResults = localStorage.getItem(LOAD_FLOW_STORAGE_KEY);
-    if (savedResults) {
-      try {
-        const parsed = JSON.parse(savedResults);
-        setResults(parsed);
-      } catch (err) {
-        console.error('Error restoring load flow results:', err);
-        localStorage.removeItem(LOAD_FLOW_STORAGE_KEY);
-      }
-    }
+    const saved = storageGet<LoadFlowResponse>(LOAD_FLOW_STORAGE_KEY);
+    if (saved) setResults(saved);
   }, []);
 
   // Listen for data import events to clear results
   useEffect(() => {
     const handleDataImport = () => {
-      console.log('Data import detected, clearing load flow results');
       setResults(null);
       setError(null);
-      localStorage.removeItem(LOAD_FLOW_STORAGE_KEY);
+      storageRemove(LOAD_FLOW_STORAGE_KEY);
     };
-
     window.addEventListener(DATA_IMPORT_EVENT, handleDataImport);
-    return () => {
-      window.removeEventListener(DATA_IMPORT_EVENT, handleDataImport);
-    };
+    return () => window.removeEventListener(DATA_IMPORT_EVENT, handleDataImport);
   }, []);
 
-  // Save results to localStorage when they change
+  // Persist results when they change
   useEffect(() => {
-    if (results) {
-      try {
-        localStorage.setItem(LOAD_FLOW_STORAGE_KEY, JSON.stringify(results));
-      } catch (err) {
-        console.error('Error saving load flow results:', err);
-      }
-    }
+    if (results) storageSet(LOAD_FLOW_STORAGE_KEY, results);
   }, [results]);
 
   const calculateLoadFlow = async (targetBusId?: string, method?: CalculationMethod) => {
     setIsCalculating(true);
     setError(null);
-
     const calcMethod = method || selectedMethod;
-
     try {
       const response = targetBusId
         ? await apiService.calculateLoadFlowForBus(targetBusId, calcMethod)
@@ -103,7 +82,7 @@ export const useLoadFlow = () => {
   const clearResults = () => {
     setResults(null);
     setError(null);
-    localStorage.removeItem(LOAD_FLOW_STORAGE_KEY);
+    storageRemove(LOAD_FLOW_STORAGE_KEY);
   };
 
   return {

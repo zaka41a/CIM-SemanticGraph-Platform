@@ -139,19 +139,14 @@ const Sidebar = () => {
           className={({ isActive }) =>
             `flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group ${
               isActive
-                ? 'bg-accent-600 text-white shadow-lg'
-                : 'text-neutral-300 hover:bg-primary-700/50 hover:text-white'
+                ? 'bg-accent-500/15 border-l-2 border-accent-400 text-accent-400'
+                : 'text-neutral-400 hover:bg-primary-700/50 hover:text-white border-l-2 border-transparent'
             }`
           }
         >
           {({ isActive }) => (
             <>
-              <LayoutDashboard
-                size={18}
-                className={`transition-transform duration-200 ${
-                  isActive ? 'scale-110' : 'group-hover:scale-110'
-                }`}
-              />
+              <LayoutDashboard size={18} className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
               <span className="font-medium text-sm">Dashboard</span>
             </>
           )}
@@ -168,20 +163,15 @@ const Sidebar = () => {
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 group ${
                       isActive
-                        ? 'bg-accent-600 text-white shadow-lg'
-                        : 'text-neutral-300 hover:bg-primary-700/50 hover:text-white'
+                        ? 'bg-accent-500/15 border-l-2 border-accent-400 text-accent-400'
+                        : 'text-neutral-400 hover:bg-primary-700/50 hover:text-white border-l-2 border-transparent'
                     }`
                   }
                 >
                   {({ isActive }) => (
                     <>
                       {Icon && (
-                        <Icon
-                          size={18}
-                          className={`transition-transform duration-200 ${
-                            isActive ? 'scale-110' : 'group-hover:scale-110'
-                          }`}
-                        />
+                        <Icon size={18} className={`transition-transform duration-200 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
                       )}
                       <span className="font-medium text-sm">{label}</span>
                     </>
@@ -208,10 +198,10 @@ const Sidebar = () => {
         <NavLink
           to="/settings"
           className={({ isActive }) =>
-            `flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-all duration-200 ${
+            `flex items-center gap-3 w-full px-4 py-3 rounded-lg transition-all duration-200 border-l-2 ${
               isActive
-                ? 'bg-accent-600 text-white shadow-lg'
-                : 'text-neutral-300 hover:bg-primary-700/50 hover:text-white'
+                ? 'bg-accent-500/15 border-accent-400 text-accent-400'
+                : 'border-transparent text-neutral-400 hover:bg-primary-700/50 hover:text-white'
             }`
           }
         >

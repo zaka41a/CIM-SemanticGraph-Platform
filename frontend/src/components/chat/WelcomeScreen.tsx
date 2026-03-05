@@ -105,7 +105,7 @@ export const WelcomeScreen = ({
       <div className="text-center">
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-800/50 rounded-full text-sm text-neutral-400 border border-primary-700/30">
           <Sparkles className="w-4 h-4 text-accent-400" />
-          Powered by Groq / Ollama
+          Claude AI Agent · GraphRAG · Qdrant Vector Search
         </div>
       </div>
     </div>

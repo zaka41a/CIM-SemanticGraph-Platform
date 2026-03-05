@@ -1,4 +1,5 @@
 import math
+import hashlib
 import logging
 from fastapi import FastAPI, HTTPException
 import pandapower as pp
@@ -21,6 +22,23 @@ from . import semantic_bus_finder
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# ── Simple in-process result cache (keyed by MD5 of network JSON + method) ─────
+_result_cache: dict[str, "PowerFlowResponse"] = {}
+_MAX_CACHE = 20  # evict oldest when full
+
+
+def _cache_key(request: "PowerFlowRequest") -> str:
+    payload = request.network.model_dump_json() + request.method.value
+    return hashlib.md5(payload.encode()).hexdigest()
+
+
+def _cache_put(key: str, value: "PowerFlowResponse") -> None:
+    if len(_result_cache) >= _MAX_CACHE:
+        oldest = next(iter(_result_cache))
+        del _result_cache[oldest]
+    _result_cache[key] = value
+
 
 app = FastAPI(
     title="CIM Power Flow Service",
@@ -95,6 +113,12 @@ async def calculate(request: PowerFlowRequest):
     if not request.network.buses:
         raise HTTPException(status_code=400, detail="Network has no buses")
 
+    # Return cached result if the network + method are identical
+    key = _cache_key(request)
+    if key in _result_cache:
+        logger.info("Returning cached power flow result (key=%s)", key[:8])
+        return _result_cache[key]
+
     try:
         # Convert to pandapower network
         net, bus_mapping = convert_to_pandapower(request.network)
@@ -116,11 +140,19 @@ async def calculate(request: PowerFlowRequest):
             tolerance=request.tolerance,
         )
 
+        _cache_put(key, response)
         return response
 
     except Exception as e:
         logger.error(f"Power flow calculation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Calculation failed: {str(e)}")
+
+
+@app.delete("/cache", status_code=204)
+async def clear_cache():
+    """Invalidate the power flow result cache (call after network data changes)."""
+    _result_cache.clear()
+    logger.info("Power flow cache cleared")
 
 
 @app.post("/calculate/{bus_id}", response_model=PowerFlowResponse)

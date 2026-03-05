@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { apiService } from '@/services/api';
+import { storageGet, storageSet, storageRemove } from '@/utils/storage';
 import { SparqlQueryResponse } from '@/types';
 
 const HISTORY_KEY = 'cim-sparql-history';
@@ -34,18 +35,11 @@ LIMIT 10`);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'templates' | 'history'>('templates');
-  const [history, setHistory] = useState<QueryHistoryEntry[]>(() => {
-    try {
-      const saved = localStorage.getItem(HISTORY_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [history, setHistory] = useState<QueryHistoryEntry[]>(() => storageGet<QueryHistoryEntry[]>(HISTORY_KEY) ?? []);
 
   const sampleQueries = [
     {
-      name: 'All Substations',
+      name: 'Substations',
       description: 'Get all substations with their descriptions',
       icon: Database,
       color: 'accent',
@@ -58,7 +52,7 @@ WHERE {
 }`,
     },
     {
-      name: 'All Generators',
+      name: 'Generators',
       description: 'List generating units with power capacity',
       icon: Zap,
       color: 'emerald',
@@ -115,7 +109,7 @@ LIMIT 50`,
     {
       name: 'Voltage Levels',
       description: 'Base voltages and associated levels',
-      icon: Layers,
+      icon: Zap,
       color: 'yellow',
       query: `PREFIX cim: <http://iec.ch/TC57/CIM100#>
 SELECT ?vlName ?nominalVoltage
@@ -129,13 +123,13 @@ ORDER BY DESC(?nominalVoltage)`,
     },
   ];
 
-  const colorMap: Record<string, { iconBg: string; iconText: string; border: string }> = {
-    accent: { iconBg: 'bg-accent-500/20', iconText: 'text-accent-400', border: 'hover:border-accent-500/30' },
-    emerald: { iconBg: 'bg-emerald-500/20', iconText: 'text-emerald-400', border: 'hover:border-emerald-500/30' },
-    blue: { iconBg: 'bg-accent-500/20', iconText: 'text-accent-400', border: 'hover:border-accent-500/30' },
-    purple: { iconBg: 'bg-accent-500/20', iconText: 'text-accent-400', border: 'hover:border-accent-500/30' },
-    cyan: { iconBg: 'bg-accent-500/20', iconText: 'text-accent-400', border: 'hover:border-accent-500/30' },
-    yellow: { iconBg: 'bg-yellow-500/20', iconText: 'text-yellow-400', border: 'hover:border-yellow-500/30' },
+  const colorMap: Record<string, { iconBg: string; iconText: string; border: string; dot: string }> = {
+    accent:  { iconBg: 'bg-blue-500/20',   iconText: 'text-blue-400',   border: 'hover:border-blue-500/30',   dot: 'bg-blue-500'   },
+    emerald: { iconBg: 'bg-emerald-500/20', iconText: 'text-emerald-400', border: 'hover:border-emerald-500/30', dot: 'bg-emerald-500' },
+    blue:    { iconBg: 'bg-sky-500/20',     iconText: 'text-sky-400',     border: 'hover:border-sky-500/30',    dot: 'bg-sky-500'    },
+    purple:  { iconBg: 'bg-purple-500/20',  iconText: 'text-purple-400',  border: 'hover:border-purple-500/30', dot: 'bg-purple-500' },
+    cyan:    { iconBg: 'bg-cyan-500/20',    iconText: 'text-cyan-400',    border: 'hover:border-cyan-500/30',   dot: 'bg-cyan-500'   },
+    yellow:  { iconBg: 'bg-yellow-500/20',  iconText: 'text-yellow-400',  border: 'hover:border-yellow-500/30', dot: 'bg-yellow-500' },
   };
 
   const handleExecute = async () => {
@@ -158,7 +152,7 @@ ORDER BY DESC(?nominalVoltage)`,
       setHistory(prev => {
         const filtered = prev.filter(h => h.query !== entry.query);
         const updated = [entry, ...filtered].slice(0, MAX_HISTORY);
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+        storageSet(HISTORY_KEY, updated);
         return updated;
       });
     } catch (err: any) {
@@ -209,7 +203,7 @@ ORDER BY DESC(?nominalVoltage)`,
 
   const clearHistory = () => {
     setHistory([]);
-    localStorage.removeItem(HISTORY_KEY);
+    storageRemove(HISTORY_KEY);
   };
 
   const isUri = (value: string) => {
@@ -295,18 +289,21 @@ ORDER BY DESC(?nominalVoltage)`,
                       className={`group w-full text-left p-3.5 rounded-xl bg-primary-800/30 hover:bg-primary-700/40 border border-primary-700/30 ${c.border} transition-all duration-200 active:scale-[0.98]`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-lg ${c.iconBg} flex-shrink-0`}>
+                        <div className={`p-2 rounded-lg ${c.iconBg} flex-shrink-0 shadow-sm`}>
                           <Icon size={16} className={c.iconText} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-white text-sm mb-0.5 group-hover:text-accent-400 transition-colors">
-                            {sample.name}
-                          </p>
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${c.dot}`} />
+                            <p className={`font-semibold text-sm ${c.iconText} group-hover:opacity-80 transition-opacity`}>
+                              {sample.name}
+                            </p>
+                          </div>
                           <p className="text-[11px] text-neutral-500 leading-relaxed">
                             {sample.description}
                           </p>
                         </div>
-                        <ArrowRight size={14} className="text-neutral-600 group-hover:text-accent-400 transition-colors flex-shrink-0 mt-1" />
+                        <ArrowRight size={14} className={`${c.iconText} opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 mt-1`} />
                       </div>
                     </button>
                   );

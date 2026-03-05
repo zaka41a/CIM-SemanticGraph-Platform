@@ -2,8 +2,22 @@
 > cim-semanticgraph-frontend@1.0.0 dev
 > vite
 
+Re-optimizing dependencies because lockfile has changed
 
-  VITE v5.4.21  ready in 618 ms
+  VITE v5.4.21  ready in 1013 ms
 
   ➜  Local:   http://localhost:3000/
   ➜  Network: use --host to expose
+11:17:22 PM [vite] page reload src/test/useChatMessages.test.ts
+11:17:41 PM [vite] page reload src/test/useChatMessages.test.ts
+11:18:31 PM [vite] page reload src/test/useChatMessages.test.ts
+11:21:58 PM [vite] page reload tailwind.config.js
+11:22:08 PM [vite] page reload tailwind.config.js
+11:22:49 PM [vite] page reload tailwind.config.js
+11:24:40 PM [vite] hmr update /src/components/Layout.tsx, /src/styles/index.css
+11:25:12 PM [vite] hmr update /src/components/Sidebar.tsx, /src/styles/index.css
+11:25:50 PM [vite] hmr update /src/components/Sidebar.tsx, /src/styles/index.css
+11:27:31 PM [vite] hmr update /src/pages/LandingPage.tsx, /src/styles/index.css
+11:27:40 PM [vite] hmr update /src/pages/LandingPage.tsx, /src/styles/index.css
+11:28:08 PM [vite] hmr update /src/pages/LandingPage.tsx, /src/styles/index.css
+11:30:08 PM [vite] hmr update /src/pages/GraphRAGChat.tsx, /src/styles/index.css

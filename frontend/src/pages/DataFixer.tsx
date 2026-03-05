@@ -6,6 +6,7 @@ import {
   Search, Cable, Gauge, Network, ArrowRight, RotateCcw,
 } from 'lucide-react';
 import api from '@/services/api';
+import { storageGet, storageSet, storageRemove } from '@/utils/storage';
 
 interface ValidationIssue {
   category: string;
@@ -52,18 +53,9 @@ const FIX_STATUS = {
 const DataFixer = () => {
   const navigate = useNavigate();
 
-  const loadSavedState = () => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Date.now() - new Date(parsed.timestamp).getTime() < 3_600_000) return parsed;
-      }
-    } catch { /* ignore */ }
-    return null;
-  };
-
-  const saved = loadSavedState();
+  const saved = storageGet<{ issues: ValidationIssue[]; fixes: FixAction[]; analysisComplete: boolean }>(
+    STORAGE_KEY, 3_600_000,
+  );
   const [issues, setIssues]                     = useState<ValidationIssue[]>(saved?.issues || []);
   const [fixes, setFixes]                       = useState<FixAction[]>(saved?.fixes || []);
   const [analyzing, setAnalyzing]               = useState(false);
@@ -73,7 +65,7 @@ const DataFixer = () => {
 
   useEffect(() => {
     if (analysisComplete) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ issues, fixes, analysisComplete, timestamp: new Date().toISOString() }));
+      storageSet(STORAGE_KEY, { issues, fixes, analysisComplete });
     }
   }, [issues, fixes, analysisComplete]);
 
@@ -283,7 +275,7 @@ WHERE {
     setIssues([]);
     setFixes([]);
     setAnalysisComplete(false);
-    localStorage.removeItem(STORAGE_KEY);
+    storageRemove(STORAGE_KEY);
   };
 
   const errorCount   = issues.filter(i => i.severity === 'error').length;

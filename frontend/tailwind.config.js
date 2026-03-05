@@ -21,19 +21,19 @@ export default {
           900: '#1a2332',  // Darkest navy from design
           950: '#0f1419',
         },
-        // Professional Orange/Gold - matching new design
+        // Amber Yellow - primary accent across all pages
         accent: {
-          50: '#fff9f0',
-          100: '#fff3e0',
-          200: '#ffe4c2',
-          300: '#ffd199',
-          400: '#ffb966',
-          500: '#f39c12',  // Main orange
-          600: '#e67e22',  // Secondary orange
-          700: '#d35400',
-          800: '#a04000',
-          900: '#6e2c00',
-          950: '#3d1800',
+          50: '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',  // amber-400 — hover / light states
+          500: '#f59e0b',  // amber-500 — main accent
+          600: '#d97706',  // amber-600 — pressed / dark states
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
+          950: '#451a03',
         },
         // Neutral grays for professional look
         neutral: {
@@ -56,16 +56,16 @@ export default {
       },
       backgroundImage: {
         'gradient-primary': 'linear-gradient(135deg, #143d59 0%, #2a6090 100%)',
-        'gradient-accent': 'linear-gradient(135deg, #f4b41a 0%, #f7cb3f 100%)',
+        'gradient-accent': 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)',
         'gradient-hero': 'linear-gradient(135deg, #0a212f 0%, #143d59 50%, #2a6090 100%)',
       },
       boxShadow: {
         'soft': '0 2px 8px rgba(20, 61, 89, 0.08)',
         'medium': '0 4px 16px rgba(20, 61, 89, 0.12)',
         'large': '0 8px 32px rgba(20, 61, 89, 0.16)',
-        'accent': '0 4px 16px rgba(244, 180, 26, 0.25)',
-        'accent-lg': '0 8px 32px rgba(244, 180, 26, 0.3)',
-        'glow': '0 0 20px rgba(244, 180, 26, 0.4)',
+        'accent': '0 4px 16px rgba(245, 158, 11, 0.25)',
+        'accent-lg': '0 8px 32px rgba(245, 158, 11, 0.3)',
+        'glow': '0 0 20px rgba(245, 158, 11, 0.45)',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',

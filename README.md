@@ -4,51 +4,50 @@
 
 # CIM-SemanticGraph-Platform
 
-![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
 ![Tests](https://img.shields.io/badge/tests-passing-green.svg)
 ![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue.svg)
 ![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green.svg)
-![Apache Jena](https://img.shields.io/badge/Apache%20Jena-4.10-blue.svg)
+![Apache Jena](https://img.shields.io/badge/Apache%20Jena-5.0-blue.svg)
 ![React](https://img.shields.io/badge/React-18-61DAFB.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)
 ![Python](https://img.shields.io/badge/Python-3.13-3776AB.svg)
 ![Pandapower](https://img.shields.io/badge/Pandapower-enabled-00A86B.svg)
+![Qdrant](https://img.shields.io/badge/Qdrant-vector--db-DC143C.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-**Enterprise-grade platform for transforming CIM power system models into semantic knowledge graphs with GraphRAG and LLM integration**
+**Enterprise-grade platform for transforming CIM power system models into semantic knowledge graphs with Claude AI Agent, GraphRAG, vector search and interactive network visualization**
 
-[Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [API Reference](#-api-reference) • [Examples](#-examples)
+[Features](#-key-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [API Reference](#-api-reference) • [Usage Examples](#-usage-examples)
 
 </div>
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#-overview)
 - [Key Features](#-key-features)
 - [Architecture](#-architecture)
 - [Technology Stack](#-technology-stack)
 - [Quick Start](#-quick-start)
-- [Installation](#-installation)
 - [Configuration](#-configuration)
 - [Usage Examples](#-usage-examples)
 - [API Reference](#-api-reference)
 - [Load Flow Analysis](#-load-flow-analysis)
-- [GraphRAG Chat](#-graphrag-chat)
+- [Claude AI Agent](#-claude-ai-agent)
+- [Vector Search & Indexing](#-vector-search--indexing)
 - [Testing](#-testing)
-- [CI/CD](#-cicd)
-- [Monitoring](#-monitoring)
 - [Project Structure](#-project-structure)
 - [Contributing](#-contributing)
 - [License](#-license)
 
 ---
 
-## 🎯 Overview
+## Overview
 
-**CIM-SemanticGraph-Platform** is a comprehensive, production-ready system that transforms **Common Information Model (CIM)** power system data into semantic knowledge graphs, enabling advanced analytics and intelligent decision support through GraphRAG (Graph Retrieval-Augmented Generation) and natural language processing.
+**CIM-SemanticGraph-Platform** is a comprehensive, production-ready system that transforms **Common Information Model (CIM)** power system data into semantic knowledge graphs, enabling advanced analytics and intelligent decision support through a **Claude AI Agent** with native tool calling, GraphRAG, Qdrant vector search, and real-time network topology visualization.
 
 ### Problem Statement
 
@@ -57,151 +56,160 @@ Modern electrical grid digitalization requires standardized, interoperable model
 ### Solution
 
 This platform provides:
-- **Semantic Transformation**: CIM → RDF/OWL knowledge graphs
-- **Intelligent Querying**: Natural language interface via GraphRAG
-- **Advanced Analytics**: Load flow calculations, impact analysis, consistency verification
-- **Modern Visualization**: Interactive graph exploration
-- **Multi-format Support**: CIM/XML, CIM/RDF, Excel import
+- **Semantic Transformation**: CIM → RDF/OWL knowledge graphs stored in Apache Jena/Fuseki
+- **AI Agent (Claude)**: Autonomous reasoning over the graph with 5 native tools (SPARQL, vector search, load flow, entity details, graph traversal)
+- **Vector Search**: Qdrant-powered semantic similarity search over indexed CIM entities
+- **Advanced Analytics**: Load flow calculations, impact analysis, network topology map
+- **Multi-format Support**: CIM/XML, CIM/RDF, Excel import with field mapping UI
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 🔄 Data Import & Transformation
+### Data Import & Transformation
 
 - **Multi-format Support**
   - CIM/XML files (IEC 61970 standard)
   - CIM/RDF files (semantic web format)
-  - Excel network files (user-friendly format)
+  - Excel network files with interactive column mapping modal
   - Automatic format detection and conversion
 
 - **Knowledge Graph Construction**
   - RDF/OWL triple generation
   - CIM ontology compliance (IEC 61970/61968)
   - Schema validation and integrity checks
-  - Support for millions of triples
+  - Auto-indexing into Qdrant after every import
 
-### 🧠 GraphRAG Intelligence
+### Claude AI Agent
+
+- **Autonomous Tool Calling** (up to 8 reasoning rounds)
+  - `semantic_search` — Qdrant vector similarity search
+  - `sparql_query` — direct SPARQL queries on Fuseki
+  - `load_flow` — real-time pandapower calculations
+  - `get_entity_details` — Jena triple store lookups
+  - `graph_traverse` — subgraph extraction & multi-hop traversal
+
+- **SSE Streaming**
+  - Real-time token-by-token streaming via Server-Sent Events
+  - Tool call / tool result events visible in the UI
+  - Confidence score and source list in final event
+
+### GraphRAG Intelligence
 
 - **Context-Aware Retrieval**
   - Custom graph traversal algorithms
-  - Semantic embedding generation
+  - Semantic embedding generation (OpenAI text-embedding-3-small)
   - Intelligent subgraph extraction
   - Multi-hop relationship discovery
 
-- **LLM Integration**
-  - Groq API support (fast inference)
-  - Ollama support (local LLM)
-  - Claude AI integration (optional)
-  - Natural language query processing
-  - Contextual answer generation
+- **Multi-provider LLM Support**
+  - Claude AI (primary, with tool calling)
+  - Groq API (fast inference fallback)
+  - Ollama (local LLM)
 
-### ⚡ Load Flow Analysis
+### Load Flow Analysis
 
-- **Power System Calculations**
-  - DC load flow solver
-  - AC load flow (simplified)
+- **Power System Calculations via pandapower**
+  - DC and AC load flow solvers
   - Voltage and angle calculations
-  - Branch power flow analysis
-  - System loss computation
-  - Violation detection
+  - Branch power flow and loading percentages
+  - System loss computation and violation detection
 
-- **Interactive Analysis**
-  - Calculate load flow via natural language
-  - Query specific bus voltages
-  - Analyze network conditions
-  - Export results
+- **Network Topology Map**
+  - Interactive Cytoscape.js visualization
+  - Voltage-colored buses (green/yellow/red by level)
+  - Loading-colored branches with hover tooltips
+  - Toggle between Topology view and data tables
 
-### 🔍 Advanced Querying
+### Advanced Querying
 
 - **SPARQL Query Engine**
   - SPARQL 1.1 support
-  - Complex graph queries
-  - OWL reasoning integration
-  - Query validation and optimization
+  - Complex graph queries with OWL reasoning
+  - Query validation and sample library
 
-- **Natural Language Queries**
+- **Natural Language Examples**
   - "What is the voltage at Düsseldorf 220kV?"
-  - "Calculate load flow at bus Köln"
-  - "Show all generators in the network"
+  - "Show all generators in the 380kV network"
   - "What equipment is affected if substation X fails?"
+  - "Calculate load flow at bus Köln"
 
-### 📊 Visualization & Analytics
+### Dashboard & Visualization
+
+- **Pro Dashboard**
+  - 8 stat cards: Substations, Lines, Transformers, Loads, Generators, Buses, Triples, Vector Indexed
+  - Platform Services panel: live status for Qdrant, pandapower, LLM
+  - Re-index button for on-demand vector re-indexing
 
 - **Interactive Graph Visualization**
-  - Cytoscape.js integration
-  - Real-time network topology
-  - Multiple layout algorithms
-  - Node/edge filtering
-  - Export to PNG
+  - Cytoscape.js with multiple layout algorithms
+  - Node/edge filtering and export to PNG
 
-- **Dashboard Analytics**
-  - Network statistics
-  - Equipment counts
-  - Triple store metrics
-  - System health monitoring
-
-### 🛡️ Data Validation
+### Data Validation
 
 - **SHACL Validation**
-  - Shape-based validation
-  - Constraint checking
-  - Detailed violation reports
+  - Shape-based validation with detailed violation reports
   - CIM compliance verification
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
-┌───────────────────────────────────────────────────────────────────┐
-│                    Frontend Layer (React + TypeScript)            │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
-│  │  Dashboard   │  │ Graph Viewer │  │ GraphRAG Chat│             │
-│  │  Statistics  │  │ Cytoscape.js │  │ LLM Interface│             │
-│  └──────────────┘  └──────────────┘  └──────────────┘             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐             │
-│  │ Data Import  │  │ SPARQL Editor│  │ Load Flow    │             │
-│  │ CIM/Excel    │  │ Query Builder│  │ Analysis     │             │
-│  └──────────────┘  └──────────────┘  └──────────────┘             │
-└────────────────────────────┬──────────────────────────────────────┘
-                             │ REST API (JSON)
-┌────────────────────────────┴─────────────────────────────────────┐
-│              Backend Layer (Spring Boot 3.2)                     │
-│  ┌───────────────────────────────────────────────────────────┐   │
-│  │              REST Controllers                             │   │
-│  │  - CIMController    - ExcelController                     │   │
-│  │  - GraphRAGController - LoadFlowController                │   │
-│  │  - SparqlController  - ShaclController                    │   │
-│  └────────────┬─────────────────────────────┬────────────────┘   │
-│               │                             │                    │
-│  ┌────────────┴────────────┐   ┌────────────┴─────────────┐      │
-│  │   GraphRAG Service      │   │   Load Flow Service      │      │
-│  │  - Entity Retrieval     │   │  - Network Extraction    │      │
-│  │  - Context Building     │   │  - Power Flow Solver     │      │
-│  │  - LLM Integration      │   │  - Violation Detection   │      │
-│  └────────────┬────────────┘   └───────────┬──────────────┘      │
-│               │                            │                     │
-│  ┌────────────┴────────────────────────────┴─────────────────┐   │
-│  │   Apache Jena Fuseki (Remote SPARQL + OWL)                │   │
-│  │  - External triple store (HTTP endpoint)                  │   │
-│  │  - OWL reasoning & inference                              │   │
-│  │  - SPARQL query/update APIs                               │   │
-│  │  - CIM Ontology (IEC 61970/61968)                         │   │
-│  └───────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────┘
-                             │
-                    ┌────────┴────────┐
-                    │  External APIs  │
-                    │  - Groq API     │
-                    │  - Ollama       │
-                    │  - Claude AI    │
-                    └─────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                  Frontend Layer (React + TypeScript)               │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌─────────────┐  │
+│  │ LandingPage│  │ Dashboard  │  │ Graph View │  │GraphRAG Chat│  │
+│  │            │  │ 8 StatCards│  │ Cytoscape  │  │ SSE Stream  │  │
+│  └────────────┘  └────────────┘  └────────────┘  └─────────────┘  │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌─────────────┐  │
+│  │ Data Import│  │SPARQL Edit.│  │  LoadFlow  │  │  Settings   │  │
+│  │+MappingModal│ │            │  │+Topology Map│  │             │  │
+│  └────────────┘  └────────────┘  └────────────┘  └─────────────┘  │
+└───────────────────────────┬────────────────────────────────────────┘
+                            │ REST / SSE
+┌───────────────────────────┴────────────────────────────────────────┐
+│                Backend Layer (Spring Boot 3.2)                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │                    REST Controllers                         │   │
+│  │  CimController  ExcelController  GraphRAGController         │   │
+│  │  LoadFlowController  SparqlController  ShaclController      │   │
+│  └──────────┬──────────────────────┬──────────────────────────┘   │
+│             │                      │                              │
+│  ┌──────────┴──────────┐  ┌────────┴──────────────┐              │
+│  │  ClaudeAgentService │  │   GraphRAGService      │              │
+│  │  5 native tools     │  │   Context building     │              │
+│  │  SSE streaming      │  │   LLM fallback chain   │              │
+│  └──────────┬──────────┘  └───────────────────────┘              │
+│             │                                                     │
+│  ┌──────────┴──────────────────────────────────────────────────┐  │
+│  │  CIMIndexingService   QdrantService   EmbeddingService       │  │
+│  │  Auto-index on import  Vector upsert  OpenAI embeddings      │  │
+│  └──────────┬──────────────────────────────────────────────────┘  │
+│             │                                                     │
+│  ┌──────────┴────────────────────────────────────────────────┐    │
+│  │   Apache Jena Fuseki (Embedded TDB2, port 3030)           │    │
+│  │   SPARQL 1.1 · OWL reasoning · CIM ontology               │    │
+│  └───────────────────────────────────────────────────────────┘    │
+└────────────────────────────────────────────────────────────────────┘
+           │                          │
+  ┌────────┴────────┐        ┌────────┴────────────┐
+  │  Qdrant (6333)  │        │  Powerflow (8000)   │
+  │  Vector DB      │        │  Python pandapower  │
+  │  cim_entities   │        │  SemanticBusFinder  │
+  └─────────────────┘        └─────────────────────┘
+           │
+  ┌────────┴────────┐
+  │  External LLMs  │
+  │  Claude AI      │
+  │  Groq API       │
+  │  Ollama         │
+  └─────────────────┘
 ```
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 ### Backend
 
@@ -209,7 +217,8 @@ This platform provides:
 |------------|---------|---------|
 | **Java** | 17+ | Core language |
 | **Spring Boot** | 3.2 | Application framework |
-| **Apache Jena** | 4.10 | RDF/OWL processing, SPARQL |
+| **Apache Jena** | 5.0.0 | RDF/OWL processing, embedded Fuseki/TDB2 |
+| **Spring WebFlux** | 3.2 | SSE streaming (Reactor/Flux) |
 | **Spring Security** | 3.2 | Security framework |
 | **Maven** | 3.8+ | Build & dependency management |
 | **JUnit 5** | 5.x | Testing framework |
@@ -222,409 +231,351 @@ This platform provides:
 | **React** | 18 | UI framework |
 | **TypeScript** | 5.0 | Type safety |
 | **Vite** | Latest | Build tool |
-| **Cytoscape.js** | Latest | Graph visualization |
+| **Cytoscape.js** | Latest | Graph & topology visualization |
 | **TailwindCSS** | Latest | Styling |
 | **Axios** | Latest | HTTP client |
 
-### Natural Language Processing
+### AI & Vector Search
 
 | Technology | Purpose |
 |------------|---------|
-| **GraphRAG** | Custom graph retrieval-augmented generation |
-| **Groq API** | Fast language model inference |
-| **Ollama** | Local language model support |
-| **Claude** | Advanced language model (optional) |
+| **Claude claude-sonnet-4-6** | Primary AI agent with native tool calling |
+| **Qdrant** | Vector database for semantic similarity search |
+| **OpenAI Embeddings** | text-embedding-3-small (1536-dim) for entity indexing |
+| **Groq API** | Fast LLM inference fallback |
+| **Ollama** | Local LLM fallback |
 
-### DevOps
+### Infrastructure
 
 | Technology | Purpose |
 |------------|---------|
-| **Docker** | Containerization |
-| **Docker Compose** | Multi-container orchestration |
-| **Maven Wrapper** | Build automation |
+| **Docker / Docker Compose** | Fuseki + Qdrant containers |
+| **Python / uvicorn** | pandapower powerflow microservice |
+| **dev.sh / stop.sh** | One-command dev lifecycle management |
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-- **Java 17+** ([Download](https://adoptium.net/))
-- **Maven 3.8+** ([Download](https://maven.apache.org/))
-- **Node.js 18+** & **npm** ([Download](https://nodejs.org/))
-- **Docker Desktop** (optional, [Download](https://www.docker.com/products/docker-desktop))
+- **Java 17+**
+- **Maven 3.8+** (or use the included `./mvnw`)
+- **Node.js 18+** and **npm**
+- **Python 3.13+**
+- **Docker Desktop** (for Fuseki + Qdrant)
 
-### Option 1: Docker Compose (Recommended)
+### One-command startup
 
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/yourusername/CIM-SemanticGraph-Platform.git
 cd CIM-SemanticGraph-Platform
 
-# Start all services
-docker-compose up -d
+# Create your .env file (see Configuration section)
+cp backend/.env.example backend/.env
+# Edit backend/.env with your API keys
 
-# Access application
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8080
-# API Docs: http://localhost:8080/swagger-ui.html
+# Start everything
+./dev.sh
 ```
 
-### Option 2: Manual Setup
+The script will:
+1. Check all prerequisites
+2. Start Fuseki and Qdrant via Docker Compose
+3. Install Python deps and start the pandapower microservice
+4. Compile and start the Spring Boot backend
+5. Install npm deps and start the Vite dev server
 
-1. **Start Apache Jena Fuseki (remote storage)**
-   ```bash
-   # Download once
-   cd /tmp
-   curl -L -o apache-jena-fuseki-4.10.0.tar.gz \
-     https://archive.apache.org/dist/jena/binaries/apache-jena-fuseki-4.10.0.tar.gz
-   tar xzf apache-jena-fuseki-4.10.0.tar.gz
+```
+Frontend    →  http://localhost:3000
+Backend API →  http://localhost:8080/api
+Swagger UI  →  http://localhost:8080/swagger-ui.html
+Fuseki UI   →  http://localhost:3030
+Qdrant UI   →  http://localhost:6333/dashboard
+Powerflow   →  http://localhost:8000/docs
+```
 
-   # Launch Fuseki with in‑memory dataset named "cim"
-   cd apache-jena-fuseki-4.10.0
-   ./fuseki-server --mem /cim
-   ```
-   Keep this terminal open. The backend will connect to `http://localhost:3030/cim`.
+### Partial startup options
 
-2. **Start the PowerFlow microservice**
-   ```bash
-   cd powerflow-service
-   python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-   ```
-   This provides the load-flow REST API used by the platform.
+```bash
+./dev.sh --infra     # Infrastructure only (Fuseki + Qdrant)
+./dev.sh --backend   # Backend + infra (no frontend)
+./dev.sh --status    # Show status of all services
+./stop.sh            # Stop all services
+```
 
-3. **Start Backend**
-   ```bash
-   export JENA_FUSEKI_REMOTE_URL=http://localhost:3030
-   export JENA_FUSEKI_DATASET=cim
-   export GROQ_API_KEY=your_key            # optional but recommended
-   cd backend
-   ./mvnw spring-boot:run
-   ```
+### Stop all services
 
-4. **Start Frontend (new terminal)**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   # Access: http://localhost:5173
-   ```
+```bash
+./stop.sh
+```
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
-### Backend Configuration
+### Environment file
 
-Edit `backend/src/main/resources/application.yml`:
+Create `backend/.env` with your API keys:
+
+```bash
+# Required for Claude AI Agent
+CLAUDE_API_KEY=sk-ant-...
+
+# Required for vector embeddings (falls back to keyword search if not set)
+OPENAI_API_KEY=sk-...
+
+# Optional: fast LLM fallback
+GROQ_API_KEY=gsk_...
+```
+
+### application.yml (key settings)
 
 ```yaml
-spring:
-  application:
-    name: cim-semantic-graph-platform
-
-# Apache Jena Configuration
 jena:
-  storage-mode: remote
+  storage-mode: fuseki          # embedded Fuseki with TDB2 persistence
   fuseki:
-    remote-url: ${JENA_FUSEKI_REMOTE_URL:http://localhost:3030}
-    dataset-name: ${JENA_FUSEKI_DATASET:cim}
+    remote-url: http://localhost:3030
+    dataset-name: cim
 
-# GraphRAG Configuration
+qdrant:
+  url: http://localhost:6333
+  collection-name: cim_entities
+  vector-size: 1536
+
+claude:
+  api:
+    key: ${CLAUDE_API_KEY:}
+    model: claude-sonnet-4-6
+
 graphrag:
   retrieval:
     top-k: 10
     max-depth: 3
   context:
     max-triples: 1000
-
-# LLM Configuration (choose one)
-llm:
-  provider: groq  # Options: groq, ollama, claude
-  groq:
-    api-key: ${GROQ_API_KEY}
-    model: mixtral-8x7b-32768
-  ollama:
-    base-url: http://localhost:11434
-    model: mistral
-  claude:
-    api-key: ${CLAUDE_API_KEY}
-    model: claude-3-sonnet-20240229
-```
-
-### Environment Variables
-
-```bash
-# Mandatory external services
-export JENA_FUSEKI_REMOTE_URL=http://localhost:3030
-export JENA_FUSEKI_DATASET=cim
-export POWERFLOW_SERVICE_URL=http://127.0.0.1:8000
-
-# Groq API (recommended for fast inference)
-export GROQ_API_KEY=your_groq_api_key
-
-# Or Ollama (local, no API key needed)
-# Just ensure Ollama is running: ollama serve
-
-# Or Claude (optional)
-export CLAUDE_API_KEY=your_claude_api_key
 ```
 
 ---
 
-## 📖 Usage Examples
+## Usage Examples
 
-### 1. Import CIM Data
+### 1. Import CIM / Excel data
 
 ```bash
 # Import CIM RDF file
 curl -X POST http://localhost:8080/api/cim/import \
-  -F "file=@test/cim/simple-network.rdf" \
+  -F "file=@examples/NRW-Power-Network.rdf" \
   -F "format=rdf"
-
-# Import CIM XML file
-curl -X POST http://localhost:8080/api/cim/import \
-  -F "file=@test/cim/medium-network.xml" \
-  -F "format=xml"
 
 # Import Excel network file
 curl -X POST http://localhost:8080/api/excel/import \
-  -F "file=@test/excel/test-simple-2bus.xlsx"
+  -F "file=@examples/NRW-Power-Network.xlsx"
 ```
 
-### 2. Query with SPARQL
+After import, entities are automatically indexed into Qdrant.
+
+### 2. Stream a question to the Claude AI Agent
+
+```bash
+curl -N 'http://localhost:8080/api/graphrag/stream?question=show+all+substations'
+```
+
+Events returned:
+```json
+{"type":"tool_call",   "tool":"sparql_query", "input":{...}}
+{"type":"tool_result", "tool":"sparql_query", "chars":1842}
+{"type":"text",        "text":"The network contains 12 substations..."}
+{"type":"done",        "sources":[...], "confidence":0.92, "execution_time_ms":3210}
+```
+
+### 3. Standard GraphRAG question
+
+```bash
+curl -X POST http://localhost:8080/api/graphrag/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is the voltage at Düsseldorf 220kV?", "sessionId": "s1"}'
+```
+
+### 4. SPARQL query
 
 ```bash
 curl -X POST http://localhost:8080/api/sparql/query \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "PREFIX cim: <http://iec.ch/TC57/CIM100#> SELECT ?sub ?name WHERE { ?sub a cim:Substation . ?sub cim:IdentifiedObject.name ?name }"
+    "query": "PREFIX cim: <http://iec.ch/TC57/CIM100#> SELECT ?s ?name WHERE { ?s a cim:Substation ; cim:IdentifiedObject.name ?name }"
   }'
 ```
 
-### 3. Natural Language Query (GraphRAG)
+### 5. Load flow calculation
 
 ```bash
-curl -X POST http://localhost:8080/api/graphrag/ask \
-  -H "Content-Type: application/json" \
-  -d '{
-    "question": "What is the voltage at Düsseldorf 220kV?",
-    "sessionId": "session-123"
-  }'
-```
-
-### 4. Calculate Load Flow
-
-```bash
-# Full network load flow
 curl -X POST http://localhost:8080/api/loadflow/calculate
+```
 
-# Load flow for specific bus
-curl -X POST http://localhost:8080/api/loadflow/calculate/BUS_DUSSELDORF_220
+### 6. Check vector indexing status
+
+```bash
+curl http://localhost:8080/api/cim/indexing-status
+
+# Trigger manual re-index
+curl -X POST http://localhost:8080/api/cim/reindex
 ```
 
 ---
 
-## 🔌 Load Flow Analysis
-
-The platform includes a comprehensive load flow analysis engine:
+## Load Flow Analysis
 
 ### Features
 
-- **DC Load Flow Solver**: Fast, accurate power flow calculations
+- **DC Load Flow Solver**: Fast power flow calculations via pandapower
+- **Semantic Bus Finder**: Maps natural language bus names to network IDs
 - **Bus Analysis**: Voltage magnitudes, angles, power injections
 - **Branch Analysis**: Power flows, losses, loading percentages
 - **Violation Detection**: Voltage limits, branch overloads
-- **System Statistics**: Generation, load, losses summary
-
-### Usage via Chat
-
-Ask natural language questions:
-
-- "Calculate load flow for the network"
-- "What is the voltage at bus Köln 220kV?"
-- "Calculate load flow at Düsseldorf"
-- "Show me load flow results"
+- **Network Topology Map**: Cytoscape.js with voltage/loading color coding
 
 ### API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/loadflow/calculate` | POST | Calculate full network load flow |
-| `/api/loadflow/calculate/{busId}` | POST | Calculate load flow for specific bus |
-| `/api/loadflow/voltage/{busId}` | GET | Get voltage at specific bus |
-| `/api/loadflow/statistics` | GET | Get system statistics |
-| `/api/loadflow/violations` | GET | Get system violations |
+| `/api/loadflow/calculate` | POST | Full network load flow |
+| `/api/loadflow/calculate/{busId}` | POST | Load flow for specific bus |
+| `/api/loadflow/voltage/{busId}` | GET | Voltage at a specific bus |
+| `/api/loadflow/statistics` | GET | System generation/load/loss summary |
+| `/api/loadflow/violations` | GET | Voltage and branch violations |
 
 ---
 
-## 💬 GraphRAG Chat
+## Claude AI Agent
 
-Interactive natural language interface for querying the knowledge graph:
+The `ClaudeAgentService` implements an autonomous reasoning loop using Claude claude-sonnet-4-6 with native tool calling.
 
-### Features
+### How it works
 
-- **Context-Aware Retrieval**: Intelligent subgraph extraction
-- **Multi-provider Support**: Groq, Ollama, Claude
-- **Session Management**: Chat history persistence
-- **Load Flow Integration**: Calculate power flow via chat
-- **Category Filtering**: Organize questions by type
+1. User question is sent with 5 tool definitions
+2. Claude decides which tools to call and in what order
+3. Tool results are fed back to Claude (up to 8 rounds)
+4. Final answer is streamed token by token via SSE
 
-### Example Queries
+### Tools available to the agent
+
+| Tool | Backend | Description |
+|------|---------|-------------|
+| `semantic_search` | Qdrant | Vector similarity search on indexed entities |
+| `sparql_query` | Apache Fuseki | Execute arbitrary SPARQL SELECT queries |
+| `load_flow` | pandapower service | Run load flow for a bus or full network |
+| `get_entity_details` | Jena triple store | Fetch all triples for a given CIM entity URI |
+| `graph_traverse` | GraphTraverser | Extract multi-hop subgraph around an entity |
+
+### SSE Stream endpoint
 
 ```
-"Calculate load flow at bus Düsseldorf 220kV"
-"What substations do we have in the network?"
-"Show me all generators connected to the 380kV network"
-"What is the total generation capacity?"
-"Find all transmission lines between Köln and Düsseldorf"
+GET /api/graphrag/stream?question=<your question>
 ```
 
 ---
 
-## 🧪 Testing
+## Vector Search & Indexing
 
-### Backend Tests
+CIM entities are automatically embedded and indexed into Qdrant after every import.
+
+- **Embedding model**: OpenAI `text-embedding-3-small` (1536 dimensions)
+- **Collection**: `cim_entities`
+- **Indexed fields**: entity URI, type, name, voltage level, description
+- **Fallback**: keyword-based SPARQL search if OpenAI key is not set
+
+### Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/cim/indexing-status` | GET | Number of indexed entities and status |
+| `/api/cim/reindex` | POST | Re-index all entities from the triple store |
+
+---
+
+## Testing
+
+### Backend
 
 ```bash
 cd backend
 ./mvnw test
+
+# With coverage report
+./mvnw test jacoco:report
+# Report: backend/target/site/jacoco/index.html
 ```
 
-### Frontend Tests
+### Frontend
 
 ```bash
 cd frontend
 npm test
 ```
 
-### Integration Tests
-
-```bash
-cd backend
-./mvnw verify
-```
-
-### Test Files
-
-Test files are located in the `test/` directory:
-
-- **CIM Files**: `test/cim/` (RDF and XML formats)
-- **Excel Files**: `test/excel/` (Network data in Excel format)
-
-See [test/README.md](test/README.md) for details.
-
 ---
 
-## 🧪 Testing
-
-See [README_TESTING.md](README_TESTING.md) for detailed testing guide.
-
-### Run Tests
-```bash
-# Backend
-cd backend && mvn test
-
-# Frontend
-cd frontend && npm test
-```
-
-### Coverage
-```bash
-cd backend && mvn test jacoco:report
-# Report: backend/target/site/jacoco/index.html
-```
-
-## 🚀 CI/CD
-
-See [README_CI_CD.md](README_CI_CD.md) for CI/CD documentation.
-
-The project uses GitHub Actions for:
-- Automated testing on push/PR
-- Code quality checks (linting, security)
-- Docker image building and publishing
-- Coverage reporting
-
-## 📊 Monitoring
-
-See [README_MONITORING.md](README_MONITORING.md) for monitoring setup.
-
-### Actuator Endpoints
-- Health: `/api/actuator/health`
-- Metrics: `/api/actuator/metrics`
-- Prometheus: `/api/actuator/prometheus`
-
-## 📦 Project Structure
+## Project Structure
 
 ```
 CIM-SemanticGraph-Platform/
-├── backend/                          # Spring Boot backend
-│   ├── src/main/java/com/cim/semanticgraph/
-│   │   ├── config/                  # Configuration classes
-│   │   ├── controller/              # REST controllers
-│   │   │   ├── CimController.java
-│   │   │   ├── ExcelController.java
-│   │   │   ├── GraphRAGController.java
-│   │   │   ├── LoadFlowController.java
-│   │   │   ├── SparqlController.java
-│   │   │   └── ShaclController.java
-│   │   ├── service/                 # Business logic
-│   │   │   ├── JenaService.java
-│   │   │   ├── GraphRAGService.java
-│   │   │   ├── LoadFlowService.java
-│   │   │   ├── ExcelImportService.java
-│   │   │   └── ShaclValidationService.java
-│   │   ├── loadflow/                # Load flow engine
-│   │   │   ├── extractor/
-│   │   │   ├── model/
-│   │   │   └── solver/
-│   │   ├── graphrag/                # GraphRAG algorithms
-│   │   └── dto/                     # Data Transfer Objects
-│   └── src/main/resources/
-│       └── application.yml          # Configuration
+├── dev.sh                            # One-command dev startup
+├── stop.sh                           # Stop all services
+├── backend/
+│   ├── .env                          # API keys (not committed)
+│   ├── docker-compose.yml            # Fuseki + Qdrant containers
+│   └── src/main/java/com/cim/semanticgraph/
+│       ├── config/
+│       │   ├── JenaConfig.java       # Embedded Fuseki/TDB2 setup
+│       │   └── SecurityConfig.java
+│       ├── controller/
+│       │   ├── CimController.java
+│       │   ├── ExcelController.java
+│       │   ├── GraphRAGController.java  # /ask + /stream (SSE)
+│       │   └── LoadFlowController.java
+│       └── service/
+│           ├── ClaudeAgentService.java  # AI Agent with 5 tools
+│           ├── QdrantService.java       # Vector DB client
+│           ├── CIMIndexingService.java  # Auto-indexing pipeline
+│           ├── EmbeddingService.java    # OpenAI embeddings
+│           ├── GraphRAGService.java
+│           ├── JenaService.java
+│           ├── LoadFlowService.java
+│           └── ExcelImportService.java
 │
-├── frontend/                         # React frontend
-│   ├── src/
-│   │   ├── pages/                   # Page components
-│   │   │   ├── Dashboard.tsx
-│   │   │   ├── GraphRAGChat.tsx
-│   │   │   ├── LoadFlow.tsx
-│   │   │   ├── SparqlEditor.tsx
-│   │   │   └── DataImport.tsx
-│   │   ├── components/               # Reusable components
-│   │   │   └── GraphVisualization.tsx
-│   │   ├── services/                # API services
-│   │   └── types/                   # TypeScript types
-│   └── package.json
+├── frontend/src/
+│   ├── pages/
+│   │   ├── LandingPage.tsx           # New landing page
+│   │   ├── Dashboard.tsx             # Pro dashboard with 8 stat cards
+│   │   ├── LoadFlow.tsx              # Load flow + topology map toggle
+│   │   ├── DataImport.tsx
+│   │   └── Settings.tsx
+│   ├── components/
+│   │   ├── loadflow/
+│   │   │   └── NetworkTopologyMap.tsx  # Cytoscape topology visualization
+│   │   ├── dataimport/
+│   │   │   └── ExcelMappingModal.tsx   # Column mapping UI
+│   │   ├── GraphVisualization.tsx
+│   │   └── Layout.tsx / Sidebar.tsx
+│   └── services/api.ts               # All REST + SSE calls
 │
-├── test/                             # Test files
-│   ├── cim/                         # CIM test files
-│   ├── excel/                       # Excel test files
-│   └── README.md                    # Test documentation
+├── powerflow-service/
+│   └── app/
+│       ├── main.py                   # FastAPI pandapower service
+│       ├── models.py
+│       └── semantic_bus_finder.py    # NLP bus name resolution
 │
-├── examples/                         # Example files
-│   ├── cim-samples/                 # Sample CIM files
-│   ├── NRW-Power-Network.xlsx       # NRW network example
-│   └── rdf/                         # RDF examples
-│
-├── docs/                             # Documentation
-│   └── diagrams/                    # Architecture diagrams
-│
-├── docker-compose.yml               # Docker orchestration
-└── README.md                        # This file
+├── examples/
+│   └── NRW-Power-Network.xlsx        # Sample NRW network data
+├── docs/diagrams/
+└── README.md
 ```
 
 ---
 
-## 📚 Documentation
-
-- **[Test Files Guide](test/README.md)** - Test file formats and usage
-- **[API Documentation](http://localhost:8080/swagger-ui.html)** - Interactive API docs (when running)
-- **[Architecture Diagrams](docs/diagrams/)** - System architecture visualizations
-
----
-
-## 🔌 API Reference
+## API Reference
 
 ### CIM Management
 
@@ -632,59 +583,59 @@ CIM-SemanticGraph-Platform/
 |----------|--------|-------------|
 | `/api/cim/import` | POST | Import CIM file (RDF/XML) |
 | `/api/cim/export` | GET | Export knowledge graph |
-| `/api/cim/statistics` | GET | Get graph statistics |
+| `/api/cim/statistics` | GET | Graph statistics |
 | `/api/cim/clear` | DELETE | Clear knowledge graph |
 | `/api/cim/validate` | POST | Validate CIM file |
+| `/api/cim/indexing-status` | GET | Vector indexing status |
+| `/api/cim/reindex` | POST | Re-index all entities |
 
 ### Excel Import
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/excel/import` | POST | Import Excel network file |
-| `/api/excel/format` | GET | Get Excel format specification |
+| `/api/excel/format` | GET | Excel format specification |
 
-### GraphRAG
+### GraphRAG / Claude Agent
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/graphrag/ask` | POST | Ask natural language question |
-| `/api/graphrag/impact` | POST | Analyze equipment impact |
-| `/api/graphrag/verify` | POST | Verify network consistency |
-| `/api/graphrag/history` | GET | Get chat history |
-| `/api/graphrag/history/{sessionId}` | GET | Get session history |
+| `/api/graphrag/ask` | POST | Natural language question (JSON response) |
+| `/api/graphrag/stream` | GET | SSE streaming with tool events |
+| `/api/graphrag/impact` | POST | Equipment impact analysis |
+| `/api/graphrag/verify` | POST | Network consistency check |
+| `/api/graphrag/history` | GET | Full chat history |
 
 ### SPARQL
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/sparql/query` | POST | Execute SPARQL SELECT query |
-| `/api/sparql/ask` | POST | Execute SPARQL ASK query |
-| `/api/sparql/validate` | POST | Validate SPARQL query |
-| `/api/sparql/samples` | GET | Get sample queries |
+| `/api/sparql/query` | POST | Execute SPARQL SELECT |
+| `/api/sparql/ask` | POST | Execute SPARQL ASK |
+| `/api/sparql/validate` | POST | Validate SPARQL syntax |
+| `/api/sparql/samples` | GET | Sample query library |
 
 ### Load Flow
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/loadflow/calculate` | POST | Calculate full network load flow |
-| `/api/loadflow/calculate/{busId}` | POST | Calculate load flow for bus |
-| `/api/loadflow/voltage/{busId}` | GET | Get bus voltage |
-| `/api/loadflow/statistics` | GET | Get system statistics |
-| `/api/loadflow/violations` | GET | Get violations |
+| `/api/loadflow/calculate` | POST | Full network load flow |
+| `/api/loadflow/calculate/{busId}` | POST | Load flow for a bus |
+| `/api/loadflow/voltage/{busId}` | GET | Bus voltage |
+| `/api/loadflow/statistics` | GET | System statistics |
+| `/api/loadflow/violations` | GET | Violations list |
 
 ### SHACL Validation
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/shacl/validate` | GET | Validate knowledge graph |
-| `/api/shacl/shapes` | GET | Get SHACL shapes |
-| `/api/shacl/validate/detailed` | POST | Detailed validation |
+| `/api/shacl/shapes` | GET | SHACL shapes |
+| `/api/shacl/validate/detailed` | POST | Detailed validation report |
 
 ---
 
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -692,37 +643,29 @@ Contributions are welcome! Please follow these steps:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-### Development Guidelines
+### Guidelines
 
 - Follow Java and TypeScript coding standards
 - Write unit tests for new features
-- Update documentation
-- Ensure all tests pass
+- Ensure all tests pass before submitting
 
 ---
 
-## 📄 License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- **IEC Technical Committee 57** - CIM standards (IEC 61970/61968)
-- **Apache Jena** - RDF/OWL framework
-- **Groq** - Fast language model inference
-- **Ollama** - Local language model support
-- **Anthropic** - Claude language models
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 📞 Support
+## Acknowledgments
 
-For questions, issues, or support:
-
-- **GitHub Issues**: [Open an issue](https://github.com/yourusername/CIM-SemanticGraph-Platform/issues)
-- **Documentation**: See `docs/` directory
+- **IEC Technical Committee 57** — CIM standards (IEC 61970/61968)
+- **Apache Jena** — RDF/OWL framework and embedded Fuseki
+- **Anthropic** — Claude AI models and tool calling API
+- **Qdrant** — Open-source vector database
+- **pandapower** — Python power system analysis
+- **Groq** — Fast language model inference
+- **Ollama** — Local language model support
 
 ---
 
@@ -730,6 +673,6 @@ For questions, issues, or support:
 
 **Built for intelligent power grid management**
 
-[⭐ Star this repo](https://github.com/yourusername/CIM-SemanticGraph-Platform) • [📖 Documentation](docs/) • [🐛 Report Bug](https://github.com/yourusername/CIM-SemanticGraph-Platform/issues)
+[Star this repo](https://github.com/yourusername/CIM-SemanticGraph-Platform) • [Documentation](docs/) • [Report Bug](https://github.com/yourusername/CIM-SemanticGraph-Platform/issues)
 
 </div>

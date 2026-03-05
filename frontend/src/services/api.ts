@@ -125,6 +125,77 @@ class ApiService {
     return response.data;
   }
 
+  streamGraphRAG(
+    question: string,
+    callbacks: {
+      onToolCall: (tool: string, input: Record<string, any>) => void;
+      onToolResult: (tool: string, chars: number) => void;
+      onText: (text: string) => void;
+      onDone: (sources: string[], confidence: number, executionTimeMs: number) => void;
+      onError: (message: string) => void;
+    },
+    maxRetries = 2,
+  ): () => void {
+    const url = `${API_BASE_URL}/graphrag/stream?question=${encodeURIComponent(question)}`;
+    let retries = 0;
+    let textReceived = false;
+    let stopped = false;
+    let es: EventSource;
+
+    const connect = () => {
+      es = new EventSource(url);
+
+      es.onmessage = (event) => {
+        retries = 0; // reset backoff counter on any successful message
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'tool_call') callbacks.onToolCall(data.tool, data.input ?? {});
+          else if (data.type === 'tool_result') callbacks.onToolResult(data.tool, data.chars ?? 0);
+          else if (data.type === 'text') {
+            textReceived = true;
+            callbacks.onText(data.text ?? '');
+          } else if (data.type === 'done') {
+            callbacks.onDone(data.sources ?? [], data.confidence ?? 0, data.execution_time_ms ?? 0);
+            es.close();
+          } else if (data.type === 'error') {
+            callbacks.onError(data.message ?? 'Unknown error');
+            es.close();
+          }
+        } catch {
+          // ignore malformed events
+        }
+      };
+
+      es.onerror = () => {
+        es.close();
+        if (stopped) return;
+        // Only retry if no text was received yet (safe to restart the question)
+        if (!textReceived && retries < maxRetries) {
+          retries++;
+          setTimeout(connect, 1000 * retries); // 1s, 2s backoff
+        } else {
+          callbacks.onError(
+            textReceived
+              ? 'Connection lost — response may be incomplete'
+              : 'Could not connect to server. Is the backend running?',
+          );
+        }
+      };
+    };
+
+    connect();
+    return () => { stopped = true; es?.close(); };
+  }
+
+  async checkBackendHealth(): Promise<boolean> {
+    try {
+      await this.client.get('/cim/health', { timeout: 3000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async analyzeImpact(equipmentId: string): Promise<GraphRAGResponse> {
     const response = await this.client.post<GraphRAGResponse>('/graphrag/impact', { equipmentId });
     return response.data;

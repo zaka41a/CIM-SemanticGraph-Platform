@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { storageGet, storageSet, storageRemove } from '@/utils/storage';
 
 interface ChatSession {
   id: string;
@@ -6,13 +7,16 @@ interface ChatSession {
   timestamp: Date;
 }
 
+const KEY_SESSION_ID = 'graphrag-session-id';
+const KEY_SESSIONS   = 'graphrag-sessions';
+
 export const useChatSession = () => {
   const [sessionId, setSessionId] = useState<string>('');
   const [sessions, setSessions] = useState<ChatSession[]>([]);
 
   useEffect(() => {
     loadSessions();
-    const storedSessionId = localStorage.getItem('graphrag-session-id');
+    const storedSessionId = storageGet<string>(KEY_SESSION_ID);
     if (storedSessionId) {
       setSessionId(storedSessionId);
     } else {
@@ -21,30 +25,26 @@ export const useChatSession = () => {
   }, []);
 
   const loadSessions = () => {
-    const stored = localStorage.getItem('graphrag-sessions');
+    const stored = storageGet<ChatSession[]>(KEY_SESSIONS);
     if (stored) {
-      const parsed = JSON.parse(stored);
-      setSessions(parsed.map((s: any) => ({
-        ...s,
-        timestamp: new Date(s.timestamp)
-      })));
+      setSessions(stored.map(s => ({ ...s, timestamp: new Date(s.timestamp) })));
     }
   };
 
   const saveSessions = (newSessions: ChatSession[]) => {
-    localStorage.setItem('graphrag-sessions', JSON.stringify(newSessions));
+    storageSet(KEY_SESSIONS, newSessions);
     setSessions(newSessions);
   };
 
   const createNewSession = () => {
     const newSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem('graphrag-session-id', newSessionId);
+    storageSet(KEY_SESSION_ID, newSessionId);
     setSessionId(newSessionId);
 
     const newSession: ChatSession = {
       id: newSessionId,
       title: 'New Chat',
-      timestamp: new Date()
+      timestamp: new Date(),
     };
     saveSessions([newSession, ...sessions]);
     return newSessionId;
@@ -52,13 +52,14 @@ export const useChatSession = () => {
 
   const selectSession = (sid: string) => {
     setSessionId(sid);
-    localStorage.setItem('graphrag-session-id', sid);
+    storageSet(KEY_SESSION_ID, sid);
   };
 
   const deleteSession = (sid: string) => {
     const updated = sessions.filter(s => s.id !== sid);
     saveSessions(updated);
-    
+    storageRemove(`graphrag-chat-${sid}`);
+
     if (sessionId === sid) {
       if (updated.length > 0) {
         selectSession(updated[0].id);
@@ -69,9 +70,7 @@ export const useChatSession = () => {
   };
 
   const updateSessionTitle = (sid: string, title: string) => {
-    const updated = sessions.map(s => 
-      s.id === sid ? { ...s, title } : s
-    );
+    const updated = sessions.map(s => (s.id === sid ? { ...s, title } : s));
     saveSessions(updated);
   };
 

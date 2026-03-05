@@ -1,11 +1,30 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { apiService } from '@/services/api';
-import { ChatMessage as ChatMessageType } from '@/types';
+import { storageGet, storageSet } from '@/utils/storage';
+import { ChatMessage, ToolCallEvent } from '@/types';
+
+const FOLLOWUP_MAP: Record<string, string[]> = {
+  substation: ['What lines are connected to this substation?', 'Show the voltage level at this substation', 'What transformers are here?'],
+  generator: ['What is the total generation capacity?', 'Calculate load flow at this generator bus', 'Show connected transmission lines'],
+  loadflow: ['Show voltage violations in the network', 'Which bus has the lowest voltage?', 'What are the system losses?'],
+  line: ['What is the loading percentage of this line?', 'Show connected substations', 'Are there any overloads?'],
+  default: ['Show me all substations', 'Calculate load flow for the network', 'What is the total generation capacity?'],
+};
+
+function inferFollowUps(question: string, answer: string): string[] {
+  const combined = (question + ' ' + answer).toLowerCase();
+  if (combined.includes('substation') || combined.includes('umspannwerk')) return FOLLOWUP_MAP.substation;
+  if (combined.includes('generator') || combined.includes('generation')) return FOLLOWUP_MAP.generator;
+  if (combined.includes('load flow') || combined.includes('voltage') || combined.includes('spannung')) return FOLLOWUP_MAP.loadflow;
+  if (combined.includes('line') || combined.includes('leitung') || combined.includes('transmission')) return FOLLOWUP_MAP.line;
+  return FOLLOWUP_MAP.default;
+}
 
 export const useChatMessages = (sessionId: string) => {
-  const [messages, setMessages] = useState<ChatMessageType[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const stopRef = useRef<(() => void) | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -26,7 +45,7 @@ export const useChatMessages = (sessionId: string) => {
   const loadChatHistory = async (sid: string) => {
     try {
       const history = await apiService.getChatHistory(sid);
-      const loadedMessages: ChatMessageType[] = history.map((chat: any) => [
+      const loadedMessages: ChatMessage[] = history.map((chat: any) => [
         {
           id: `${chat.id}-q`,
           role: 'user' as const,
@@ -43,89 +62,134 @@ export const useChatMessages = (sessionId: string) => {
         },
       ]).flat();
       setMessages(loadedMessages);
-    } catch (err) {
-      // Fallback to localStorage if API fails
-      const stored = localStorage.getItem(`graphrag-chat-${sid}`);
+    } catch {
+      const stored = storageGet<ChatMessage[]>(`graphrag-chat-${sid}`);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        setMessages(parsed.map((m: any) => ({
-          ...m,
-          timestamp: new Date(m.timestamp)
-        })));
+        setMessages(stored.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) })));
       } else {
         setMessages([]);
       }
     }
   };
 
-  const saveChatHistory = (sid: string, msgs: ChatMessageType[]) => {
-    localStorage.setItem(`graphrag-chat-${sid}`, JSON.stringify(msgs));
+  const saveChatHistory = (sid: string, msgs: ChatMessage[]) => {
+    storageSet(`graphrag-chat-${sid}`, msgs);
   };
 
-  const sendMessage = async (question: string, onSessionTitleUpdate?: (title: string) => void) => {
+  const stopGeneration = useCallback(() => {
+    if (stopRef.current) {
+      stopRef.current();
+      stopRef.current = null;
+      setIsLoading(false);
+      setMessages(prev => prev.map(m => m.streaming ? { ...m, streaming: false } : m));
+    }
+  }, []);
+
+  const sendMessage = useCallback(async (
+    question: string,
+    onSessionTitleUpdate?: (title: string) => void,
+  ) => {
     if (!question.trim() || isLoading) return;
 
-    const userMessage: ChatMessageType = {
+    const userMessage: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
       content: question,
       timestamp: new Date(),
     };
 
+    const assistantId = (Date.now() + 1).toString();
+    const assistantMessage: ChatMessage = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      streaming: true,
+      toolCalls: [],
+      toolResults: {},
+    };
+
     setMessages(prev => {
-      const updated = [...prev, userMessage];
-      saveChatHistory(sessionId, updated);
+      const updated = [...prev, userMessage, assistantMessage];
+      if (prev.length === 0 && onSessionTitleUpdate) {
+        const title = question.length > 50 ? question.substring(0, 50) + '...' : question;
+        onSessionTitleUpdate(title);
+      }
       return updated;
     });
 
     setIsLoading(true);
 
-    try {
-      const response = await apiService.askGraphRAG(question, sessionId);
-      
-      const assistantMessage: ChatMessageType = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response.answer,
-        timestamp: new Date(),
-        sources: response.sources,
-        confidence: response.confidence,
-      };
+    const stop = apiService.streamGraphRAG(question, {
+      onToolCall: (tool, input) => {
+        setMessages(prev => prev.map(m =>
+          m.id === assistantId
+            ? { ...m, toolCalls: [...(m.toolCalls ?? []), { tool, input } as ToolCallEvent] }
+            : m,
+        ));
+      },
+      onToolResult: (tool, chars) => {
+        setMessages(prev => prev.map(m =>
+          m.id === assistantId
+            ? { ...m, toolResults: { ...(m.toolResults ?? {}), [tool]: chars } }
+            : m,
+        ));
+      },
+      onText: (text) => {
+        setMessages(prev => prev.map(m =>
+          m.id === assistantId ? { ...m, content: m.content + text } : m,
+        ));
+      },
+      onDone: (sources, confidence, executionTimeMs) => {
+        stopRef.current = null;
+        setIsLoading(false);
+        setMessages(prev => {
+          const updated = prev.map(m => {
+            if (m.id !== assistantId) return m;
+            const followUpSuggestions = inferFollowUps(question, m.content);
+            return { ...m, streaming: false, sources, confidence, executionTimeMs, followUpSuggestions };
+          });
+          saveChatHistory(sessionId, updated);
+          return updated;
+        });
+      },
+      onError: (message) => {
+        stopRef.current = null;
+        setIsLoading(false);
+        setMessages(prev => {
+          const updated = prev.map(m =>
+            m.id === assistantId
+              ? { ...m, streaming: false, content: m.content || `Error: ${message}` }
+              : m,
+          );
+          saveChatHistory(sessionId, updated);
+          return updated;
+        });
+      },
+    });
 
-      setMessages(prev => {
-        const updated = [...prev, assistantMessage];
-        saveChatHistory(sessionId, updated);
-        
-        // Update session title from first question
-        if (prev.length === 0 && onSessionTitleUpdate) {
-          const title = question.length > 50 ? question.substring(0, 50) + '...' : question;
-          onSessionTitleUpdate(title);
-        }
-        
-        return updated;
-      });
-    } catch (err: any) {
-      const errorMessage: ChatMessageType = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `I apologize, but I encountered an error: ${err.message || 'Please try again later.'}`,
-        timestamp: new Date(),
-      };
-      setMessages(prev => {
-        const updated = [...prev, errorMessage];
-        saveChatHistory(sessionId, updated);
-        return updated;
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    stopRef.current = stop;
+  }, [isLoading, sessionId]);
+
+  const setFeedback = useCallback((messageId: string, feedback: 'up' | 'down') => {
+    setMessages(prev => prev.map(m =>
+      m.id === messageId ? { ...m, feedback: m.feedback === feedback ? null : feedback } : m,
+    ));
+  }, []);
+
+  const getLastUserQuestion = useCallback((): string => {
+    const userMessages = messages.filter(m => m.role === 'user');
+    return userMessages[userMessages.length - 1]?.content ?? '';
+  }, [messages]);
 
   return {
     messages,
     isLoading,
     messagesEndRef,
     sendMessage,
+    stopGeneration,
+    setFeedback,
+    getLastUserQuestion,
     clearMessages: () => {
       setMessages([]);
       saveChatHistory(sessionId, []);
