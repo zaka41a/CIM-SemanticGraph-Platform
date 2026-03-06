@@ -483,7 +483,7 @@ const GraphVisualization = () => {
       <div className="flex items-center justify-center h-96 card">
         <div className="text-center text-neutral-400">
           <AlertCircle className="mx-auto mb-3" size={36} />
-          <p className="text-sm">No graph data — import CIM data to visualize the network</p>
+          <p className="text-sm">No graph data</p>
         </div>
       </div>
     );
