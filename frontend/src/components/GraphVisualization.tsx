@@ -189,7 +189,7 @@ const GraphVisualization = () => {
   const containerRef                    = useRef<HTMLDivElement>(null);
   const [lastUpdate, setLastUpdate]     = useState<Date | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [currentLayout, setCurrentLayout] = useState<'dagre' | 'circle' | 'grid' | 'cose'>('dagre');
+  const [currentLayout, setCurrentLayout] = useState<'dagre' | 'circle' | 'grid' | 'cose'>('cose');
   const [loadFlowMode, setLoadFlowMode] = useState(false);
   const [loadFlowData, setLoadFlowData] = useState<LoadFlowData | null>(null);
 
@@ -247,15 +247,34 @@ const GraphVisualization = () => {
   }, [hiddenTypes, elements]);
 
   // ── Load Flow ──────────────────────────────────────────────────────────────
+  const [loadFlowLoading, setLoadFlowLoading] = useState(false);
+
   const fetchLoadFlowData = useCallback(async () => {
     try {
       const stored = localStorage.getItem('cim_load_flow_results');
       if (stored) {
-        setLoadFlowData(JSON.parse(stored));
-        return;
+        const parsed = JSON.parse(stored);
+        // Discard cached data if it has no valid busResults (e.g. error response)
+        if (Array.isArray(parsed?.busResults) && parsed.busResults.length > 0) {
+          setLoadFlowData(parsed);
+          return;
+        }
+        localStorage.removeItem('cim_load_flow_results');
       }
-      setError('No Load Flow data. Please run Load Flow calculation first.');
-    } catch { setError('Error loading Load Flow data'); }
+      // Auto-calculate if no valid cached data
+      setLoadFlowLoading(true);
+      const response = await api.calculateLoadFlow('DC');
+      if (Array.isArray(response?.busResults)) {
+        localStorage.setItem('cim_load_flow_results', JSON.stringify(response));
+        setLoadFlowData(response);
+      } else {
+        setError('Load Flow returned no bus data.');
+      }
+    } catch {
+      setError('Load Flow calculation failed. Please check the backend.');
+    } finally {
+      setLoadFlowLoading(false);
+    }
   }, []);
 
   const handleToggleLoadFlow = useCallback(async () => {
@@ -263,34 +282,16 @@ const GraphVisualization = () => {
     setLoadFlowMode(m => !m);
   }, [loadFlowMode, loadFlowData, fetchLoadFlowData]);
 
-  const applyLoadFlowVisualization = useCallback((graphElements: any[]) => {
-    if (!loadFlowData || !loadFlowMode) return graphElements;
-    return graphElements.map(el => {
-      if (el.data.source) {
-        const branch = loadFlowData.branchResults.find(b =>
-          (b.fromBusId.includes(el.data.source) || el.data.source.includes(b.fromBusId)) &&
-          (b.toBusId.includes(el.data.target)   || el.data.target.includes(b.toBusId))
-        );
-        if (branch) return { ...el, data: { ...el.data, loadingPercentage: branch.loadingPercentage, activePowerMw: Math.abs(branch.fromActivePowerMw) } };
-      } else {
-        const bus = loadFlowData.busResults.find(b =>
-          b.busId.includes(el.data.id) || el.data.id.includes(b.busId) ||
-          (el.data.id.replace(/_CN$/, '') === b.busId.replace(/_CN$/, ''))
-        );
-        if (bus) return { ...el, data: { ...el.data, voltageMagnitude: bus.voltageMagnitude, voltageAngle: bus.voltageAngle, withinLimits: bus.withinLimits } };
-      }
-      return el;
-    });
-  }, [loadFlowData, loadFlowMode]);
-
   useEffect(() => {
     if (!cyRef.current || elements.length === 0) return;
     const cy = cyRef.current;
-    if (loadFlowMode && loadFlowData) {
+    const busResults = loadFlowData?.busResults;
+    const branchResults = loadFlowData?.branchResults;
+    if (loadFlowMode && Array.isArray(busResults) && Array.isArray(branchResults)) {
       cy.elements().forEach((ele: any) => {
         if (ele.isNode()) {
           const nodeId = ele.data('id');
-          const bus = loadFlowData.busResults.find(b =>
+          const bus = busResults.find((b: any) =>
             b.busId.includes(nodeId) || nodeId.includes(b.busId) ||
             nodeId.replace(/_CN$/, '') === b.busId.replace(/_CN$/, '')
           );
@@ -301,7 +302,7 @@ const GraphVisualization = () => {
             ele.data('withinLimits', bus.withinLimits);
           }
         } else if (ele.isEdge()) {
-          const branch = loadFlowData.branchResults.find(b =>
+          const branch = branchResults.find((b: any) =>
             (b.fromBusId.includes(ele.data('source')) || ele.data('source').includes(b.fromBusId)) &&
             (b.toBusId.includes(ele.data('target'))   || ele.data('target').includes(b.toBusId))
           );
@@ -374,8 +375,7 @@ const GraphVisualization = () => {
           }
         });
 
-        let graphElements = [...Array.from(nodes.values()), ...edges];
-        graphElements = applyLoadFlowVisualization(graphElements);
+        const graphElements = [...Array.from(nodes.values()), ...edges];
         setElements(graphElements);
         setLastUpdate(new Date());
       } else {
@@ -388,7 +388,7 @@ const GraphVisualization = () => {
     } finally {
       setLoading(false);
     }
-  }, [applyLoadFlowVisualization]);
+  }, []);
 
   useEffect(() => {
     fetchGraphData();
@@ -408,12 +408,23 @@ const GraphVisualization = () => {
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
+  // Destroy cytoscape instance on unmount to prevent null-ref errors from
+  // running layout callbacks after the component is gone.
+  useEffect(() => {
+    return () => {
+      if (cyRef.current) {
+        try { cyRef.current.stop(); } catch (_) {}
+        cyRef.current = null;
+      }
+    };
+  }, []);
+
   // ── Layout helpers ─────────────────────────────────────────────────────────
   const LAYOUT_CFG: Record<string, any> = {
-    dagre:  { name: 'dagre', rankDir: 'LR', nodeSep: 100, rankSep: 160, animate: true, animationDuration: 400 },
-    circle: { name: 'circle', animate: true, animationDuration: 400 },
-    grid:   { name: 'grid',   animate: true, animationDuration: 400 },
-    cose:   { name: 'cose',   animate: true, animationDuration: 400, nodeRepulsion: 8000, idealEdgeLength: 100 },
+    dagre:  { name: 'dagre', rankDir: 'LR', nodeSep: 100, rankSep: 160, animate: false },
+    circle: { name: 'circle', animate: false },
+    grid:   { name: 'grid',   animate: false },
+    cose:   { name: 'cose',   animate: false, nodeRepulsion: 8000, idealEdgeLength: 100, numIter: 1000 },
   };
 
   const LAYOUT_LABELS: Record<string, string> = { dagre: 'Hierarchical', circle: 'Circle', grid: 'Grid', cose: 'Force-Directed' };
@@ -579,15 +590,19 @@ const GraphVisualization = () => {
         {/* Load Flow */}
         <button
           onClick={handleToggleLoadFlow}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${
+          disabled={loadFlowLoading}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors disabled:opacity-60 ${
             loadFlowMode
               ? 'bg-accent-500/20 border-accent-500/30 text-accent-400'
               : 'bg-primary-800/40 border-primary-600/30 text-neutral-400 hover:text-white hover:bg-primary-700/40'
           }`}
-          title={loadFlowMode ? 'Disable Load Flow' : 'Enable Load Flow'}
+          title={loadFlowMode ? 'Disable Load Flow' : 'Enable Load Flow overlay'}
         >
-          {loadFlowMode ? <Zap size={13} /> : <ZapOff size={13} />}
-          Load Flow
+          {loadFlowLoading
+            ? <RefreshCw size={13} className="animate-spin" />
+            : loadFlowMode ? <Zap size={13} /> : <ZapOff size={13} />
+          }
+          {loadFlowLoading ? 'Calculating…' : 'Load Flow'}
         </button>
 
         {/* Layout */}
@@ -648,7 +663,7 @@ const GraphVisualization = () => {
           elements={elements}
           style={{ width: '100%', height: isFullscreen ? 'calc(100vh - 110px)' : '520px', background: 'transparent' }}
           stylesheet={buildStylesheet() as any}
-          layout={LAYOUT_CFG.dagre}
+          layout={LAYOUT_CFG.cose}
           cy={(cy: cytoscape.Core) => {
             cyRef.current = cy;
 

@@ -240,9 +240,24 @@ public class ExcelImportService {
             terminal.addLiteral(model.createProperty(cimNamespace + "Terminal.sequenceNumber"), 1);
 
             if (voltage != null && !voltage.isEmpty()) {
-                Resource voltageLevel = model.createResource(BASE_URI + "VoltageLevel/" + sanitizeId(voltage) + "kV");
-                voltageLevel.addProperty(RDF.type, model.createResource(cimNamespace + "VoltageLevel"));
-                bus.addProperty(model.createProperty(cimNamespace + "Equipment.EquipmentContainer"), voltageLevel);
+                try {
+                    double voltageKv = Double.parseDouble(voltage.replaceAll("[^0-9.]", ""));
+                    String vlKey = sanitizeId(voltage) + "kV";
+                    Resource voltageLevel = model.createResource(BASE_URI + "VoltageLevel/" + vlKey);
+                    voltageLevel.addProperty(RDF.type, model.createResource(cimNamespace + "VoltageLevel"));
+                    voltageLevel.addProperty(model.createProperty(cimNamespace + "IdentifiedObject.name"),
+                            model.createLiteral(voltage + "kV"));
+
+                    Resource baseVoltage = model.createResource(BASE_URI + "BaseVoltage/" + (int) voltageKv + "kV");
+                    baseVoltage.addProperty(RDF.type, model.createResource(cimNamespace + "BaseVoltage"));
+                    baseVoltage.addLiteral(model.createProperty(cimNamespace + "BaseVoltage.nominalVoltage"), voltageKv);
+                    voltageLevel.addProperty(model.createProperty(cimNamespace + "VoltageLevel.BaseVoltage"), baseVoltage);
+
+                    bus.addProperty(model.createProperty(cimNamespace + "Equipment.EquipmentContainer"), voltageLevel);
+                    cn.addProperty(model.createProperty(cimNamespace + "ConnectivityNode.ConnectivityNodeContainer"), voltageLevel);
+                } catch (NumberFormatException e) {
+                    log.warn("Invalid voltage value for bus {}: {}", id, voltage);
+                }
             }
 
             count++;
@@ -358,18 +373,40 @@ public class ExcelImportService {
                 }
             }
 
+            Resource terminal1 = model.createResource(BASE_URI + "Terminal/" + sanitizeId(id) + "_T1");
+            terminal1.addProperty(RDF.type, model.createResource(cimNamespace + "Terminal"));
+            terminal1.addProperty(model.createProperty(cimNamespace + "Terminal.ConductingEquipment"), trafo);
+            terminal1.addLiteral(model.createProperty(cimNamespace + "Terminal.sequenceNumber"), 1);
+
             if (hvBus != null && !hvBus.isEmpty()) {
-                Resource terminal1 = model.createResource(BASE_URI + "Terminal/" + sanitizeId(id) + "_T1");
-                terminal1.addProperty(RDF.type, model.createResource(cimNamespace + "Terminal"));
-                terminal1.addProperty(model.createProperty(cimNamespace + "Terminal.ConductingEquipment"), trafo);
-                terminal1.addLiteral(model.createProperty(cimNamespace + "Terminal.sequenceNumber"), 1);
+                String cn1Id = sanitizeId(hvBus) + "_CN";
+                Resource cn1 = model.getResource(BASE_URI + "ConnectivityNode/" + cn1Id);
+                if (cn1 == null || !cn1.hasProperty(RDF.type)) {
+                    cn1 = model.createResource(BASE_URI + "ConnectivityNode/" + cn1Id);
+                    cn1.addProperty(RDF.type, model.createResource(cimNamespace + "ConnectivityNode"));
+                }
+                terminal1.addProperty(model.createProperty(cimNamespace + "Terminal.ConnectivityNode"), cn1);
+                log.info("Connected transformer {} HV terminal to ConnectivityNode {} (bus: {})", id, cn1Id, hvBus);
+            } else {
+                log.warn("Transformer {} has no HV bus specified", id);
             }
 
+            Resource terminal2 = model.createResource(BASE_URI + "Terminal/" + sanitizeId(id) + "_T2");
+            terminal2.addProperty(RDF.type, model.createResource(cimNamespace + "Terminal"));
+            terminal2.addProperty(model.createProperty(cimNamespace + "Terminal.ConductingEquipment"), trafo);
+            terminal2.addLiteral(model.createProperty(cimNamespace + "Terminal.sequenceNumber"), 2);
+
             if (lvBus != null && !lvBus.isEmpty()) {
-                Resource terminal2 = model.createResource(BASE_URI + "Terminal/" + sanitizeId(id) + "_T2");
-                terminal2.addProperty(RDF.type, model.createResource(cimNamespace + "Terminal"));
-                terminal2.addProperty(model.createProperty(cimNamespace + "Terminal.ConductingEquipment"), trafo);
-                terminal2.addLiteral(model.createProperty(cimNamespace + "Terminal.sequenceNumber"), 2);
+                String cn2Id = sanitizeId(lvBus) + "_CN";
+                Resource cn2 = model.getResource(BASE_URI + "ConnectivityNode/" + cn2Id);
+                if (cn2 == null || !cn2.hasProperty(RDF.type)) {
+                    cn2 = model.createResource(BASE_URI + "ConnectivityNode/" + cn2Id);
+                    cn2.addProperty(RDF.type, model.createResource(cimNamespace + "ConnectivityNode"));
+                }
+                terminal2.addProperty(model.createProperty(cimNamespace + "Terminal.ConnectivityNode"), cn2);
+                log.info("Connected transformer {} LV terminal to ConnectivityNode {} (bus: {})", id, cn2Id, lvBus);
+            } else {
+                log.warn("Transformer {} has no LV bus specified", id);
             }
 
             count++;
@@ -1072,12 +1109,18 @@ public class ExcelImportService {
             if (name != null && !name.isEmpty())
                 bus.addProperty(model.createProperty(cimNamespace + "IdentifiedObject.name"), model.createLiteral(name));
             if (voltage != null && !voltage.isEmpty()) {
-                Resource vl = model.createResource(BASE_URI + "VoltageLevel/" + sanitizeId(id) + "_VL");
-                vl.addProperty(RDF.type, model.createResource(cimNamespace + "VoltageLevel"));
-                try { vl.addProperty(model.createProperty(cimNamespace + "VoltageLevel.BaseVoltage"),
-                        model.createTypedLiteral(Double.parseDouble(voltage)));
+                try {
+                    double voltageKv = Double.parseDouble(voltage.replaceAll("[^0-9.]", ""));
+                    Resource vl = model.createResource(BASE_URI + "VoltageLevel/" + sanitizeId(id) + "_VL");
+                    vl.addProperty(RDF.type, model.createResource(cimNamespace + "VoltageLevel"));
+
+                    Resource bv = model.createResource(BASE_URI + "BaseVoltage/" + (int) voltageKv + "kV");
+                    bv.addProperty(RDF.type, model.createResource(cimNamespace + "BaseVoltage"));
+                    bv.addLiteral(model.createProperty(cimNamespace + "BaseVoltage.nominalVoltage"), voltageKv);
+                    vl.addProperty(model.createProperty(cimNamespace + "VoltageLevel.BaseVoltage"), bv);
+
+                    bus.addProperty(model.createProperty(cimNamespace + "Equipment.EquipmentContainer"), vl);
                 } catch (NumberFormatException ignored) {}
-                bus.addProperty(model.createProperty(cimNamespace + "Equipment.EquipmentContainer"), vl);
             }
             if (sub != null && !sub.isEmpty()) {
                 Resource subRes = model.createResource(BASE_URI + "Substation/" + sanitizeId(sub));

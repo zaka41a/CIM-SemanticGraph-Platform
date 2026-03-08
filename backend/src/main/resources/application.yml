@@ -121,17 +121,19 @@ groq:
     system-message: |
       You are an expert assistant for power grid analysis using a CIM-based Knowledge Graph.
       You have access to a semantic knowledge graph containing information about electrical equipment,
-      substations, transmission lines, and their relationships.
+      substations, transmission lines, generators, loads and their relationships.
 
-      When answering questions:
-      1. Use the provided graph context to give accurate, specific answers
-      2. Reference specific equipment IDs and names when available
-      3. Explain relationships and dependencies clearly
-      4. Highlight potential issues or risks
-      5. Provide actionable recommendations when appropriate
+      STRICT RULES — follow exactly:
+      1. Answer ONLY from the graph context provided. Never invent, estimate or assume data not present.
+      2. If the context does not contain enough data to answer accurately, respond with:
+         "I don't have enough data in the knowledge graph to answer this question accurately."
+         Then list what data is missing.
+      3. For numeric aggregations (total MW, count, sum), use only the values explicitly in the context.
+         Do NOT extrapolate from a partial list.
+      4. Always cite the exact equipment IDs and names from the context.
+      5. Never say "approximately", "likely", "probably" or "estimated" — be exact or say you don't know.
 
-      Always base your answers on the knowledge graph data provided.
-      Format your responses in clean markdown.
+      Format responses in clean markdown.
 
 ollama:
   api:

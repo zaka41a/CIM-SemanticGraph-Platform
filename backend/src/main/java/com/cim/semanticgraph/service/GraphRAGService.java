@@ -64,17 +64,23 @@ public class GraphRAGService {
             log.debug("Step 1: Retrieving relevant entities");
             List<String> relevantEntities = findRelevantEntities(question);
 
+            log.debug("Step 1b: Building direct SPARQL context for aggregate questions");
+            String sparqlContext = buildSparqlContext(question);
+
             GraphRAGResponse response;
-            if (relevantEntities.isEmpty()) {
+            if (relevantEntities.isEmpty() && sparqlContext.isEmpty()) {
                 log.warn("No relevant entities found for query");
                 response = buildFallbackResponse(question, startTime);
             } else {
-                log.debug("Step 2: Retrieving subgraph. Entities: {}, Depth: {}",
-                         relevantEntities.size(), maxDepth);
-                Model subgraph = retrieveSubgraph(relevantEntities);
+                Model subgraph = relevantEntities.isEmpty()
+                        ? jenaService.getModelCopy()
+                        : retrieveSubgraph(relevantEntities);
 
                 log.debug("Step 3: Building LLM context");
                 String graphContext = contextBuilder.buildContext(subgraph, maxTriples);
+                if (!sparqlContext.isEmpty()) {
+                    graphContext = sparqlContext + "\n\n---\n\n" + graphContext;
+                }
 
                 log.debug("Step 4: Querying LLM");
                 String answer;
@@ -461,6 +467,157 @@ public class GraphRAGService {
                 .llmModel(llmModel)
                 .confidence(0.3)
                 .build();
+    }
+
+    private String buildSparqlContext(String question) {
+        String q = question.toLowerCase();
+        StringBuilder ctx = new StringBuilder();
+
+        boolean wantsGenerators = q.contains("generat") || q.contains("power plant") || q.contains("capacity");
+        boolean wantsLoads = q.contains("load") || q.contains("consum") || q.contains("charge");
+        boolean wantsLines = q.contains("line") || q.contains("transmission") || q.contains("ligne");
+        boolean wantsSubstations = q.contains("substation") || q.contains("poste") || q.contains("umspann");
+        boolean wantsTransformers = q.contains("transform");
+        boolean wantsAll = q.contains("all") || q.contains("total") || q.contains("every") ||
+                           q.contains("how many") || q.contains("count") || q.contains("list");
+
+        if (wantsGenerators || wantsAll) {
+            String sparql = """
+                PREFIX cim: <%s>
+                SELECT ?name ?maxP ?minP WHERE {
+                    ?g a cim:GeneratingUnit .
+                    ?g cim:IdentifiedObject.name ?name .
+                    OPTIONAL { ?g cim:GeneratingUnit.maxOperatingP ?maxP }
+                    OPTIONAL { ?g cim:GeneratingUnit.minOperatingP ?minP }
+                }
+                ORDER BY ?name
+                """.formatted(cimNamespace);
+            try {
+                List<Map<String, String>> rows = jenaService.executeSparqlSelect(sparql);
+                if (!rows.isEmpty()) {
+                    ctx.append("## All Generating Units (from SPARQL)\n");
+                    double total = 0;
+                    for (Map<String, String> row : rows) {
+                        String name = row.getOrDefault("name", "?");
+                        String maxP = row.getOrDefault("maxP", "?");
+                        String minP = row.getOrDefault("minP", "?");
+                        ctx.append(String.format("- %s | maxOperatingP=%s MW | minOperatingP=%s MW\n", name, maxP, minP));
+                        try { total += Double.parseDouble(maxP); } catch (NumberFormatException ignored) {}
+                    }
+                    ctx.append(String.format("**Total max generation capacity: %.1f MW (%d units)**\n\n", total, rows.size()));
+                }
+            } catch (Exception e) {
+                log.warn("SPARQL generator query failed: {}", e.getMessage());
+            }
+        }
+
+        if (wantsLoads || wantsAll) {
+            String sparql = """
+                PREFIX cim: <%s>
+                SELECT ?name ?p ?q WHERE {
+                    ?l a cim:EnergyConsumer .
+                    ?l cim:IdentifiedObject.name ?name .
+                    OPTIONAL { ?l cim:EnergyConsumer.p ?p }
+                    OPTIONAL { ?l cim:EnergyConsumer.q ?q }
+                }
+                ORDER BY ?name
+                """.formatted(cimNamespace);
+            try {
+                List<Map<String, String>> rows = jenaService.executeSparqlSelect(sparql);
+                if (!rows.isEmpty()) {
+                    ctx.append("## All Loads / Energy Consumers (from SPARQL)\n");
+                    double total = 0;
+                    for (Map<String, String> row : rows) {
+                        String name = row.getOrDefault("name", "?");
+                        String pMw = row.getOrDefault("p", "?");
+                        String qMvar = row.getOrDefault("q", "?");
+                        ctx.append(String.format("- %s | p=%s MW | q=%s MVAr\n", name, pMw, qMvar));
+                        try { total += Double.parseDouble(pMw); } catch (NumberFormatException ignored) {}
+                    }
+                    ctx.append(String.format("**Total load: %.1f MW (%d consumers)**\n\n", total, rows.size()));
+                }
+            } catch (Exception e) {
+                log.warn("SPARQL load query failed: {}", e.getMessage());
+            }
+        }
+
+        if (wantsLines || wantsAll) {
+            String sparql = """
+                PREFIX cim: <%s>
+                SELECT ?name ?r ?x ?length WHERE {
+                    ?l a cim:ACLineSegment .
+                    ?l cim:IdentifiedObject.name ?name .
+                    OPTIONAL { ?l cim:ACLineSegment.r ?r }
+                    OPTIONAL { ?l cim:ACLineSegment.x ?x }
+                    OPTIONAL { ?l cim:Conductor.length ?length }
+                }
+                ORDER BY ?name
+                """.formatted(cimNamespace);
+            try {
+                List<Map<String, String>> rows = jenaService.executeSparqlSelect(sparql);
+                if (!rows.isEmpty()) {
+                    ctx.append("## All AC Line Segments (from SPARQL)\n");
+                    for (Map<String, String> row : rows) {
+                        String name = row.getOrDefault("name", "?");
+                        String r = row.getOrDefault("r", "?");
+                        String x = row.getOrDefault("x", "?");
+                        String len = row.getOrDefault("length", "?");
+                        ctx.append(String.format("- %s | r=%s Ω | x=%s Ω | length=%s km\n", name, r, x, len));
+                    }
+                    ctx.append(String.format("**Total: %d transmission lines**\n\n", rows.size()));
+                }
+            } catch (Exception e) {
+                log.warn("SPARQL line query failed: {}", e.getMessage());
+            }
+        }
+
+        if (wantsSubstations || wantsAll) {
+            String sparql = """
+                PREFIX cim: <%s>
+                SELECT ?name WHERE {
+                    ?s a cim:Substation .
+                    ?s cim:IdentifiedObject.name ?name .
+                }
+                ORDER BY ?name
+                """.formatted(cimNamespace);
+            try {
+                List<Map<String, String>> rows = jenaService.executeSparqlSelect(sparql);
+                if (!rows.isEmpty()) {
+                    ctx.append("## All Substations (from SPARQL)\n");
+                    for (Map<String, String> row : rows) {
+                        ctx.append(String.format("- %s\n", row.getOrDefault("name", "?")));
+                    }
+                    ctx.append(String.format("**Total: %d substations**\n\n", rows.size()));
+                }
+            } catch (Exception e) {
+                log.warn("SPARQL substation query failed: {}", e.getMessage());
+            }
+        }
+
+        if (wantsTransformers || wantsAll) {
+            String sparql = """
+                PREFIX cim: <%s>
+                SELECT ?name WHERE {
+                    ?t a cim:PowerTransformer .
+                    ?t cim:IdentifiedObject.name ?name .
+                }
+                ORDER BY ?name
+                """.formatted(cimNamespace);
+            try {
+                List<Map<String, String>> rows = jenaService.executeSparqlSelect(sparql);
+                if (!rows.isEmpty()) {
+                    ctx.append("## All Power Transformers (from SPARQL)\n");
+                    for (Map<String, String> row : rows) {
+                        ctx.append(String.format("- %s\n", row.getOrDefault("name", "?")));
+                    }
+                    ctx.append(String.format("**Total: %d transformers**\n\n", rows.size()));
+                }
+            } catch (Exception e) {
+                log.warn("SPARQL transformer query failed: {}", e.getMessage());
+            }
+        }
+
+        return ctx.toString();
     }
 
     private boolean isLoadFlowRequest(String question) {

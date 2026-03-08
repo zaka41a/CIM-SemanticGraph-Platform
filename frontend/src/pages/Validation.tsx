@@ -49,9 +49,10 @@ function severityRank(s: string) {
 }
 
 function computeScore(result: ValidationResult): number {
-  const total = result.triplesValidated || 1;
-  const penalized = result.errorCount * 3 + result.warningCount;
-  return Math.max(0, Math.round(((total - penalized) / total) * 100));
+  if (result.errorCount === 0 && result.warningCount === 0) return 100;
+  const errorPenalty = result.errorCount * 25;
+  const warnPenalty = result.warningCount * 5;
+  return Math.max(0, Math.min(99, 100 - errorPenalty - warnPenalty));
 }
 
 function shortPath(path: string): string {
@@ -434,7 +435,7 @@ const Validation = () => {
             SHACL validates structural constraints; DataFixer checks domain-specific CIM rules.
           </span>
           <button
-            onClick={() => navigate('/fixer')}
+            onClick={() => navigate('/data-fixer')}
             className="flex-shrink-0 px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-medium transition-colors"
           >
             Open DataFixer

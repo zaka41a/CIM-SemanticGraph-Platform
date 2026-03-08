@@ -6,7 +6,7 @@ from .models import NetworkInput, BusType, BranchType
 logger = logging.getLogger(__name__)
 
 
-def convert_to_pandapower(network: NetworkInput) -> tuple[pp.pandapowerNet, dict[str, int]]:
+def convert_to_pandapower(network: NetworkInput) -> tuple[pp.pandapowerNet, dict[str, int], dict[str, tuple[str, int]]]:
     """
     Convert a CIM NetworkInput (JSON from Spring Boot) into a pandapower network.
 
@@ -23,6 +23,8 @@ def convert_to_pandapower(network: NetworkInput) -> tuple[pp.pandapowerNet, dict
 
     net = pp.create_empty_network(name=network.name, f_hz=50.0, sn_mva=network.baseMva)
     bus_id_to_pp_idx: dict[str, int] = {}
+    # Maps branch.id -> ("line"|"trafo", pandapower element index)
+    branch_result_map: dict[str, tuple[str, int]] = {}
 
     # --- Create buses ---
     for bus in network.buses:
@@ -96,7 +98,6 @@ def convert_to_pandapower(network: NetworkInput) -> tuple[pp.pandapowerNet, dict
             continue
 
         if branch.type == BranchType.LINE:
-            # Check if line connects buses with very different voltage levels
             from_bus = next((b for b in network.buses if b.id == branch.fromBusId), None)
             to_bus = next((b for b in network.buses if b.id == branch.toBusId), None)
             if from_bus and to_bus:
@@ -107,11 +108,17 @@ def convert_to_pandapower(network: NetworkInput) -> tuple[pp.pandapowerNet, dict
                         f"({from_bus.baseVoltageKv}kV to {to_bus.baseVoltageKv}kV), "
                         f"converting to transformer"
                     )
+                    trafo_idx = len(net.trafo)
                     _create_transformer(net, network, branch, from_idx, to_idx)
+                    branch_result_map[branch.id] = ("trafo", trafo_idx)
                     continue
+            line_idx = len(net.line)
             _create_line(net, network, branch, from_idx, to_idx)
+            branch_result_map[branch.id] = ("line", line_idx)
         elif branch.type == BranchType.TRANSFORMER:
+            trafo_idx = len(net.trafo)
             _create_transformer(net, network, branch, from_idx, to_idx)
+            branch_result_map[branch.id] = ("trafo", trafo_idx)
 
     logger.info(
         f"Converted network: {len(net.bus)} buses, {len(net.line)} lines, "
@@ -120,7 +127,7 @@ def convert_to_pandapower(network: NetworkInput) -> tuple[pp.pandapowerNet, dict
         f"{len(net.sgen)} sgens"
     )
 
-    return net, bus_id_to_pp_idx
+    return net, bus_id_to_pp_idx, branch_result_map
 
 
 def _create_line(
@@ -210,18 +217,36 @@ def _create_transformer(
 
     sn_mva = branch.ratingMva if branch.ratingMva > 0 else 100.0
 
-    # vkr_percent = R_pu * 100, vk_percent = Z_pu * 100
-    vkr_percent = abs(branch.resistance) * 100
-    z_pu = math.sqrt(branch.resistance ** 2 + branch.reactance ** 2)
-    vk_percent = z_pu * 100
+    # CIM impedances for transformers are in per-unit on the system base (baseMva).
+    # pandapower expects per-unit on the transformer's own MVA base (sn_mva).
+    # Convert: Z_trafo_pu = Z_sys_pu * (sn_mva / baseMva)
+    # If values look like physical ohms (large values), convert to pu first.
+    r_pu = branch.resistance
+    x_pu = branch.reactance
+    sys_base_mva = network.baseMva if network.baseMva > 0 else 100.0
 
-    # Ensure vk >= vkr
+    # Detect physical ohms: if impedance > 1.0 it's likely physical ohms, convert to pu
+    z_base_hv = (hv_kv ** 2) / sys_base_mva if hv_kv > 0 else 1.0
+    if abs(r_pu) > 1.0 or abs(x_pu) > 1.0:
+        r_pu = r_pu / z_base_hv
+        x_pu = x_pu / z_base_hv
+        logger.info(f"Transformer {branch.name}: converted physical ohms to pu (Z_base={z_base_hv:.1f}Ω)")
+
+    # Re-base from system MVA to transformer MVA
+    rebase = sn_mva / sys_base_mva
+    r_pu_trafo = r_pu * rebase
+    x_pu_trafo = x_pu * rebase
+
+    vkr_percent = abs(r_pu_trafo) * 100
+    z_pu_trafo = math.sqrt(r_pu_trafo ** 2 + x_pu_trafo ** 2)
+    vk_percent = z_pu_trafo * 100
+
+    # Ensure vk >= vkr and clamp to physically realistic range
     if vk_percent < vkr_percent:
         vk_percent = vkr_percent * 1.1
-
-    # Clamp to reasonable values
     vkr_percent = max(vkr_percent, 0.1)
     vk_percent = max(vk_percent, 0.5)
+    vk_percent = min(vk_percent, 25.0)  # real transformers: 4-20%
 
     # Determine HV/LV bus mapping
     if from_kv >= to_kv:

@@ -121,7 +121,7 @@ async def calculate(request: PowerFlowRequest):
 
     try:
         # Convert to pandapower network
-        net, bus_mapping = convert_to_pandapower(request.network)
+        net, bus_mapping, branch_result_map = convert_to_pandapower(request.network)
 
         # Run power flow
         converged, iterations, exec_time_ms = run_power_flow(
@@ -132,6 +132,7 @@ async def calculate(request: PowerFlowRequest):
         response = build_response(
             net=net,
             bus_mapping=bus_mapping,
+            branch_result_map=branch_result_map,
             network_input=request.network,
             converged=converged,
             iterations=iterations,
@@ -166,6 +167,7 @@ async def calculate_for_bus(bus_id: str, request: PowerFlowRequest):
 def build_response(
     net: pp.pandapowerNet,
     bus_mapping: dict[str, int],
+    branch_result_map: dict[str, tuple[str, int]],
     network_input,
     converged: bool,
     iterations: int,
@@ -213,34 +215,33 @@ def build_response(
             voltagePercentage=round(vm_pu * 100, 2),
         ))
 
-    # Build branch results
+    # Build branch results using the exact pandapower element index from branch_result_map
     branch_results = []
-    line_idx = 0
-    trafo_idx = 0
 
     for branch in network_input.branches:
-        if branch.type == BranchType.LINE and line_idx < len(net.res_line):
-            from_p = _safe_float(net.res_line.at[line_idx, "p_from_mw"])
-            from_q = _safe_float(net.res_line.at[line_idx, "q_from_mvar"])
-            to_p = _safe_float(net.res_line.at[line_idx, "p_to_mw"])
-            to_q = _safe_float(net.res_line.at[line_idx, "q_to_mvar"])
-            pl_mw = _safe_float(net.res_line.at[line_idx, "pl_mw"])
-            ql_mvar = _safe_float(net.res_line.at[line_idx, "ql_mvar"])
-            i_ka = _safe_float(net.res_line.at[line_idx, "i_ka"])
-            loading = _safe_float(net.res_line.at[line_idx, "loading_percent"])
-            line_idx += 1
-        elif branch.type == BranchType.TRANSFORMER and trafo_idx < len(net.res_trafo):
-            from_p = _safe_float(net.res_trafo.at[trafo_idx, "p_hv_mw"])
-            from_q = _safe_float(net.res_trafo.at[trafo_idx, "q_hv_mvar"])
-            to_p = _safe_float(net.res_trafo.at[trafo_idx, "p_lv_mw"])
-            to_q = _safe_float(net.res_trafo.at[trafo_idx, "q_lv_mvar"])
-            pl_mw = _safe_float(net.res_trafo.at[trafo_idx, "pl_mw"])
-            ql_mvar = _safe_float(net.res_trafo.at[trafo_idx, "ql_mvar"])
-            i_ka = _safe_float(net.res_trafo.at[trafo_idx, "i_hv_ka"])
-            loading = _safe_float(net.res_trafo.at[trafo_idx, "loading_percent"])
-            trafo_idx += 1
-        else:
-            from_p = from_q = to_p = to_q = pl_mw = ql_mvar = i_ka = loading = 0.0
+        mapping = branch_result_map.get(branch.id)
+        from_p = from_q = to_p = to_q = pl_mw = ql_mvar = i_ka = loading = 0.0
+
+        if mapping is not None:
+            elem_type, idx = mapping
+            if elem_type == "line" and idx < len(net.res_line):
+                from_p  = _safe_float(net.res_line.at[idx, "p_from_mw"])
+                from_q  = _safe_float(net.res_line.at[idx, "q_from_mvar"])
+                to_p    = _safe_float(net.res_line.at[idx, "p_to_mw"])
+                to_q    = _safe_float(net.res_line.at[idx, "q_to_mvar"])
+                pl_mw   = _safe_float(net.res_line.at[idx, "pl_mw"])
+                ql_mvar = _safe_float(net.res_line.at[idx, "ql_mvar"])
+                i_ka    = _safe_float(net.res_line.at[idx, "i_ka"])
+                loading = _safe_float(net.res_line.at[idx, "loading_percent"])
+            elif elem_type == "trafo" and idx < len(net.res_trafo):
+                from_p  = _safe_float(net.res_trafo.at[idx, "p_hv_mw"])
+                from_q  = _safe_float(net.res_trafo.at[idx, "q_hv_mvar"])
+                to_p    = _safe_float(net.res_trafo.at[idx, "p_lv_mw"])
+                to_q    = _safe_float(net.res_trafo.at[idx, "q_lv_mvar"])
+                pl_mw   = _safe_float(net.res_trafo.at[idx, "pl_mw"])
+                ql_mvar = _safe_float(net.res_trafo.at[idx, "ql_mvar"])
+                i_ka    = _safe_float(net.res_trafo.at[idx, "i_hv_ka"])
+                loading = _safe_float(net.res_trafo.at[idx, "loading_percent"])
 
         branch_results.append(BranchResult(
             branchId=branch.id,

@@ -24,7 +24,7 @@ export const useLoadFlow = () => {
   const [isCalculating, setIsCalculating] = useState(false);
   const [results, setResults] = useState<LoadFlowResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMethod, setSelectedMethod] = useState<CalculationMethod>('DC');
+  const [selectedMethod, setSelectedMethod] = useState<CalculationMethod>('AC_NEWTON_RAPHSON');
   const [availableMethods, setAvailableMethods] = useState<LoadFlowMethodInfo[]>([
     { id: 'DC', name: 'DC Power Flow', description: 'Fast linear approximation', available: true },
   ]);
