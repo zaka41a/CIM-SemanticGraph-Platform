@@ -1,0 +1,598 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix cim:  <http://iec.ch/TC57/CIM100#> .
+@prefix md:   <http://iec.ch/TC57/61970-552/ModelDescription/1#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+
+# CIM Turtle – medium_12bus  (12 buses, 14 lines)
+
+cim:BV_medium_12bus a cim:BaseVoltage ;
+    cim:IdentifiedObject.name "BV_110.0kV" ;
+    cim:BaseVoltage.nominalVoltage 110.0 .
+
+cim:SS_medium_12bus a cim:Substation ;
+    cim:IdentifiedObject.name "SS_medium_12bus" .
+
+cim:VL_medium_12bus a cim:VoltageLevel ;
+    cim:IdentifiedObject.name "VL_medium_12bus" ;
+    cim:VoltageLevel.Substation cim:SS_medium_12bus ;
+    cim:VoltageLevel.BaseVoltage cim:BV_medium_12bus .
+
+cim:CN_medium_12bus_0 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_001" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_0 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_001" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_0 .
+
+cim:CN_medium_12bus_1 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_002" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_1 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_002" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_1 .
+
+cim:CN_medium_12bus_2 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_003" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_2 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_003" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_2 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_2 .
+
+cim:CN_medium_12bus_3 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_004" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_3 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_004" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_3 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_3 .
+
+cim:CN_medium_12bus_4 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_005" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_4 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_005" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_4 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_4 .
+
+cim:CN_medium_12bus_5 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_006" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_5 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_006" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_5 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_5 .
+
+cim:CN_medium_12bus_6 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_007" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_6 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_007" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_6 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_6 .
+
+cim:CN_medium_12bus_7 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_008" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_7 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_008" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_7 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_7 .
+
+cim:CN_medium_12bus_8 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_009" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_8 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_009" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_8 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_8 .
+
+cim:CN_medium_12bus_9 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_010" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_9 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_010" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_9 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_9 .
+
+cim:CN_medium_12bus_10 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_011" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_10 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_011" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_10 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_10 .
+
+cim:CN_medium_12bus_11 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_012" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_12bus .
+
+cim:BB_medium_12bus_11 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_012" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_BB_medium_12bus_11 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_12bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_11 .
+
+cim:L_medium_12bus_0 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L1_BUS_001_BUS_002" ;
+    cim:ACLineSegment.r 1.5718 ;
+    cim:ACLineSegment.x 0.5544 ;
+    cim:ACLineSegment.bch 7.748e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_0_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_0_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_1 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L2_BUS_002_BUS_003" ;
+    cim:ACLineSegment.r 2.1272 ;
+    cim:ACLineSegment.x 3.022 ;
+    cim:ACLineSegment.bch 1.298e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_1_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_1_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_2 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L3_BUS_001_BUS_004" ;
+    cim:ACLineSegment.r 2.4598 ;
+    cim:ACLineSegment.x 3.924 ;
+    cim:ACLineSegment.bch 3.537e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_2_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_2_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_3 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L4_BUS_004_BUS_005" ;
+    cim:ACLineSegment.r 1.0767 ;
+    cim:ACLineSegment.x 1.8843 ;
+    cim:ACLineSegment.bch 5.109e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_3_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_3_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_4 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L5_BUS_004_BUS_006" ;
+    cim:ACLineSegment.r 0.8597 ;
+    cim:ACLineSegment.x 4.2554 ;
+    cim:ACLineSegment.bch 8.241e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_4_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_4_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_5 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L6_BUS_003_BUS_007" ;
+    cim:ACLineSegment.r 0.2728 ;
+    cim:ACLineSegment.x 4.8059 ;
+    cim:ACLineSegment.bch 6.392e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_5_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_5_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_6 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L7_BUS_007_BUS_008" ;
+    cim:ACLineSegment.r 2.0735 ;
+    cim:ACLineSegment.x 3.5512 ;
+    cim:ACLineSegment.bch 4.411e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_6_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_6_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_7 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L8_BUS_004_BUS_009" ;
+    cim:ACLineSegment.r 1.8372 ;
+    cim:ACLineSegment.x 4.8291 ;
+    cim:ACLineSegment.bch 2.774e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_7_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_7_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_8 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_8 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L9_BUS_005_BUS_010" ;
+    cim:ACLineSegment.r 2.0224 ;
+    cim:ACLineSegment.x 2.714 ;
+    cim:ACLineSegment.bch 4.887e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_8_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_8_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_9 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_9 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L10_BUS_009_BUS_011" ;
+    cim:ACLineSegment.r 1.0946 ;
+    cim:ACLineSegment.x 3.6686 ;
+    cim:ACLineSegment.bch 2.757e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_9_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_8 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_9_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_10 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_10 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L11_BUS_008_BUS_012" ;
+    cim:ACLineSegment.r 2.1308 ;
+    cim:ACLineSegment.x 4.1621 ;
+    cim:ACLineSegment.bch 9.58e-06 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_10_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_10_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_11 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_11 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L12_BUS_011_BUS_004" ;
+    cim:ACLineSegment.r 2.2053 ;
+    cim:ACLineSegment.x 1.2571 ;
+    cim:ACLineSegment.bch 4.701e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_11_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_10 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_11_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_12 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L13_BUS_005_BUS_008" ;
+    cim:ACLineSegment.r 1.5297 ;
+    cim:ACLineSegment.x 1.926 ;
+    cim:ACLineSegment.bch 3.84e-06 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_12_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_12 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_12_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_12 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_12bus_13 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L14_BUS_002_BUS_012" ;
+    cim:ACLineSegment.r 2.1289 ;
+    cim:ACLineSegment.x 0.9501 ;
+    cim:ACLineSegment.bch 2.2e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_L_medium_12bus_13_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_13 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_12bus_13_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_12bus_13 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_11 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:GEN_medium_12bus_0 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_1" ;
+    cim:GeneratingUnit.maxOperatingP 409.0 ;
+    cim:GeneratingUnit.minOperatingP 40.9 ;
+    cim:GeneratingUnit.nominalP 327.2 .
+
+cim:SM_medium_12bus_0 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_1" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_12bus_0 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_GEN_medium_12bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_12bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_0 .
+
+cim:GEN_medium_12bus_1 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_2" ;
+    cim:GeneratingUnit.maxOperatingP 203.2 ;
+    cim:GeneratingUnit.minOperatingP 20.3 ;
+    cim:GeneratingUnit.nominalP 162.6 .
+
+cim:SM_medium_12bus_1 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_2" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_12bus_1 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_GEN_medium_12bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_12bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_1 .
+
+cim:GEN_medium_12bus_2 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_3" ;
+    cim:GeneratingUnit.maxOperatingP 446.1 ;
+    cim:GeneratingUnit.minOperatingP 44.6 ;
+    cim:GeneratingUnit.nominalP 356.9 .
+
+cim:SM_medium_12bus_2 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_3" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_12bus_2 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_GEN_medium_12bus_2 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_12bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_2 .
+
+cim:GEN_medium_12bus_3 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_4" ;
+    cim:GeneratingUnit.maxOperatingP 365.5 ;
+    cim:GeneratingUnit.minOperatingP 36.6 ;
+    cim:GeneratingUnit.nominalP 292.4 .
+
+cim:SM_medium_12bus_3 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_4" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_12bus_3 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_GEN_medium_12bus_3 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_12bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_3 .
+
+cim:LOAD_medium_12bus_0 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_1" ;
+    cim:EnergyConsumer.p 90.1 ;
+    cim:EnergyConsumer.q 9.3 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_LOAD_medium_12bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_12bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_4 .
+
+cim:LOAD_medium_12bus_1 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_2" ;
+    cim:EnergyConsumer.p 284.9 ;
+    cim:EnergyConsumer.q 35.8 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_LOAD_medium_12bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_12bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_5 .
+
+cim:LOAD_medium_12bus_2 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_3" ;
+    cim:EnergyConsumer.p 218.8 ;
+    cim:EnergyConsumer.q 54.0 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_LOAD_medium_12bus_2 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_12bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_6 .
+
+cim:LOAD_medium_12bus_3 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_4" ;
+    cim:EnergyConsumer.p 229.9 ;
+    cim:EnergyConsumer.q 70.6 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_LOAD_medium_12bus_3 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_12bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_7 .
+
+cim:LOAD_medium_12bus_4 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_5" ;
+    cim:EnergyConsumer.p 197.3 ;
+    cim:EnergyConsumer.q 48.8 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_LOAD_medium_12bus_4 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_12bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_8 .
+
+cim:LOAD_medium_12bus_5 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_6" ;
+    cim:EnergyConsumer.p 240.0 ;
+    cim:EnergyConsumer.q 30.7 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_12bus .
+
+cim:T_LOAD_medium_12bus_5 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_12bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_9 .
+
+cim:PT_medium_12bus_0 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_1" .
+
+cim:PTW_medium_12bus_0_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_12bus_0 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 188.6 ;
+    cim:PowerTransformerEnd.ratedU 110.0 .
+
+cim:T_PT_medium_12bus_0_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_12bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_medium_12bus_0_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_12bus_0 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 376.7 ;
+    cim:PowerTransformerEnd.ratedU 63.51 .
+
+cim:T_PT_medium_12bus_0_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_12bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_medium_12bus_1 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_2" .
+
+cim:PTW_medium_12bus_1_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_12bus_1 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 222.5 ;
+    cim:PowerTransformerEnd.ratedU 110.0 .
+
+cim:T_PT_medium_12bus_1_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_12bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_medium_12bus_1_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_12bus_1 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 332.6 ;
+    cim:PowerTransformerEnd.ratedU 63.51 .
+
+cim:T_PT_medium_12bus_1_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_12bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_medium_12bus_2 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_3" .
+
+cim:PTW_medium_12bus_2_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_12bus_2 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 289.3 ;
+    cim:PowerTransformerEnd.ratedU 110.0 .
+
+cim:T_PT_medium_12bus_2_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_12bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_medium_12bus_2_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_12bus_2 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 312.4 ;
+    cim:PowerTransformerEnd.ratedU 63.51 .
+
+cim:T_PT_medium_12bus_2_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_12bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_12bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 2 .

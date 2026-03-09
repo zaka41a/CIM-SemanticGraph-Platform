@@ -1,0 +1,305 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix cim:  <http://iec.ch/TC57/CIM100#> .
+@prefix md:   <http://iec.ch/TC57/61970-552/ModelDescription/1#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+
+# CIM Turtle – small_6bus  (6 buses, 6 lines)
+
+cim:BV_small_6bus a cim:BaseVoltage ;
+    cim:IdentifiedObject.name "BV_20.0kV" ;
+    cim:BaseVoltage.nominalVoltage 20.0 .
+
+cim:SS_small_6bus a cim:Substation ;
+    cim:IdentifiedObject.name "SS_small_6bus" .
+
+cim:VL_small_6bus a cim:VoltageLevel ;
+    cim:IdentifiedObject.name "VL_small_6bus" ;
+    cim:VoltageLevel.Substation cim:SS_small_6bus ;
+    cim:VoltageLevel.BaseVoltage cim:BV_small_6bus .
+
+cim:CN_small_6bus_0 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_001" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_small_6bus .
+
+cim:BB_small_6bus_0 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_001" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_BB_small_6bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_small_6bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_0 .
+
+cim:CN_small_6bus_1 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_002" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_small_6bus .
+
+cim:BB_small_6bus_1 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_002" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_BB_small_6bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_small_6bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_1 .
+
+cim:CN_small_6bus_2 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_003" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_small_6bus .
+
+cim:BB_small_6bus_2 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_003" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_BB_small_6bus_2 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_small_6bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_2 .
+
+cim:CN_small_6bus_3 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_004" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_small_6bus .
+
+cim:BB_small_6bus_3 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_004" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_BB_small_6bus_3 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_small_6bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_3 .
+
+cim:CN_small_6bus_4 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_005" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_small_6bus .
+
+cim:BB_small_6bus_4 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_005" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_BB_small_6bus_4 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_small_6bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_4 .
+
+cim:CN_small_6bus_5 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_006" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_small_6bus .
+
+cim:BB_small_6bus_5 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_006" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_BB_small_6bus_5 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_small_6bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_5 .
+
+cim:L_small_6bus_0 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L1_BUS_001_BUS_002" ;
+    cim:ACLineSegment.r 1.8233 ;
+    cim:ACLineSegment.x 4.0129 ;
+    cim:ACLineSegment.bch 1.182e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_L_small_6bus_0_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_small_6bus_0_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_small_6bus_1 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L2_BUS_001_BUS_003" ;
+    cim:ACLineSegment.r 0.4871 ;
+    cim:ACLineSegment.x 2.7046 ;
+    cim:ACLineSegment.bch 1.488e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_L_small_6bus_1_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_small_6bus_1_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_small_6bus_2 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L3_BUS_003_BUS_004" ;
+    cim:ACLineSegment.r 0.4669 ;
+    cim:ACLineSegment.x 2.34 ;
+    cim:ACLineSegment.bch 8.757e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_L_small_6bus_2_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_small_6bus_2_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_small_6bus_3 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L4_BUS_002_BUS_005" ;
+    cim:ACLineSegment.r 0.1977 ;
+    cim:ACLineSegment.x 4.0497 ;
+    cim:ACLineSegment.bch 8.574e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_L_small_6bus_3_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_small_6bus_3_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_small_6bus_4 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L5_BUS_002_BUS_006" ;
+    cim:ACLineSegment.r 0.2538 ;
+    cim:ACLineSegment.x 3.2781 ;
+    cim:ACLineSegment.bch 5.452e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_L_small_6bus_4_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_small_6bus_4_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_small_6bus_5 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L6_BUS_006_BUS_004" ;
+    cim:ACLineSegment.r 0.0467 ;
+    cim:ACLineSegment.x 0.5117 ;
+    cim:ACLineSegment.bch 7.56e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_L_small_6bus_5_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_small_6bus_5_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_small_6bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:GEN_small_6bus_0 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_1" ;
+    cim:GeneratingUnit.maxOperatingP 156.4 ;
+    cim:GeneratingUnit.minOperatingP 15.6 ;
+    cim:GeneratingUnit.nominalP 125.1 .
+
+cim:SM_small_6bus_0 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_1" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_small_6bus_0 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_GEN_small_6bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_small_6bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_0 .
+
+cim:GEN_small_6bus_1 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_2" ;
+    cim:GeneratingUnit.maxOperatingP 232.9 ;
+    cim:GeneratingUnit.minOperatingP 23.3 ;
+    cim:GeneratingUnit.nominalP 186.3 .
+
+cim:SM_small_6bus_1 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_2" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_small_6bus_1 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_GEN_small_6bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_small_6bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_1 .
+
+cim:LOAD_small_6bus_0 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_1" ;
+    cim:EnergyConsumer.p 149.6 ;
+    cim:EnergyConsumer.q 53.8 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_LOAD_small_6bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_small_6bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_2 .
+
+cim:LOAD_small_6bus_1 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_2" ;
+    cim:EnergyConsumer.p 271.7 ;
+    cim:EnergyConsumer.q 40.6 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_LOAD_small_6bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_small_6bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_3 .
+
+cim:LOAD_small_6bus_2 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_3" ;
+    cim:EnergyConsumer.p 10.6 ;
+    cim:EnergyConsumer.q 2.3 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_small_6bus .
+
+cim:T_LOAD_small_6bus_2 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_small_6bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_4 .
+
+cim:PT_small_6bus_0 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_1" .
+
+cim:PTW_small_6bus_0_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_small_6bus_0 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 470.6 ;
+    cim:PowerTransformerEnd.ratedU 20.0 .
+
+cim:T_PT_small_6bus_0_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_small_6bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_small_6bus_0_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_small_6bus_0 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 414.1 ;
+    cim:PowerTransformerEnd.ratedU 11.55 .
+
+cim:T_PT_small_6bus_0_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_small_6bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_small_6bus_1 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_2" .
+
+cim:PTW_small_6bus_1_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_small_6bus_1 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 214.1 ;
+    cim:PowerTransformerEnd.ratedU 20.0 .
+
+cim:T_PT_small_6bus_1_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_small_6bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_small_6bus_1_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_small_6bus_1 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 378.6 ;
+    cim:PowerTransformerEnd.ratedU 11.55 .
+
+cim:T_PT_small_6bus_1_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_small_6bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_small_6bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 2 .

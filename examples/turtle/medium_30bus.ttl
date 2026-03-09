@@ -1,0 +1,1341 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix cim:  <http://iec.ch/TC57/CIM100#> .
+@prefix md:   <http://iec.ch/TC57/61970-552/ModelDescription/1#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+
+# CIM Turtle – medium_30bus  (30 buses, 35 lines)
+
+cim:BV_medium_30bus a cim:BaseVoltage ;
+    cim:IdentifiedObject.name "BV_110.0kV" ;
+    cim:BaseVoltage.nominalVoltage 110.0 .
+
+cim:SS_medium_30bus a cim:Substation ;
+    cim:IdentifiedObject.name "SS_medium_30bus" .
+
+cim:VL_medium_30bus a cim:VoltageLevel ;
+    cim:IdentifiedObject.name "VL_medium_30bus" ;
+    cim:VoltageLevel.Substation cim:SS_medium_30bus ;
+    cim:VoltageLevel.BaseVoltage cim:BV_medium_30bus .
+
+cim:CN_medium_30bus_0 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_001" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_0 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_001" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_0 .
+
+cim:CN_medium_30bus_1 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_002" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_1 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_002" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_1 .
+
+cim:CN_medium_30bus_2 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_003" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_2 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_003" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_2 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_2 .
+
+cim:CN_medium_30bus_3 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_004" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_3 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_004" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_3 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_3 .
+
+cim:CN_medium_30bus_4 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_005" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_4 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_005" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_4 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_4 .
+
+cim:CN_medium_30bus_5 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_006" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_5 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_006" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_5 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_5 .
+
+cim:CN_medium_30bus_6 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_007" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_6 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_007" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_6 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_6 .
+
+cim:CN_medium_30bus_7 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_008" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_7 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_008" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_7 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_7 .
+
+cim:CN_medium_30bus_8 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_009" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_8 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_009" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_8 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_8 .
+
+cim:CN_medium_30bus_9 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_010" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_9 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_010" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_9 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_9 .
+
+cim:CN_medium_30bus_10 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_011" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_10 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_011" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_10 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_10 .
+
+cim:CN_medium_30bus_11 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_012" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_11 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_012" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_11 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_11 .
+
+cim:CN_medium_30bus_12 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_013" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_12 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_013" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_12 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_12 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_12 .
+
+cim:CN_medium_30bus_13 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_014" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_13 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_014" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_13 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_13 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_13 .
+
+cim:CN_medium_30bus_14 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_015" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_14 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_015" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_14 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_14 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_14 .
+
+cim:CN_medium_30bus_15 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_016" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_15 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_016" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_15 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_15 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_15 .
+
+cim:CN_medium_30bus_16 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_017" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_16 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_017" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_16 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_16 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_16 .
+
+cim:CN_medium_30bus_17 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_018" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_17 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_018" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_17 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_17 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_17 .
+
+cim:CN_medium_30bus_18 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_019" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_18 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_019" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_18 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_18 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_18 .
+
+cim:CN_medium_30bus_19 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_020" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_19 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_020" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_19 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_19 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_19 .
+
+cim:CN_medium_30bus_20 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_021" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_20 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_021" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_20 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_20 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_20 .
+
+cim:CN_medium_30bus_21 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_022" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_21 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_022" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_21 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_21 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_21 .
+
+cim:CN_medium_30bus_22 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_023" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_22 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_023" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_22 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_22 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_22 .
+
+cim:CN_medium_30bus_23 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_024" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_23 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_024" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_23 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_23 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_23 .
+
+cim:CN_medium_30bus_24 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_025" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_24 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_025" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_24 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_24 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_24 .
+
+cim:CN_medium_30bus_25 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_026" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_25 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_026" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_25 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_25 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_25 .
+
+cim:CN_medium_30bus_26 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_027" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_26 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_027" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_26 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_26 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_26 .
+
+cim:CN_medium_30bus_27 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_028" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_27 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_028" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_27 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_27 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_27 .
+
+cim:CN_medium_30bus_28 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_029" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_28 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_029" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_28 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_28 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_28 .
+
+cim:CN_medium_30bus_29 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_030" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_medium_30bus .
+
+cim:BB_medium_30bus_29 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_030" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_BB_medium_30bus_29 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_medium_30bus_29 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_29 .
+
+cim:L_medium_30bus_0 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L1_BUS_001_BUS_002" ;
+    cim:ACLineSegment.r 1.431 ;
+    cim:ACLineSegment.x 0.9772 ;
+    cim:ACLineSegment.bch 6.715e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_0_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_0_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_1 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L2_BUS_001_BUS_003" ;
+    cim:ACLineSegment.r 1.3135 ;
+    cim:ACLineSegment.x 1.835 ;
+    cim:ACLineSegment.bch 9.539e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_1_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_1_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_2 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L3_BUS_002_BUS_004" ;
+    cim:ACLineSegment.r 1.3648 ;
+    cim:ACLineSegment.x 3.9427 ;
+    cim:ACLineSegment.bch 5.125e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_2_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_2_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_3 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L4_BUS_001_BUS_005" ;
+    cim:ACLineSegment.r 0.0606 ;
+    cim:ACLineSegment.x 4.373 ;
+    cim:ACLineSegment.bch 5.31e-06 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_3_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_3_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_4 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L5_BUS_003_BUS_006" ;
+    cim:ACLineSegment.r 0.9733 ;
+    cim:ACLineSegment.x 1.8978 ;
+    cim:ACLineSegment.bch 7.498e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_4_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_4_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_5 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L6_BUS_005_BUS_007" ;
+    cim:ACLineSegment.r 0.8992 ;
+    cim:ACLineSegment.x 0.3844 ;
+    cim:ACLineSegment.bch 2.487e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_5_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_5_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_6 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L7_BUS_004_BUS_008" ;
+    cim:ACLineSegment.r 1.6462 ;
+    cim:ACLineSegment.x 0.5631 ;
+    cim:ACLineSegment.bch 5.861e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_6_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_6_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_7 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L8_BUS_007_BUS_009" ;
+    cim:ACLineSegment.r 1.8941 ;
+    cim:ACLineSegment.x 0.7104 ;
+    cim:ACLineSegment.bch 3.588e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_7_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_7_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_8 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_8 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L9_BUS_007_BUS_010" ;
+    cim:ACLineSegment.r 0.853 ;
+    cim:ACLineSegment.x 3.2318 ;
+    cim:ACLineSegment.bch 8.321e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_8_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_8_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_9 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_9 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L10_BUS_005_BUS_011" ;
+    cim:ACLineSegment.r 1.7149 ;
+    cim:ACLineSegment.x 4.9051 ;
+    cim:ACLineSegment.bch 4.837e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_9_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_9_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_10 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_10 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L11_BUS_002_BUS_012" ;
+    cim:ACLineSegment.r 0.4639 ;
+    cim:ACLineSegment.x 0.7175 ;
+    cim:ACLineSegment.bch 7.189e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_10_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_10_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_11 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_11 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L12_BUS_007_BUS_013" ;
+    cim:ACLineSegment.r 2.3596 ;
+    cim:ACLineSegment.x 0.2331 ;
+    cim:ACLineSegment.bch 2.096e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_11_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_11_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_12 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_12 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L13_BUS_001_BUS_014" ;
+    cim:ACLineSegment.r 1.9799 ;
+    cim:ACLineSegment.x 4.4347 ;
+    cim:ACLineSegment.bch 3.224e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_12_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_12 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_12_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_12 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_13 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_13 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L14_BUS_006_BUS_015" ;
+    cim:ACLineSegment.r 0.7821 ;
+    cim:ACLineSegment.x 2.0212 ;
+    cim:ACLineSegment.bch 8.173e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_13_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_13 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_13_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_13 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_14 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_14 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L15_BUS_003_BUS_016" ;
+    cim:ACLineSegment.r 1.1888 ;
+    cim:ACLineSegment.x 0.2313 ;
+    cim:ACLineSegment.bch 6.504e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_14_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_14 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_14_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_14 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_15 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_15 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L16_BUS_015_BUS_017" ;
+    cim:ACLineSegment.r 0.7224 ;
+    cim:ACLineSegment.x 4.3176 ;
+    cim:ACLineSegment.bch 5.73e-06 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_15_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_15 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_14 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_15_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_15 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_16 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_16 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L17_BUS_012_BUS_018" ;
+    cim:ACLineSegment.r 1.6428 ;
+    cim:ACLineSegment.x 1.4024 ;
+    cim:ACLineSegment.bch 8.013e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_16_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_16 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_11 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_16_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_16 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_17 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_17 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L18_BUS_003_BUS_019" ;
+    cim:ACLineSegment.r 1.098 ;
+    cim:ACLineSegment.x 2.0301 ;
+    cim:ACLineSegment.bch 4.453e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_17_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_17 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_17_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_17 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_18 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_18 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L19_BUS_014_BUS_020" ;
+    cim:ACLineSegment.r 2.3916 ;
+    cim:ACLineSegment.x 1.7282 ;
+    cim:ACLineSegment.bch 1.949e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_18_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_18 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_13 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_18_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_18 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_19 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_19 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L20_BUS_004_BUS_021" ;
+    cim:ACLineSegment.r 1.7333 ;
+    cim:ACLineSegment.x 1.8684 ;
+    cim:ACLineSegment.bch 7.993e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_19_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_19 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_19_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_19 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_20 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_20 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L21_BUS_008_BUS_022" ;
+    cim:ACLineSegment.r 0.6741 ;
+    cim:ACLineSegment.x 0.4589 ;
+    cim:ACLineSegment.bch 4.303e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_20_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_20 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_20_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_20 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_21 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_21 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L22_BUS_014_BUS_023" ;
+    cim:ACLineSegment.r 1.0822 ;
+    cim:ACLineSegment.x 4.9757 ;
+    cim:ACLineSegment.bch 1.887e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_21_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_21 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_13 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_21_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_21 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_22 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_22 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L23_BUS_019_BUS_024" ;
+    cim:ACLineSegment.r 0.7415 ;
+    cim:ACLineSegment.x 0.5579 ;
+    cim:ACLineSegment.bch 3.346e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_22_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_22 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_18 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_22_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_22 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_23 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_23 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L24_BUS_013_BUS_025" ;
+    cim:ACLineSegment.r 0.7461 ;
+    cim:ACLineSegment.x 2.2573 ;
+    cim:ACLineSegment.bch 7.205e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_23_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_23 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_12 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_23_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_23 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_24 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_24 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L25_BUS_017_BUS_026" ;
+    cim:ACLineSegment.r 0.4249 ;
+    cim:ACLineSegment.x 2.2473 ;
+    cim:ACLineSegment.bch 4.527e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_24_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_24 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_16 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_24_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_24 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_25 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_25 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L26_BUS_003_BUS_027" ;
+    cim:ACLineSegment.r 1.8198 ;
+    cim:ACLineSegment.x 4.5625 ;
+    cim:ACLineSegment.bch 6.187e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_25_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_25 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_25_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_25 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_26 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_26 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L27_BUS_013_BUS_028" ;
+    cim:ACLineSegment.r 1.093 ;
+    cim:ACLineSegment.x 3.2154 ;
+    cim:ACLineSegment.bch 7.936e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_26_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_26 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_12 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_26_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_26 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_27 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_27 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L28_BUS_028_BUS_029" ;
+    cim:ACLineSegment.r 0.1528 ;
+    cim:ACLineSegment.x 3.3724 ;
+    cim:ACLineSegment.bch 4.121e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_27_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_27 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_27 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_27_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_27 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_28 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_28 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L29_BUS_010_BUS_030" ;
+    cim:ACLineSegment.r 1.2876 ;
+    cim:ACLineSegment.x 3.762 ;
+    cim:ACLineSegment.bch 1.684e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_28_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_28 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_9 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_28_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_28 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_29 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_29 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L30_BUS_024_BUS_011" ;
+    cim:ACLineSegment.r 0.0875 ;
+    cim:ACLineSegment.x 4.2509 ;
+    cim:ACLineSegment.bch 6.813e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_29_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_29 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_23 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_29_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_29 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_10 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_30 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L31_BUS_008_BUS_011" ;
+    cim:ACLineSegment.r 1.1011 ;
+    cim:ACLineSegment.x 0.6748 ;
+    cim:ACLineSegment.bch 2.436e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_30_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_30 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_30_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_30 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_10 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_31 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L32_BUS_025_BUS_006" ;
+    cim:ACLineSegment.r 1.6165 ;
+    cim:ACLineSegment.x 1.8426 ;
+    cim:ACLineSegment.bch 9.5e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_31_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_31 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_24 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_31_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_31 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_32 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L33_BUS_003_BUS_017" ;
+    cim:ACLineSegment.r 0.0906 ;
+    cim:ACLineSegment.x 0.8095 ;
+    cim:ACLineSegment.bch 4.554e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_32_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_32 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_32_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_32 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_16 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_33 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L34_BUS_021_BUS_004" ;
+    cim:ACLineSegment.r 0.9337 ;
+    cim:ACLineSegment.x 2.2475 ;
+    cim:ACLineSegment.bch 8.61e-06 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_33_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_33 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_20 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_33_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_33 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_medium_30bus_34 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L35_BUS_007_BUS_029" ;
+    cim:ACLineSegment.r 0.3529 ;
+    cim:ACLineSegment.x 1.8664 ;
+    cim:ACLineSegment.bch 3.212e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_L_medium_30bus_34_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_34 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_medium_30bus_34_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_medium_30bus_34 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_28 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:GEN_medium_30bus_0 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_1" ;
+    cim:GeneratingUnit.maxOperatingP 175.4 ;
+    cim:GeneratingUnit.minOperatingP 17.5 ;
+    cim:GeneratingUnit.nominalP 140.3 .
+
+cim:SM_medium_30bus_0 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_1" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_30bus_0 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_GEN_medium_30bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_30bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_0 .
+
+cim:GEN_medium_30bus_1 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_2" ;
+    cim:GeneratingUnit.maxOperatingP 482.2 ;
+    cim:GeneratingUnit.minOperatingP 48.2 ;
+    cim:GeneratingUnit.nominalP 385.8 .
+
+cim:SM_medium_30bus_1 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_2" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_30bus_1 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_GEN_medium_30bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_30bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_1 .
+
+cim:GEN_medium_30bus_2 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_3" ;
+    cim:GeneratingUnit.maxOperatingP 61.7 ;
+    cim:GeneratingUnit.minOperatingP 6.2 ;
+    cim:GeneratingUnit.nominalP 49.4 .
+
+cim:SM_medium_30bus_2 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_3" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_30bus_2 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_GEN_medium_30bus_2 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_30bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_2 .
+
+cim:GEN_medium_30bus_3 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_4" ;
+    cim:GeneratingUnit.maxOperatingP 133.7 ;
+    cim:GeneratingUnit.minOperatingP 13.4 ;
+    cim:GeneratingUnit.nominalP 107.0 .
+
+cim:SM_medium_30bus_3 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_4" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_30bus_3 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_GEN_medium_30bus_3 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_30bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_3 .
+
+cim:GEN_medium_30bus_4 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_5" ;
+    cim:GeneratingUnit.maxOperatingP 283.0 ;
+    cim:GeneratingUnit.minOperatingP 28.3 ;
+    cim:GeneratingUnit.nominalP 226.4 .
+
+cim:SM_medium_30bus_4 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_5" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_30bus_4 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_GEN_medium_30bus_4 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_30bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_4 .
+
+cim:GEN_medium_30bus_5 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_6" ;
+    cim:GeneratingUnit.maxOperatingP 461.1 ;
+    cim:GeneratingUnit.minOperatingP 46.1 ;
+    cim:GeneratingUnit.nominalP 368.9 .
+
+cim:SM_medium_30bus_5 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_6" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_30bus_5 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_GEN_medium_30bus_5 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_30bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_5 .
+
+cim:GEN_medium_30bus_6 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_7" ;
+    cim:GeneratingUnit.maxOperatingP 103.0 ;
+    cim:GeneratingUnit.minOperatingP 10.3 ;
+    cim:GeneratingUnit.nominalP 82.4 .
+
+cim:SM_medium_30bus_6 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_7" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_30bus_6 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_GEN_medium_30bus_6 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_30bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_6 .
+
+cim:GEN_medium_30bus_7 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_8" ;
+    cim:GeneratingUnit.maxOperatingP 398.7 ;
+    cim:GeneratingUnit.minOperatingP 39.9 ;
+    cim:GeneratingUnit.nominalP 319.0 .
+
+cim:SM_medium_30bus_7 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_8" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_medium_30bus_7 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_GEN_medium_30bus_7 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_medium_30bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_7 .
+
+cim:LOAD_medium_30bus_0 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_1" ;
+    cim:EnergyConsumer.p 214.2 ;
+    cim:EnergyConsumer.q 35.2 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_8 .
+
+cim:LOAD_medium_30bus_1 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_2" ;
+    cim:EnergyConsumer.p 187.4 ;
+    cim:EnergyConsumer.q 57.8 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_9 .
+
+cim:LOAD_medium_30bus_2 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_3" ;
+    cim:EnergyConsumer.p 299.6 ;
+    cim:EnergyConsumer.q 48.0 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_2 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_10 .
+
+cim:LOAD_medium_30bus_3 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_4" ;
+    cim:EnergyConsumer.p 49.4 ;
+    cim:EnergyConsumer.q 6.0 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_3 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_11 .
+
+cim:LOAD_medium_30bus_4 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_5" ;
+    cim:EnergyConsumer.p 60.1 ;
+    cim:EnergyConsumer.q 18.9 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_4 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_12 .
+
+cim:LOAD_medium_30bus_5 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_6" ;
+    cim:EnergyConsumer.p 299.2 ;
+    cim:EnergyConsumer.q 102.7 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_5 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_13 .
+
+cim:LOAD_medium_30bus_6 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_7" ;
+    cim:EnergyConsumer.p 290.6 ;
+    cim:EnergyConsumer.q 115.1 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_6 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_14 .
+
+cim:LOAD_medium_30bus_7 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_8" ;
+    cim:EnergyConsumer.p 203.7 ;
+    cim:EnergyConsumer.q 63.7 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_7 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_15 .
+
+cim:LOAD_medium_30bus_8 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_9" ;
+    cim:EnergyConsumer.p 169.5 ;
+    cim:EnergyConsumer.q 31.7 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_8 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_16 .
+
+cim:LOAD_medium_30bus_9 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_10" ;
+    cim:EnergyConsumer.p 97.0 ;
+    cim:EnergyConsumer.q 14.3 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_9 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_17 .
+
+cim:LOAD_medium_30bus_10 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_11" ;
+    cim:EnergyConsumer.p 215.8 ;
+    cim:EnergyConsumer.q 66.9 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_10 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_18 .
+
+cim:LOAD_medium_30bus_11 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_12" ;
+    cim:EnergyConsumer.p 60.5 ;
+    cim:EnergyConsumer.q 12.6 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_medium_30bus .
+
+cim:T_LOAD_medium_30bus_11 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_medium_30bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_19 .
+
+cim:PT_medium_30bus_0 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_1" .
+
+cim:PTW_medium_30bus_0_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_30bus_0 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 189.7 ;
+    cim:PowerTransformerEnd.ratedU 110.0 .
+
+cim:T_PT_medium_30bus_0_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_30bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_medium_30bus_0_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_30bus_0 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 494.1 ;
+    cim:PowerTransformerEnd.ratedU 63.51 .
+
+cim:T_PT_medium_30bus_0_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_30bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_medium_30bus_1 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_2" .
+
+cim:PTW_medium_30bus_1_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_30bus_1 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 416.8 ;
+    cim:PowerTransformerEnd.ratedU 110.0 .
+
+cim:T_PT_medium_30bus_1_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_30bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_medium_30bus_1_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_30bus_1 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 194.7 ;
+    cim:PowerTransformerEnd.ratedU 63.51 .
+
+cim:T_PT_medium_30bus_1_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_30bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_medium_30bus_2 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_3" .
+
+cim:PTW_medium_30bus_2_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_30bus_2 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 297.6 ;
+    cim:PowerTransformerEnd.ratedU 110.0 .
+
+cim:T_PT_medium_30bus_2_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_30bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_medium_30bus_2_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_30bus_2 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 244.4 ;
+    cim:PowerTransformerEnd.ratedU 63.51 .
+
+cim:T_PT_medium_30bus_2_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_30bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_medium_30bus_3 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_4" .
+
+cim:PTW_medium_30bus_3_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_30bus_3 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 328.9 ;
+    cim:PowerTransformerEnd.ratedU 110.0 .
+
+cim:T_PT_medium_30bus_3_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_30bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_medium_30bus_3_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_30bus_3 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 287.0 ;
+    cim:PowerTransformerEnd.ratedU 63.51 .
+
+cim:T_PT_medium_30bus_3_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_30bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_medium_30bus_4 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_5" .
+
+cim:PTW_medium_30bus_4_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_30bus_4 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 493.2 ;
+    cim:PowerTransformerEnd.ratedU 110.0 .
+
+cim:T_PT_medium_30bus_4_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_30bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_8 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_medium_30bus_4_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_medium_30bus_4 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 151.9 ;
+    cim:PowerTransformerEnd.ratedU 63.51 .
+
+cim:T_PT_medium_30bus_4_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_medium_30bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_medium_30bus_9 ;
+    cim:ACDCTerminal.sequenceNumber 2 .

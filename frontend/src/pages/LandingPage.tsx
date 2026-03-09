@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight, Zap, Brain, Database, GitBranch, Activity, Shield,
-  ChevronRight, Upload, BarChart3, MessageSquare, Search, Network,
+  ChevronRight, Upload, BarChart3, Search, Network,
   CheckCircle2, Code2, Cpu, Layers,
 } from 'lucide-react';
 
@@ -432,48 +432,6 @@ export default function LandingPage() {
       </section>
 
 
-      {/* ── CTA ────────────────────────────────────────────────────────────── */}
-      <section className="relative z-10 max-w-4xl mx-auto px-6 pb-20">
-        <div
-          className="relative rounded-3xl p-10 sm:p-14 text-center overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg, rgba(245,158,11,0.07) 0%, rgba(139,92,246,0.05) 100%)',
-            border: '1px solid rgba(245,158,11,0.18)',
-            boxShadow: '0 0 80px rgba(245,158,11,0.07)',
-          }}
-        >
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(245,158,11,0.5), transparent)' }} />
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(139,92,246,0.3), transparent)' }} />
-
-          <img src="/logo.svg" alt="" className="h-12 w-12 mx-auto mb-6 object-contain" style={{ filter: 'drop-shadow(0 0 14px rgba(245,158,11,0.6))' }} />
-          <h2 className="text-3xl font-black text-white mb-3">Ready to analyze your grid?</h2>
-          <p className="text-neutral-400 mb-8 max-w-sm mx-auto text-sm">
-            Import your CIM/RDF or Excel data and start querying in natural language with Claude AI Agent.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="group inline-flex items-center gap-3 px-8 py-3.5 font-bold text-sm rounded-2xl transition-all"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', boxShadow: '0 0 28px rgba(245,158,11,0.4)', color: '#0a0f1a' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.04)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
-            >
-              Open Dashboard
-              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-            </button>
-            <button
-              onClick={() => navigate('/graphrag')}
-              className="inline-flex items-center gap-2 px-8 py-3.5 font-medium text-sm rounded-2xl transition-all text-neutral-300 hover:text-white"
-              style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(139,92,246,0.2)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(139,92,246,0.1)'; }}
-            >
-              <MessageSquare size={15} />
-              Try AI Chat
-            </button>
-          </div>
-        </div>
-      </section>
 
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="relative z-10 border-t px-6 lg:px-10 py-8" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>

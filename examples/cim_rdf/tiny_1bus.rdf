@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- CIM/XML  IEC 61970-552  –  tiny_1bus -->
+<rdf:RDF
+  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+  xmlns:cim="http://iec.ch/TC57/CIM100#"
+  xmlns:md="http://iec.ch/TC57/61970-552/ModelDescription/1#">
+
+  <md:FullModel rdf:about="urn:uuid:9070f1970b364403935d97f42ab6ec52">
+    <md:Model.description>CIM test network – tiny_1bus</md:Model.description>
+    <md:Model.version>1</md:Model.version>
+    <md:Model.profile>http://iec.ch/TC57/61970-552/ModelDescription/1</md:Model.profile>
+  </md:FullModel>
+
+  <cim:BaseVoltage rdf:ID="_e111938ab9d34955b215b21f305346eb">
+    <cim:IdentifiedObject.name>BV_10.5kV</cim:IdentifiedObject.name>
+    <cim:BaseVoltage.nominalVoltage>10.5</cim:BaseVoltage.nominalVoltage>
+  </cim:BaseVoltage>
+  <cim:Substation rdf:ID="_025d1e9f91b242d6be8e8883abc11f45">
+    <cim:IdentifiedObject.name>SS_tiny_1bus</cim:IdentifiedObject.name>
+  </cim:Substation>
+  <cim:VoltageLevel rdf:ID="_2ce530d7c8974c56b95a691da3ea0ac2">
+    <cim:IdentifiedObject.name>VL_tiny_1bus</cim:IdentifiedObject.name>
+    <cim:VoltageLevel.Substation rdf:resource="#_025d1e9f91b242d6be8e8883abc11f45"/>
+    <cim:VoltageLevel.BaseVoltage rdf:resource="#_e111938ab9d34955b215b21f305346eb"/>
+  </cim:VoltageLevel>
+  <cim:ConnectivityNode rdf:ID="_41aebb3af6f84e8fb05c041a696afe2e">
+    <cim:IdentifiedObject.name>BUS_001</cim:IdentifiedObject.name>
+    <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_2ce530d7c8974c56b95a691da3ea0ac2"/>
+  </cim:ConnectivityNode>
+  <cim:BusbarSection rdf:ID="_6b0a62aa2afe41d0a3ab3e4de087106e">
+    <cim:IdentifiedObject.name>BB_BUS_001</cim:IdentifiedObject.name>
+    <cim:ConductingEquipment.BaseVoltage rdf:resource="#_e111938ab9d34955b215b21f305346eb"/>
+  </cim:BusbarSection>
+  <cim:Terminal rdf:ID="_a39effc782a24cae87e81ad5b71cbf80">
+    <cim:Terminal.ConductingEquipment rdf:resource="#_6b0a62aa2afe41d0a3ab3e4de087106e"/>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_41aebb3af6f84e8fb05c041a696afe2e"/>
+  </cim:Terminal>
+  <cim:GeneratingUnit rdf:ID="_82b99a7a750e49f6b5ccc48386012073">
+    <cim:IdentifiedObject.name>GEN_1_BUS_001</cim:IdentifiedObject.name>
+    <cim:GeneratingUnit.maxOperatingP>337.7</cim:GeneratingUnit.maxOperatingP>
+    <cim:GeneratingUnit.minOperatingP>33.8</cim:GeneratingUnit.minOperatingP>
+    <cim:GeneratingUnit.nominalP>270.2</cim:GeneratingUnit.nominalP>
+  </cim:GeneratingUnit>
+  <cim:SynchronousMachine rdf:ID="_53d9343c15a5478a9dbb0c6d9c7610d5">
+    <cim:IdentifiedObject.name>SM_1</cim:IdentifiedObject.name>
+    <cim:SynchronousMachine.GeneratingUnit rdf:resource="#_82b99a7a750e49f6b5ccc48386012073"/>
+    <cim:ConductingEquipment.BaseVoltage rdf:resource="#_e111938ab9d34955b215b21f305346eb"/>
+    <cim:RegulatingCondEq.RegulatingControl rdf:resource="#_82b99a7a750e49f6b5ccc48386012073"/>
+  </cim:SynchronousMachine>
+  <cim:Terminal rdf:ID="_48ad1d6407b54562971d2a729b5e19cd">
+    <cim:Terminal.ConductingEquipment rdf:resource="#_53d9343c15a5478a9dbb0c6d9c7610d5"/>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_41aebb3af6f84e8fb05c041a696afe2e"/>
+  </cim:Terminal>
+  <cim:EnergyConsumer rdf:ID="_ed78c06c3dd24d8ba67ed3bcdff4d9f7">
+    <cim:IdentifiedObject.name>LOAD_1_BUS_001</cim:IdentifiedObject.name>
+    <cim:EnergyConsumer.p>17.3</cim:EnergyConsumer.p>
+    <cim:EnergyConsumer.q>3.2</cim:EnergyConsumer.q>
+    <cim:ConductingEquipment.BaseVoltage rdf:resource="#_e111938ab9d34955b215b21f305346eb"/>
+  </cim:EnergyConsumer>
+  <cim:Terminal rdf:ID="_12080ae26d8642af840423e8f7ddf49a">
+    <cim:Terminal.ConductingEquipment rdf:resource="#_ed78c06c3dd24d8ba67ed3bcdff4d9f7"/>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_41aebb3af6f84e8fb05c041a696afe2e"/>
+  </cim:Terminal>
+</rdf:RDF>

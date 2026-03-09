@@ -1,4 +1,4 @@
-INFO:     Started server process [12183]
+INFO:     Started server process [5707]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
@@ -7,12 +7,6 @@ INFO:httpx:HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
   client = QdrantClient(url=self._qdrant_url, timeout=5)
 INFO:httpx:HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
 INFO:app.semantic_bus_finder:SemanticBusFinder ready. Qdrant=http://localhost:6333, collection=cim_entities
-INFO:     127.0.0.1:53249 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53553 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53553 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53628 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53628 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53772 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53772 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53889 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53889 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59441 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59627 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59627 - "GET /health HTTP/1.1" 200 OK

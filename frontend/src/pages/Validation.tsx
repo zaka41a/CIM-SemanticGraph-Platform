@@ -79,11 +79,11 @@ function relativeTime(iso: string): string {
 }
 
 // ── Compliance Gauge ───────────────────────────────────────────────────────────
-const ComplianceGauge = ({ score }: { score: number }) => {
+const ComplianceGauge = ({ score, onAccent = false }: { score: number; onAccent?: boolean }) => {
   const r = 52;
   const circumference = Math.PI * r; // half circle
   const offset = circumference * (1 - score / 100);
-  const color = score >= 90 ? '#10b981' : score >= 70 ? '#f59e0b' : '#ef4444';
+  const color = onAccent ? 'white' : score >= 90 ? '#10b981' : score >= 70 ? '#f59e0b' : '#ef4444';
   const label = score >= 90 ? 'Excellent' : score >= 70 ? 'Good' : score >= 50 ? 'Fair' : 'Poor';
 
   return (
@@ -93,7 +93,7 @@ const ComplianceGauge = ({ score }: { score: number }) => {
         <path
           d="M 14 74 A 56 56 0 0 1 126 74"
           fill="none"
-          stroke="rgba(255,255,255,0.07)"
+          stroke={onAccent ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.07)'}
           strokeWidth="10"
           strokeLinecap="round"
         />
@@ -114,7 +114,7 @@ const ComplianceGauge = ({ score }: { score: number }) => {
         </text>
       </svg>
       <span className="text-xs font-semibold mt-1" style={{ color }}>{label}</span>
-      <span className="text-[10px] text-neutral-500 mt-0.5">Compliance Score</span>
+      <span className={`text-[10px] mt-0.5 ${onAccent ? 'text-white/70' : 'text-neutral-500'}`}>Compliance Score</span>
     </div>
   );
 };
@@ -161,7 +161,7 @@ const LoadingStepper = () => {
 const SEV_STYLE: Record<string, { cls: string; icon: React.ReactNode }> = {
   ERROR:     { cls: 'text-red-400 bg-red-500/10 border-red-500/30',      icon: <XCircle size={14} /> },
   VIOLATION: { cls: 'text-red-400 bg-red-500/10 border-red-500/30',      icon: <XCircle size={14} /> },
-  WARNING:   { cls: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30', icon: <AlertTriangle size={14} /> },
+  WARNING:   { cls: 'text-accent-500 bg-yellow-500/10 border-yellow-500/30', icon: <AlertTriangle size={14} /> },
   INFO:      { cls: 'text-blue-400 bg-blue-500/10 border-blue-500/30',   icon: <Info size={14} /> },
 };
 
@@ -382,11 +382,8 @@ const Validation = () => {
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl" />
         <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl shadow-lg shadow-accent-500/20">
-              <ShieldCheck size={28} className="text-white" />
-            </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">SHACL Validation</h1>
+              <h1 className="text-3xl font-bold text-accent-500">SHACL Validation</h1>
               <p className="text-neutral-400 text-sm mt-0.5">
                 Validate your CIM Knowledge Graph against IEC 61970 SHACL constraints
               </p>
@@ -467,10 +464,10 @@ const Validation = () => {
                     <span className="text-neutral-600">·</span>
                     <span className="text-red-400">{h.errorCount} errors</span>
                     <span className="text-neutral-600">·</span>
-                    <span className="text-yellow-400">{h.warningCount} warnings</span>
+                    <span className="text-accent-500">{h.warningCount} warnings</span>
                   </div>
                 </div>
-                <span className={`text-sm font-black ${h.score >= 90 ? 'text-emerald-400' : h.score >= 70 ? 'text-yellow-400' : 'text-red-400'}`}>
+                <span className={`text-sm font-black ${h.score >= 90 ? 'text-emerald-400' : h.score >= 70 ? 'text-accent-500' : 'text-red-400'}`}>
                   {h.score}%
                 </span>
               </div>
@@ -500,23 +497,23 @@ const Validation = () => {
         <div className="space-y-6">
 
           {/* Summary + gauge */}
-          <div className={`card overflow-hidden border ${result.valid ? 'border-emerald-500/30' : 'border-red-500/30'}`}>
-            <div className={`p-6 border-b ${result.valid ? 'bg-gradient-to-r from-emerald-500/8 to-transparent border-emerald-500/20' : 'bg-gradient-to-r from-red-500/8 to-transparent border-red-500/20'}`}>
+          <div className={`card overflow-hidden border ${result.valid ? 'border-accent-500/50' : 'border-red-500/30'}`}>
+            <div className={`p-6 border-b ${result.valid ? 'bg-accent-500/15 border-accent-500/30' : 'bg-gradient-to-r from-red-500/8 to-transparent border-red-500/20'}`}>
               <div className="flex items-center justify-between flex-wrap gap-6">
                 {/* Status */}
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-xl ${result.valid ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
-                    {result.valid ? <CheckCircle size={28} className="text-emerald-400" /> : <AlertTriangle size={28} className="text-red-400" />}
+                  <div className={`p-3 rounded-xl ${result.valid ? 'bg-accent-500/20' : 'bg-red-500/20'}`}>
+                    {result.valid ? <CheckCircle size={28} className="text-accent-400" /> : <AlertTriangle size={28} className="text-red-400" />}
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-white">
                       {result.valid ? 'Validation Passed' : 'Validation Failed'}
                     </h3>
-                    <p className={`text-sm mt-0.5 ${result.valid ? 'text-emerald-400' : 'text-red-400'}`}>{result.message}</p>
+                    <p className={`text-sm mt-0.5 ${result.valid ? 'text-accent-400' : 'text-red-400'}`}>{result.message}</p>
                   </div>
                 </div>
                 {/* Gauge */}
-                <ComplianceGauge score={score} />
+                <ComplianceGauge score={score} onAccent={false} />
               </div>
             </div>
 
@@ -525,7 +522,7 @@ const Validation = () => {
               {[
                 { label: 'Triples', value: result.triplesValidated.toLocaleString(), icon: Hash, color: 'text-accent-400', bg: 'bg-accent-500/10 border-accent-500/20' },
                 { label: 'Errors',  value: result.errorCount,   icon: XCircle,       color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20' },
-                { label: 'Warnings', value: result.warningCount, icon: AlertTriangle, color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+                { label: 'Warnings', value: result.warningCount, icon: AlertTriangle, color: 'text-accent-500', bg: 'bg-yellow-500/10 border-yellow-500/20' },
                 { label: 'Time',    value: formatMs(result.executionTimeMs), icon: Clock, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
               ].map(({ label, value, icon: Icon, color, bg }) => (
                 <div key={label} className={`p-4 rounded-xl border ${bg} text-center`}>
@@ -572,7 +569,7 @@ const Validation = () => {
               {/* Violations header */}
               <div className="px-5 py-4 border-b border-primary-700/30 flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <FileWarning size={16} className="text-yellow-400" />
+                  <FileWarning size={16} className="text-accent-500" />
                   <h3 className="font-bold text-white text-sm">Constraint Violations</h3>
                 </div>
 
@@ -749,7 +746,7 @@ const PathGroup = ({
         <span className="font-mono text-sm font-semibold text-white flex-1 truncate">{path}</span>
         <div className="flex items-center gap-2 flex-shrink-0">
           {errorCount > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/25">{errorCount} err</span>}
-          {warnCount  > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-yellow-500/15 text-yellow-400 border border-yellow-500/25">{warnCount} warn</span>}
+          {warnCount  > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-yellow-500/15 text-accent-500 border border-yellow-500/25">{warnCount} warn</span>}
           <span className="text-xs text-neutral-500">{violations.length} total</span>
         </div>
       </button>

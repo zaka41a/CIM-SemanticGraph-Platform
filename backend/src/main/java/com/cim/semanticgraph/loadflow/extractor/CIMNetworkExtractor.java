@@ -950,11 +950,35 @@ public class CIMNetworkExtractor {
      */
     private void ensureSlackBus(NetworkModel network) {
         if (network.getSlackBus() == null && !network.getBuses().isEmpty()) {
-            // Find bus with highest generation or first PV bus
+            // 1. Prefer PV bus (generator bus) with highest generation
             Bus slackCandidate = network.getBuses().stream()
                     .filter(Bus::isPV)
                     .max((b1, b2) -> Double.compare(b1.getGenerationMw(), b2.getGenerationMw()))
-                    .orElse(network.getBuses().get(0));
+                    .orElse(null);
+
+            // 2. Fallback: pick the bus with the most branch connections (feeder/substation bus)
+            //    This works well for radial distribution networks where the root bus is the external grid connection
+            if (slackCandidate == null && !network.getBranches().isEmpty()) {
+                java.util.Map<String, Long> connectionCount = new java.util.HashMap<>();
+                for (com.cim.semanticgraph.loadflow.model.Branch branch : network.getBranches()) {
+                    connectionCount.merge(branch.getFromBusId(), 1L, Long::sum);
+                    connectionCount.merge(branch.getToBusId(), 1L, Long::sum);
+                }
+                String mostConnectedId = connectionCount.entrySet().stream()
+                        .max(java.util.Map.Entry.comparingByValue())
+                        .map(java.util.Map.Entry::getKey)
+                        .orElse(null);
+                if (mostConnectedId != null) {
+                    slackCandidate = network.getBus(mostConnectedId);
+                    log.info("Selected most-connected bus {} ({} connections) as slack bus",
+                            mostConnectedId, connectionCount.get(mostConnectedId));
+                }
+            }
+
+            // 3. Last resort: first bus
+            if (slackCandidate == null) {
+                slackCandidate = network.getBuses().get(0);
+            }
 
             slackCandidate.setType(Bus.BusType.SLACK);
             slackCandidate.setVoltageMagnitude(1.0);

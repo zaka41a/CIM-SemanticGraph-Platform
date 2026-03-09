@@ -32,6 +32,7 @@ com/cim/semanticgraph/service/CIMIndexingService.class
 com/cim/semanticgraph/exception/GlobalExceptionHandler.class
 com/cim/semanticgraph/model/ImportHistory.class
 com/cim/semanticgraph/service/ChatHistoryService.class
+com/cim/semanticgraph/graphrag/AnswerEvaluator.class
 com/cim/semanticgraph/controller/ShaclController.class
 com/cim/semanticgraph/exception/SparqlException.class
 com/cim/semanticgraph/service/QdrantService$SearchResult.class
@@ -51,6 +52,7 @@ com/cim/semanticgraph/exception/GlobalExceptionHandler$ErrorResponse.class
 com/cim/semanticgraph/dto/LoadFlowResponse$BranchResult.class
 com/cim/semanticgraph/loadflow/model/Branch.class
 com/cim/semanticgraph/controller/CimController.class
+com/cim/semanticgraph/graphrag/AnswerEvaluator$EvaluationResult.class
 com/cim/semanticgraph/dto/ValidationResult.class
 com/cim/semanticgraph/config/JenaConfig$1.class
 com/cim/semanticgraph/service/ShaclValidationService$Violation.class
@@ -68,6 +70,7 @@ com/cim/semanticgraph/service/ShaclValidationService$ValidationResult$Validation
 com/cim/semanticgraph/service/ImportHistoryService.class
 com/cim/semanticgraph/dto/LoadFlowResponse$Violation$ViolationBuilder.class
 com/cim/semanticgraph/service/ShaclValidationService.class
+com/cim/semanticgraph/service/ReportService$PageNumberHandler.class
 com/cim/semanticgraph/service/ReportService.class
 com/cim/semanticgraph/controller/SystemController.class
 com/cim/semanticgraph/dto/LoadFlowResponse$SystemStatistics$SystemStatisticsBuilder.class

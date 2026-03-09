@@ -23,7 +23,7 @@ import org.springframework.security.web.SecurityFilterChain;
 <span class="nc" id="L23">                .authorizeHttpRequests(auth -&gt; auth</span>
 <span class="nc" id="L24">                        .requestMatchers(&quot;/actuator/health&quot;, &quot;/actuator/info&quot;).permitAll()</span>
 <span class="nc" id="L25">                        .requestMatchers(&quot;/swagger-ui/**&quot;, &quot;/api-docs/**&quot;, &quot;/swagger-ui.html&quot;).permitAll()</span>
-<span class="nc" id="L26">                        .requestMatchers(&quot;/cim/**&quot;, &quot;/sparql/**&quot;, &quot;/graphrag/**&quot;).permitAll()</span>
+<span class="nc" id="L26">                        .requestMatchers(&quot;/cim/**&quot;, &quot;/sparql/**&quot;, &quot;/graphrag/**&quot;, &quot;/graphrag/stream&quot;).permitAll()</span>
 <span class="nc" id="L27">                        .requestMatchers(&quot;/loadflow/**&quot;).permitAll()</span>
 <span class="nc" id="L28">                        .requestMatchers(&quot;/shacl/**&quot;).permitAll()</span>
 <span class="nc" id="L29">                        .requestMatchers(&quot;/excel/**&quot;).permitAll()</span>

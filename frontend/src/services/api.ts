@@ -367,6 +367,14 @@ class ApiService {
     return response.data;
   }
 
+  async generateFullCIMReport(): Promise<Blob> {
+    const response = await this.client.get('/reports/full', {
+      responseType: 'blob',
+      timeout: 120000, // 2 min — AI generation takes time
+    });
+    return response.data;
+  }
+
   // Qdrant / Vector DB APIs
   async getIndexingStatus(): Promise<{
     qdrantAvailable: boolean;

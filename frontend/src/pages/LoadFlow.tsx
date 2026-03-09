@@ -153,8 +153,8 @@ const BranchTable = ({ branches }: { branches: BranchResult[] }) => {
                 <td className="px-4 py-3 text-sm">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                     branch.branchType === 'TRANSFORMER'
-                      ? 'bg-accent-500/20 text-accent-400 border border-accent-500/30'
-                      : 'bg-accent-500/20 text-accent-400 border border-accent-500/30'
+                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
+                      : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
                   }`}>
                     {branch.branchType}
                   </span>
@@ -235,7 +235,7 @@ const LoadFlow = () => {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Export PDF error:', err);
-      alert('Erreur lors de la génération du rapport PDF');
+      alert('Failed to generate PDF report');
     } finally {
       setExportingPDF(false);
     }

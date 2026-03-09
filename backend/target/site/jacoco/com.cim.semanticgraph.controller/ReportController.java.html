@@ -82,15 +82,33 @@ public class ReportController {
         }
     }
 
-    private String getTimestamp() {
-<span class="nc" id="L86">        return LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;yyyyMMdd_HHmmss&quot;));</span>
+    @GetMapping(&quot;/full&quot;)
+    @Operation(summary = &quot;Generate Full CIM Report&quot;, description = &quot;Generate a comprehensive AI-narrated PDF report of the entire CIM knowledge graph&quot;)
+    public ResponseEntity&lt;byte[]&gt; generateFullCIMReport() {
+<span class="nc" id="L88">        log.info(&quot;REST API: Generate Full CIM report&quot;);</span>
+        try {
+<span class="nc" id="L90">            byte[] pdfBytes = reportService.generateFullCIMReport();</span>
+<span class="nc" id="L91">            HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L92">            headers.setContentType(MediaType.APPLICATION_PDF);</span>
+<span class="nc" id="L93">            headers.setContentDispositionFormData(&quot;attachment&quot;,</span>
+<span class="nc" id="L94">                &quot;CIM_Full_Report_&quot; + getTimestamp() + &quot;.pdf&quot;);</span>
+<span class="nc" id="L95">            headers.setContentLength(pdfBytes.length);</span>
+<span class="nc" id="L96">            return new ResponseEntity&lt;&gt;(pdfBytes, headers, HttpStatus.OK);</span>
+<span class="nc" id="L97">        } catch (Exception e) {</span>
+<span class="nc" id="L98">            log.error(&quot;Error generating Full CIM report&quot;, e);</span>
+<span class="nc" id="L99">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();</span>
+        }
     }
 
-<span class="nc bnc" id="L89" title="All 14 branches missed.">    @Data</span>
-<span class="nc" id="L90">    @NoArgsConstructor</span>
-<span class="nc" id="L91">    @AllArgsConstructor</span>
+    private String getTimestamp() {
+<span class="nc" id="L104">        return LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;yyyyMMdd_HHmmss&quot;));</span>
+    }
+
+<span class="nc bnc" id="L107" title="All 14 branches missed.">    @Data</span>
+<span class="nc" id="L108">    @NoArgsConstructor</span>
+<span class="nc" id="L109">    @AllArgsConstructor</span>
     public static class DataQualityReportRequest {
-<span class="nc" id="L93">        private List&lt;Map&lt;String, Object&gt;&gt; issues;</span>
+<span class="nc" id="L111">        private List&lt;Map&lt;String, Object&gt;&gt; issues;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

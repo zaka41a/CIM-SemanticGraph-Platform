@@ -267,11 +267,11 @@ const Dashboard = () => {
   const handleExportStatisticsPDF = async () => {
     setExportingPDF(true);
     try {
-      const blob = await apiService.generateNetworkStatisticsReport();
+      const blob = await apiService.generateFullCIMReport();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `NetworkStatistics_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+      link.download = `CIM_Full_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -375,11 +375,8 @@ const Dashboard = () => {
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl shadow-lg shadow-accent-500/20">
-                <BarChart3 size={28} className="text-white" />
-              </div>
               <div>
-                <h1 className="text-3xl font-bold text-white mb-1">Dashboard</h1>
+                <h1 className="text-3xl font-bold text-accent-500 mb-1">Dashboard</h1>
                 <p className="text-neutral-300">
                   Real-time overview of your CIM Knowledge Graph
                 </p>

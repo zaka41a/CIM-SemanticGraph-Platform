@@ -91,7 +91,7 @@ const PowerBalance = ({ gen, load }: { gen: number; load: number }) => {
       <div className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold border ${
         balanced
           ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-          : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+          : 'bg-yellow-500/10 border-yellow-500/20 text-accent-500'
       }`}>
         <span>Imbalance</span>
         <span className="font-mono">{imbalance > 0 ? '+' : ''}{imbalance.toFixed(1)} MW</span>
@@ -123,7 +123,7 @@ const Diagnostics = () => {
 
   const statusConfig = {
     OK:      { border: 'border-emerald-500/30', iconBg: 'bg-emerald-500/20', icon: CheckCircle2, color: 'text-emerald-400', label: 'Healthy',  dot: 'bg-emerald-400' },
-    WARNING: { border: 'border-yellow-500/30',  iconBg: 'bg-yellow-500/20',  icon: AlertTriangle, color: 'text-yellow-400', label: 'Warning',  dot: 'bg-yellow-400' },
+    WARNING: { border: 'border-yellow-500/30',  iconBg: 'bg-yellow-500/20',  icon: AlertTriangle, color: 'text-accent-500', label: 'Warning',  dot: 'bg-yellow-400' },
     ERROR:   { border: 'border-red-500/30',     iconBg: 'bg-red-500/20',     icon: XCircle,       color: 'text-red-400',    label: 'Critical', dot: 'bg-red-400' },
   };
 
@@ -138,11 +138,8 @@ const Diagnostics = () => {
         <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl" />
         <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl shadow-lg shadow-accent-500/20">
-              <Activity size={28} className="text-white" />
-            </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Network Diagnostics</h1>
+              <h1 className="text-3xl font-bold text-accent-500">Network Diagnostics</h1>
               <p className="text-neutral-400 text-sm mt-0.5">
                 {lastRun
                   ? `Last run: ${lastRun.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}`
@@ -208,7 +205,7 @@ const Diagnostics = () => {
                   <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Errors</div>
                 </div>
                 <div className="px-4 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-                  <div className="text-2xl font-black text-yellow-400">{diagnostics.warnings.length}</div>
+                  <div className="text-2xl font-black text-accent-500">{diagnostics.warnings.length}</div>
                   <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Warnings</div>
                 </div>
               </div>
@@ -266,16 +263,16 @@ const Diagnostics = () => {
               {diagnostics.warnings.length > 0 && (
                 <div className="card overflow-hidden">
                   <div className="px-5 py-4 border-b border-yellow-500/20 bg-yellow-500/5 flex items-center gap-3">
-                    <AlertTriangle size={18} className="text-yellow-400" />
-                    <h2 className="font-bold text-yellow-400">Warnings</h2>
-                    <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                    <AlertTriangle size={18} className="text-accent-500" />
+                    <h2 className="font-bold text-accent-500">Warnings</h2>
+                    <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-500/20 text-accent-500 border border-yellow-500/30">
                       {diagnostics.warnings.length}
                     </span>
                   </div>
                   <div className="divide-y divide-primary-700/20">
                     {diagnostics.warnings.map((w, i) => (
                       <div key={i} className="flex items-start gap-3 px-5 py-4 hover:bg-yellow-500/5 transition-colors">
-                        <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black font-mono bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 mt-0.5">
+                        <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black font-mono bg-yellow-500/20 text-accent-500 border border-yellow-500/30 mt-0.5">
                           {w.code}
                         </span>
                         <p className="text-sm text-neutral-300 leading-relaxed">{w.message}</p>

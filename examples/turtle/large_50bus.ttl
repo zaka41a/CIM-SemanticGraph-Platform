@@ -1,0 +1,2289 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix cim:  <http://iec.ch/TC57/CIM100#> .
+@prefix md:   <http://iec.ch/TC57/61970-552/ModelDescription/1#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+
+# CIM Turtle – large_50bus  (50 buses, 64 lines)
+
+cim:BV_large_50bus a cim:BaseVoltage ;
+    cim:IdentifiedObject.name "BV_220.0kV" ;
+    cim:BaseVoltage.nominalVoltage 220.0 .
+
+cim:SS_large_50bus a cim:Substation ;
+    cim:IdentifiedObject.name "SS_large_50bus" .
+
+cim:VL_large_50bus a cim:VoltageLevel ;
+    cim:IdentifiedObject.name "VL_large_50bus" ;
+    cim:VoltageLevel.Substation cim:SS_large_50bus ;
+    cim:VoltageLevel.BaseVoltage cim:BV_large_50bus .
+
+cim:CN_large_50bus_0 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_001" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_0 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_001" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_0 .
+
+cim:CN_large_50bus_1 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_002" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_1 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_002" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_1 .
+
+cim:CN_large_50bus_2 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_003" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_2 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_003" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_2 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_2 .
+
+cim:CN_large_50bus_3 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_004" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_3 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_004" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_3 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_3 .
+
+cim:CN_large_50bus_4 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_005" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_4 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_005" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_4 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_4 .
+
+cim:CN_large_50bus_5 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_006" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_5 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_006" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_5 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_5 .
+
+cim:CN_large_50bus_6 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_007" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_6 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_007" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_6 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_6 .
+
+cim:CN_large_50bus_7 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_008" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_7 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_008" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_7 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_7 .
+
+cim:CN_large_50bus_8 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_009" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_8 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_009" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_8 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_8 .
+
+cim:CN_large_50bus_9 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_010" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_9 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_010" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_9 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_9 .
+
+cim:CN_large_50bus_10 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_011" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_10 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_011" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_10 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_10 .
+
+cim:CN_large_50bus_11 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_012" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_11 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_012" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_11 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_11 .
+
+cim:CN_large_50bus_12 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_013" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_12 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_013" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_12 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_12 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_12 .
+
+cim:CN_large_50bus_13 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_014" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_13 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_014" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_13 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_13 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_13 .
+
+cim:CN_large_50bus_14 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_015" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_14 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_015" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_14 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_14 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_14 .
+
+cim:CN_large_50bus_15 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_016" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_15 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_016" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_15 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_15 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_15 .
+
+cim:CN_large_50bus_16 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_017" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_16 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_017" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_16 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_16 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_16 .
+
+cim:CN_large_50bus_17 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_018" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_17 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_018" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_17 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_17 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_17 .
+
+cim:CN_large_50bus_18 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_019" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_18 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_019" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_18 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_18 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_18 .
+
+cim:CN_large_50bus_19 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_020" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_19 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_020" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_19 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_19 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_19 .
+
+cim:CN_large_50bus_20 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_021" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_20 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_021" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_20 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_20 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_20 .
+
+cim:CN_large_50bus_21 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_022" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_21 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_022" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_21 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_21 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_21 .
+
+cim:CN_large_50bus_22 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_023" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_22 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_023" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_22 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_22 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_22 .
+
+cim:CN_large_50bus_23 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_024" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_23 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_024" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_23 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_23 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_23 .
+
+cim:CN_large_50bus_24 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_025" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_24 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_025" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_24 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_24 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_24 .
+
+cim:CN_large_50bus_25 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_026" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_25 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_026" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_25 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_25 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_25 .
+
+cim:CN_large_50bus_26 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_027" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_26 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_027" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_26 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_26 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_26 .
+
+cim:CN_large_50bus_27 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_028" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_27 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_028" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_27 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_27 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_27 .
+
+cim:CN_large_50bus_28 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_029" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_28 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_029" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_28 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_28 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_28 .
+
+cim:CN_large_50bus_29 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_030" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_29 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_030" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_29 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_29 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_29 .
+
+cim:CN_large_50bus_30 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_031" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_30 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_031" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_30 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_30 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_30 .
+
+cim:CN_large_50bus_31 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_032" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_31 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_032" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_31 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_31 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_31 .
+
+cim:CN_large_50bus_32 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_033" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_32 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_033" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_32 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_32 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_32 .
+
+cim:CN_large_50bus_33 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_034" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_33 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_034" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_33 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_33 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_33 .
+
+cim:CN_large_50bus_34 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_035" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_34 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_035" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_34 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_34 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_34 .
+
+cim:CN_large_50bus_35 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_036" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_35 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_036" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_35 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_35 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_35 .
+
+cim:CN_large_50bus_36 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_037" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_36 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_037" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_36 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_36 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_36 .
+
+cim:CN_large_50bus_37 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_038" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_37 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_038" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_37 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_37 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_37 .
+
+cim:CN_large_50bus_38 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_039" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_38 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_039" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_38 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_38 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_38 .
+
+cim:CN_large_50bus_39 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_040" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_39 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_040" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_39 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_39 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_39 .
+
+cim:CN_large_50bus_40 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_041" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_40 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_041" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_40 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_40 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_40 .
+
+cim:CN_large_50bus_41 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_042" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_41 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_042" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_41 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_41 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_41 .
+
+cim:CN_large_50bus_42 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_043" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_42 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_043" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_42 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_42 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_42 .
+
+cim:CN_large_50bus_43 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_044" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_43 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_044" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_43 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_43 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_43 .
+
+cim:CN_large_50bus_44 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_045" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_44 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_045" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_44 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_44 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_44 .
+
+cim:CN_large_50bus_45 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_046" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_45 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_046" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_45 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_45 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_45 .
+
+cim:CN_large_50bus_46 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_047" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_46 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_047" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_46 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_46 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_46 .
+
+cim:CN_large_50bus_47 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_048" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_47 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_048" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_47 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_47 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_47 .
+
+cim:CN_large_50bus_48 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_049" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_48 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_049" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_48 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_48 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_48 .
+
+cim:CN_large_50bus_49 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_050" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_large_50bus .
+
+cim:BB_large_50bus_49 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_050" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_BB_large_50bus_49 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_large_50bus_49 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_49 .
+
+cim:L_large_50bus_0 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L1_BUS_001_BUS_002" ;
+    cim:ACLineSegment.r 0.6796 ;
+    cim:ACLineSegment.x 1.3786 ;
+    cim:ACLineSegment.bch 1.545e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_0_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_0_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_1 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L2_BUS_002_BUS_003" ;
+    cim:ACLineSegment.r 0.4263 ;
+    cim:ACLineSegment.x 1.416 ;
+    cim:ACLineSegment.bch 3.068e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_1_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_1_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_2 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L3_BUS_003_BUS_004" ;
+    cim:ACLineSegment.r 1.9588 ;
+    cim:ACLineSegment.x 1.8376 ;
+    cim:ACLineSegment.bch 9.448e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_2_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_2_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_3 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L4_BUS_001_BUS_005" ;
+    cim:ACLineSegment.r 1.805 ;
+    cim:ACLineSegment.x 2.5042 ;
+    cim:ACLineSegment.bch 6.205e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_3_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_3_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_4 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L5_BUS_003_BUS_006" ;
+    cim:ACLineSegment.r 1.1501 ;
+    cim:ACLineSegment.x 0.7207 ;
+    cim:ACLineSegment.bch 1.67e-06 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_4_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_4_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_5 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L6_BUS_003_BUS_007" ;
+    cim:ACLineSegment.r 0.9953 ;
+    cim:ACLineSegment.x 4.216 ;
+    cim:ACLineSegment.bch 3.861e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_5_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_5_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_6 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L7_BUS_004_BUS_008" ;
+    cim:ACLineSegment.r 2.1569 ;
+    cim:ACLineSegment.x 2.2291 ;
+    cim:ACLineSegment.bch 4.363e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_6_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_6_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_7 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L8_BUS_008_BUS_009" ;
+    cim:ACLineSegment.r 2.0606 ;
+    cim:ACLineSegment.x 3.2726 ;
+    cim:ACLineSegment.bch 5.984e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_7_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_7_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_8 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_8 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L9_BUS_003_BUS_010" ;
+    cim:ACLineSegment.r 0.7581 ;
+    cim:ACLineSegment.x 3.0359 ;
+    cim:ACLineSegment.bch 6.983e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_8_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_8_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_9 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_9 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L10_BUS_009_BUS_011" ;
+    cim:ACLineSegment.r 1.2027 ;
+    cim:ACLineSegment.x 0.9293 ;
+    cim:ACLineSegment.bch 4.043e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_9_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_8 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_9_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_10 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_10 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L11_BUS_008_BUS_012" ;
+    cim:ACLineSegment.r 0.8047 ;
+    cim:ACLineSegment.x 3.6876 ;
+    cim:ACLineSegment.bch 6.366e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_10_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_10_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_11 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_11 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L12_BUS_005_BUS_013" ;
+    cim:ACLineSegment.r 2.4197 ;
+    cim:ACLineSegment.x 3.9208 ;
+    cim:ACLineSegment.bch 3.326e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_11_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_11_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_12 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_12 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L13_BUS_004_BUS_014" ;
+    cim:ACLineSegment.r 0.7079 ;
+    cim:ACLineSegment.x 3.94 ;
+    cim:ACLineSegment.bch 3.714e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_12_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_12 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_12_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_12 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_13 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_13 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L14_BUS_013_BUS_015" ;
+    cim:ACLineSegment.r 2.3308 ;
+    cim:ACLineSegment.x 1.039 ;
+    cim:ACLineSegment.bch 9.973e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_13_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_13 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_12 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_13_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_13 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_14 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_14 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L15_BUS_002_BUS_016" ;
+    cim:ACLineSegment.r 0.458 ;
+    cim:ACLineSegment.x 3.8497 ;
+    cim:ACLineSegment.bch 3.66e-06 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_14_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_14 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_14_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_14 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_15 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_15 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L16_BUS_011_BUS_017" ;
+    cim:ACLineSegment.r 1.8208 ;
+    cim:ACLineSegment.x 4.7177 ;
+    cim:ACLineSegment.bch 2.176e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_15_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_15 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_10 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_15_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_15 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_16 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_16 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L17_BUS_006_BUS_018" ;
+    cim:ACLineSegment.r 1.9962 ;
+    cim:ACLineSegment.x 4.1648 ;
+    cim:ACLineSegment.bch 7.85e-06 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_16_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_16 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_16_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_16 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_17 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_17 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L18_BUS_015_BUS_019" ;
+    cim:ACLineSegment.r 2.121 ;
+    cim:ACLineSegment.x 3.9855 ;
+    cim:ACLineSegment.bch 6.762e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_17_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_17 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_14 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_17_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_17 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_18 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_18 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L19_BUS_009_BUS_020" ;
+    cim:ACLineSegment.r 0.3566 ;
+    cim:ACLineSegment.x 1.549 ;
+    cim:ACLineSegment.bch 2.602e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_18_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_18 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_8 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_18_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_18 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_19 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_19 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L20_BUS_006_BUS_021" ;
+    cim:ACLineSegment.r 0.3938 ;
+    cim:ACLineSegment.x 2.1445 ;
+    cim:ACLineSegment.bch 3.832e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_19_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_19 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_19_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_19 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_20 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_20 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L21_BUS_001_BUS_022" ;
+    cim:ACLineSegment.r 1.1282 ;
+    cim:ACLineSegment.x 3.0098 ;
+    cim:ACLineSegment.bch 5.864e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_20_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_20 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_20_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_20 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_21 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_21 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L22_BUS_011_BUS_023" ;
+    cim:ACLineSegment.r 1.3406 ;
+    cim:ACLineSegment.x 4.6213 ;
+    cim:ACLineSegment.bch 8.709e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_21_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_21 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_10 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_21_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_21 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_22 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_22 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L23_BUS_010_BUS_024" ;
+    cim:ACLineSegment.r 1.0516 ;
+    cim:ACLineSegment.x 0.232 ;
+    cim:ACLineSegment.bch 9.687e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_22_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_22 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_9 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_22_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_22 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_23 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_23 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L24_BUS_019_BUS_025" ;
+    cim:ACLineSegment.r 1.7571 ;
+    cim:ACLineSegment.x 4.0709 ;
+    cim:ACLineSegment.bch 5.979e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_23_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_23 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_18 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_23_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_23 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_24 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_24 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L25_BUS_022_BUS_026" ;
+    cim:ACLineSegment.r 2.2869 ;
+    cim:ACLineSegment.x 0.5914 ;
+    cim:ACLineSegment.bch 2.557e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_24_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_24 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_21 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_24_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_24 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_25 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_25 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L26_BUS_025_BUS_027" ;
+    cim:ACLineSegment.r 1.6651 ;
+    cim:ACLineSegment.x 0.8734 ;
+    cim:ACLineSegment.bch 6.166e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_25_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_25 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_24 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_25_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_25 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_26 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_26 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L27_BUS_007_BUS_028" ;
+    cim:ACLineSegment.r 1.4124 ;
+    cim:ACLineSegment.x 3.2429 ;
+    cim:ACLineSegment.bch 6.503e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_26_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_26 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_26_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_26 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_27 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_27 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L28_BUS_006_BUS_029" ;
+    cim:ACLineSegment.r 2.4174 ;
+    cim:ACLineSegment.x 1.6914 ;
+    cim:ACLineSegment.bch 7.983e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_27_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_27 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_27_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_27 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_28 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_28 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L29_BUS_020_BUS_030" ;
+    cim:ACLineSegment.r 0.2738 ;
+    cim:ACLineSegment.x 0.5381 ;
+    cim:ACLineSegment.bch 2.298e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_28_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_28 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_19 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_28_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_28 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_29 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_29 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L30_BUS_028_BUS_031" ;
+    cim:ACLineSegment.r 1.8697 ;
+    cim:ACLineSegment.x 2.8121 ;
+    cim:ACLineSegment.bch 6.908e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_29_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_29 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_27 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_29_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_29 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_30 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_30 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L31_BUS_021_BUS_032" ;
+    cim:ACLineSegment.r 0.5604 ;
+    cim:ACLineSegment.x 1.9019 ;
+    cim:ACLineSegment.bch 4.684e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_30_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_30 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_20 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_30_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_30 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_31 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_31 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L32_BUS_026_BUS_033" ;
+    cim:ACLineSegment.r 1.7021 ;
+    cim:ACLineSegment.x 3.4677 ;
+    cim:ACLineSegment.bch 1.592e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_31_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_31 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_25 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_31_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_31 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_32 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_32 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L33_BUS_028_BUS_034" ;
+    cim:ACLineSegment.r 2.4943 ;
+    cim:ACLineSegment.x 2.4397 ;
+    cim:ACLineSegment.bch 3.025e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_32_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_32 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_27 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_32_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_32 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_33 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_33 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L34_BUS_033_BUS_035" ;
+    cim:ACLineSegment.r 2.3022 ;
+    cim:ACLineSegment.x 0.475 ;
+    cim:ACLineSegment.bch 8.33e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_33_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_33 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_32 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_33_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_33 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_34 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_34 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L35_BUS_021_BUS_036" ;
+    cim:ACLineSegment.r 1.8281 ;
+    cim:ACLineSegment.x 1.7742 ;
+    cim:ACLineSegment.bch 3.496e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_34_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_34 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_20 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_34_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_34 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_35 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_35 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L36_BUS_006_BUS_037" ;
+    cim:ACLineSegment.r 1.9628 ;
+    cim:ACLineSegment.x 2.6295 ;
+    cim:ACLineSegment.bch 3.548e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_35_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_35 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_35_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_35 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_36 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_36 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L37_BUS_026_BUS_038" ;
+    cim:ACLineSegment.r 0.2531 ;
+    cim:ACLineSegment.x 3.6239 ;
+    cim:ACLineSegment.bch 4.579e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_36_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_36 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_25 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_36_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_36 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_37 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_37 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L38_BUS_007_BUS_039" ;
+    cim:ACLineSegment.r 0.1773 ;
+    cim:ACLineSegment.x 0.2712 ;
+    cim:ACLineSegment.bch 7.137e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_37_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_37 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_37_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_37 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_38 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_38 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L39_BUS_012_BUS_040" ;
+    cim:ACLineSegment.r 0.0662 ;
+    cim:ACLineSegment.x 1.7482 ;
+    cim:ACLineSegment.bch 1.183e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_38_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_38 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_11 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_38_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_38 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_39 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_39 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L40_BUS_009_BUS_041" ;
+    cim:ACLineSegment.r 2.0021 ;
+    cim:ACLineSegment.x 4.6531 ;
+    cim:ACLineSegment.bch 7.431e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_39_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_39 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_8 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_39_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_39 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_40 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_40 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L41_BUS_031_BUS_042" ;
+    cim:ACLineSegment.r 1.2948 ;
+    cim:ACLineSegment.x 2.782 ;
+    cim:ACLineSegment.bch 3.377e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_40_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_40 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_30 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_40_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_40 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_41 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_41 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L42_BUS_021_BUS_043" ;
+    cim:ACLineSegment.r 1.0717 ;
+    cim:ACLineSegment.x 2.3372 ;
+    cim:ACLineSegment.bch 7.998e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_41_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_41 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_20 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_41_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_41 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_42 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_42 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L43_BUS_016_BUS_044" ;
+    cim:ACLineSegment.r 1.5781 ;
+    cim:ACLineSegment.x 0.9726 ;
+    cim:ACLineSegment.bch 6.607e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_42_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_42 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_15 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_42_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_42 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_43 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_43 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L44_BUS_001_BUS_045" ;
+    cim:ACLineSegment.r 0.995 ;
+    cim:ACLineSegment.x 3.7001 ;
+    cim:ACLineSegment.bch 8.843e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_43_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_43 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_43_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_43 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_44 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_44 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L45_BUS_017_BUS_046" ;
+    cim:ACLineSegment.r 1.1294 ;
+    cim:ACLineSegment.x 2.1763 ;
+    cim:ACLineSegment.bch 1.44e-06 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_44_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_44 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_16 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_44_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_44 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_45 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_45 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L46_BUS_025_BUS_047" ;
+    cim:ACLineSegment.r 0.5448 ;
+    cim:ACLineSegment.x 1.4278 ;
+    cim:ACLineSegment.bch 7.067e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_45_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_45 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_24 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_45_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_45 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_46 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_46 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L47_BUS_016_BUS_048" ;
+    cim:ACLineSegment.r 1.9921 ;
+    cim:ACLineSegment.x 2.9079 ;
+    cim:ACLineSegment.bch 8.015e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_46_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_46 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_15 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_46_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_46 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_47 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_47 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L48_BUS_029_BUS_049" ;
+    cim:ACLineSegment.r 1.3469 ;
+    cim:ACLineSegment.x 1.8607 ;
+    cim:ACLineSegment.bch 2.051e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_47_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_47 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_28 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_47_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_47 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_48 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_48 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L49_BUS_049_BUS_050" ;
+    cim:ACLineSegment.r 0.2937 ;
+    cim:ACLineSegment.x 3.37 ;
+    cim:ACLineSegment.bch 4.946e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_48_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_48 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_48 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_48_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_48 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_49 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_49 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L50_BUS_018_BUS_022" ;
+    cim:ACLineSegment.r 2.4151 ;
+    cim:ACLineSegment.x 1.6014 ;
+    cim:ACLineSegment.bch 3.948e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_49_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_49 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_17 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_49_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_49 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_21 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_50 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L51_BUS_020_BUS_038" ;
+    cim:ACLineSegment.r 0.9874 ;
+    cim:ACLineSegment.x 0.6154 ;
+    cim:ACLineSegment.bch 3.585e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_50_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_50 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_19 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_50_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_50 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_37 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_51 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L52_BUS_047_BUS_037" ;
+    cim:ACLineSegment.r 1.1501 ;
+    cim:ACLineSegment.x 0.904 ;
+    cim:ACLineSegment.bch 6.769e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_51_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_51 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_46 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_51_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_51 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_36 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_52 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L53_BUS_001_BUS_017" ;
+    cim:ACLineSegment.r 2.0035 ;
+    cim:ACLineSegment.x 4.5975 ;
+    cim:ACLineSegment.bch 5.943e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_52_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_52 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_52_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_52 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_16 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_53 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L54_BUS_042_BUS_024" ;
+    cim:ACLineSegment.r 1.6836 ;
+    cim:ACLineSegment.x 1.6003 ;
+    cim:ACLineSegment.bch 2.462e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_53_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_53 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_41 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_53_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_53 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_23 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_54 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L55_BUS_045_BUS_016" ;
+    cim:ACLineSegment.r 0.3012 ;
+    cim:ACLineSegment.x 1.8979 ;
+    cim:ACLineSegment.bch 1.499e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_54_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_54 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_44 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_54_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_54 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_15 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_55 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L56_BUS_004_BUS_043" ;
+    cim:ACLineSegment.r 0.9773 ;
+    cim:ACLineSegment.x 3.0023 ;
+    cim:ACLineSegment.bch 5.791e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_55_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_55 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_55_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_55 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_42 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_56 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L57_BUS_008_BUS_030" ;
+    cim:ACLineSegment.r 1.0634 ;
+    cim:ACLineSegment.x 2.459 ;
+    cim:ACLineSegment.bch 5.42e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_56_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_56 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_56_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_56 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_29 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_57 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L58_BUS_020_BUS_011" ;
+    cim:ACLineSegment.r 2.2987 ;
+    cim:ACLineSegment.x 4.6569 ;
+    cim:ACLineSegment.bch 1.815e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_57_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_57 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_19 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_57_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_57 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_10 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_58 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L59_BUS_026_BUS_044" ;
+    cim:ACLineSegment.r 0.4255 ;
+    cim:ACLineSegment.x 1.4797 ;
+    cim:ACLineSegment.bch 1.952e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_58_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_58 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_25 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_58_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_58 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_43 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_59 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L60_BUS_033_BUS_046" ;
+    cim:ACLineSegment.r 2.1065 ;
+    cim:ACLineSegment.x 3.1161 ;
+    cim:ACLineSegment.bch 8.669e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_59_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_59 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_32 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_59_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_59 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_45 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_60 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L61_BUS_050_BUS_020" ;
+    cim:ACLineSegment.r 2.3801 ;
+    cim:ACLineSegment.x 2.4488 ;
+    cim:ACLineSegment.bch 2.032e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_60_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_60 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_49 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_60_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_60 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_19 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_61 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L62_BUS_045_BUS_008" ;
+    cim:ACLineSegment.r 0.966 ;
+    cim:ACLineSegment.x 2.8298 ;
+    cim:ACLineSegment.bch 6.565e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_61_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_61 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_44 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_61_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_61 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_62 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L63_BUS_041_BUS_019" ;
+    cim:ACLineSegment.r 1.0287 ;
+    cim:ACLineSegment.x 2.484 ;
+    cim:ACLineSegment.bch 7.13e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_62_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_62 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_40 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_62_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_62 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_18 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:L_large_50bus_63 a cim:ACLineSegment ;
+    cim:IdentifiedObject.name "L64_BUS_024_BUS_040" ;
+    cim:ACLineSegment.r 1.1152 ;
+    cim:ACLineSegment.x 0.8779 ;
+    cim:ACLineSegment.bch 5.697e-05 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_L_large_50bus_63_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_63 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_23 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:T_L_large_50bus_63_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:L_large_50bus_63 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_39 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:GEN_large_50bus_0 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_1" ;
+    cim:GeneratingUnit.maxOperatingP 408.1 ;
+    cim:GeneratingUnit.minOperatingP 40.8 ;
+    cim:GeneratingUnit.nominalP 326.5 .
+
+cim:SM_large_50bus_0 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_1" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_0 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_0 .
+
+cim:GEN_large_50bus_1 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_2" ;
+    cim:GeneratingUnit.maxOperatingP 149.2 ;
+    cim:GeneratingUnit.minOperatingP 14.9 ;
+    cim:GeneratingUnit.nominalP 119.4 .
+
+cim:SM_large_50bus_1 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_2" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_1 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_1 .
+
+cim:GEN_large_50bus_2 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_3" ;
+    cim:GeneratingUnit.maxOperatingP 64.7 ;
+    cim:GeneratingUnit.minOperatingP 6.5 ;
+    cim:GeneratingUnit.nominalP 51.8 .
+
+cim:SM_large_50bus_2 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_3" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_2 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_2 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_2 .
+
+cim:GEN_large_50bus_3 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_4" ;
+    cim:GeneratingUnit.maxOperatingP 151.2 ;
+    cim:GeneratingUnit.minOperatingP 15.1 ;
+    cim:GeneratingUnit.nominalP 121.0 .
+
+cim:SM_large_50bus_3 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_4" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_3 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_3 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_3 .
+
+cim:GEN_large_50bus_4 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_5" ;
+    cim:GeneratingUnit.maxOperatingP 179.9 ;
+    cim:GeneratingUnit.minOperatingP 18.0 ;
+    cim:GeneratingUnit.nominalP 143.9 .
+
+cim:SM_large_50bus_4 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_5" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_4 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_4 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_4 .
+
+cim:GEN_large_50bus_5 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_6" ;
+    cim:GeneratingUnit.maxOperatingP 401.3 ;
+    cim:GeneratingUnit.minOperatingP 40.1 ;
+    cim:GeneratingUnit.nominalP 321.0 .
+
+cim:SM_large_50bus_5 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_6" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_5 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_5 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_5 .
+
+cim:GEN_large_50bus_6 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_7" ;
+    cim:GeneratingUnit.maxOperatingP 304.5 ;
+    cim:GeneratingUnit.minOperatingP 30.5 ;
+    cim:GeneratingUnit.nominalP 243.6 .
+
+cim:SM_large_50bus_6 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_7" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_6 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_6 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_6 .
+
+cim:GEN_large_50bus_7 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_8" ;
+    cim:GeneratingUnit.maxOperatingP 397.6 ;
+    cim:GeneratingUnit.minOperatingP 39.8 ;
+    cim:GeneratingUnit.nominalP 318.1 .
+
+cim:SM_large_50bus_7 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_8" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_7 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_7 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_7 .
+
+cim:GEN_large_50bus_8 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_9" ;
+    cim:GeneratingUnit.maxOperatingP 272.9 ;
+    cim:GeneratingUnit.minOperatingP 27.3 ;
+    cim:GeneratingUnit.nominalP 218.3 .
+
+cim:SM_large_50bus_8 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_9" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_8 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_8 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_8 .
+
+cim:GEN_large_50bus_9 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_10" ;
+    cim:GeneratingUnit.maxOperatingP 279.9 ;
+    cim:GeneratingUnit.minOperatingP 28.0 ;
+    cim:GeneratingUnit.nominalP 223.9 .
+
+cim:SM_large_50bus_9 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_10" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_9 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_9 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_9 .
+
+cim:GEN_large_50bus_10 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_11" ;
+    cim:GeneratingUnit.maxOperatingP 307.7 ;
+    cim:GeneratingUnit.minOperatingP 30.8 ;
+    cim:GeneratingUnit.nominalP 246.2 .
+
+cim:SM_large_50bus_10 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_11" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_10 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_10 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_10 .
+
+cim:GEN_large_50bus_11 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_12" ;
+    cim:GeneratingUnit.maxOperatingP 170.6 ;
+    cim:GeneratingUnit.minOperatingP 17.1 ;
+    cim:GeneratingUnit.nominalP 136.5 .
+
+cim:SM_large_50bus_11 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_12" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_large_50bus_11 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_GEN_large_50bus_11 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_large_50bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_11 .
+
+cim:LOAD_large_50bus_0 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_1" ;
+    cim:EnergyConsumer.p 167.5 ;
+    cim:EnergyConsumer.q 66.5 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_12 .
+
+cim:LOAD_large_50bus_1 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_2" ;
+    cim:EnergyConsumer.p 167.2 ;
+    cim:EnergyConsumer.q 54.7 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_13 .
+
+cim:LOAD_large_50bus_2 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_3" ;
+    cim:EnergyConsumer.p 230.4 ;
+    cim:EnergyConsumer.q 53.5 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_2 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_14 .
+
+cim:LOAD_large_50bus_3 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_4" ;
+    cim:EnergyConsumer.p 73.4 ;
+    cim:EnergyConsumer.q 16.7 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_3 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_15 .
+
+cim:LOAD_large_50bus_4 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_5" ;
+    cim:EnergyConsumer.p 223.4 ;
+    cim:EnergyConsumer.q 66.1 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_4 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_16 .
+
+cim:LOAD_large_50bus_5 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_6" ;
+    cim:EnergyConsumer.p 81.8 ;
+    cim:EnergyConsumer.q 29.6 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_5 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_17 .
+
+cim:LOAD_large_50bus_6 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_7" ;
+    cim:EnergyConsumer.p 19.3 ;
+    cim:EnergyConsumer.q 3.5 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_6 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_18 .
+
+cim:LOAD_large_50bus_7 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_8" ;
+    cim:EnergyConsumer.p 260.0 ;
+    cim:EnergyConsumer.q 32.8 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_7 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_19 .
+
+cim:LOAD_large_50bus_8 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_9" ;
+    cim:EnergyConsumer.p 260.9 ;
+    cim:EnergyConsumer.q 35.3 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_8 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_8 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_20 .
+
+cim:LOAD_large_50bus_9 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_10" ;
+    cim:EnergyConsumer.p 245.4 ;
+    cim:EnergyConsumer.q 40.0 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_9 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_9 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_21 .
+
+cim:LOAD_large_50bus_10 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_11" ;
+    cim:EnergyConsumer.p 223.9 ;
+    cim:EnergyConsumer.q 68.7 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_10 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_10 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_22 .
+
+cim:LOAD_large_50bus_11 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_12" ;
+    cim:EnergyConsumer.p 259.7 ;
+    cim:EnergyConsumer.q 73.5 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_11 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_11 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_23 .
+
+cim:LOAD_large_50bus_12 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_13" ;
+    cim:EnergyConsumer.p 134.2 ;
+    cim:EnergyConsumer.q 38.2 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_12 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_12 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_24 .
+
+cim:LOAD_large_50bus_13 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_14" ;
+    cim:EnergyConsumer.p 237.6 ;
+    cim:EnergyConsumer.q 81.7 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_13 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_13 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_25 .
+
+cim:LOAD_large_50bus_14 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_15" ;
+    cim:EnergyConsumer.p 243.6 ;
+    cim:EnergyConsumer.q 66.0 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_14 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_14 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_26 .
+
+cim:LOAD_large_50bus_15 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_16" ;
+    cim:EnergyConsumer.p 164.4 ;
+    cim:EnergyConsumer.q 45.9 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_15 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_15 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_27 .
+
+cim:LOAD_large_50bus_16 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_17" ;
+    cim:EnergyConsumer.p 58.8 ;
+    cim:EnergyConsumer.q 23.1 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_16 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_16 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_28 .
+
+cim:LOAD_large_50bus_17 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_18" ;
+    cim:EnergyConsumer.p 94.9 ;
+    cim:EnergyConsumer.q 25.8 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_17 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_17 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_29 .
+
+cim:LOAD_large_50bus_18 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_19" ;
+    cim:EnergyConsumer.p 286.2 ;
+    cim:EnergyConsumer.q 72.8 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_18 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_18 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_30 .
+
+cim:LOAD_large_50bus_19 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_20" ;
+    cim:EnergyConsumer.p 271.0 ;
+    cim:EnergyConsumer.q 93.4 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_large_50bus .
+
+cim:T_LOAD_large_50bus_19 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_large_50bus_19 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_31 .
+
+cim:PT_large_50bus_0 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_1" .
+
+cim:PTW_large_50bus_0_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_0 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 154.2 ;
+    cim:PowerTransformerEnd.ratedU 220.0 .
+
+cim:T_PT_large_50bus_0_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_0 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_large_50bus_0_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_0 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 400.0 ;
+    cim:PowerTransformerEnd.ratedU 127.02 .
+
+cim:T_PT_large_50bus_0_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_1 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_large_50bus_1 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_2" .
+
+cim:PTW_large_50bus_1_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_1 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 264.6 ;
+    cim:PowerTransformerEnd.ratedU 220.0 .
+
+cim:T_PT_large_50bus_1_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_2 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_large_50bus_1_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_1 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 123.7 ;
+    cim:PowerTransformerEnd.ratedU 127.02 .
+
+cim:T_PT_large_50bus_1_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_1 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_3 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_large_50bus_2 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_3" .
+
+cim:PTW_large_50bus_2_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_2 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 210.9 ;
+    cim:PowerTransformerEnd.ratedU 220.0 .
+
+cim:T_PT_large_50bus_2_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_4 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_large_50bus_2_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_2 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 362.4 ;
+    cim:PowerTransformerEnd.ratedU 127.02 .
+
+cim:T_PT_large_50bus_2_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_2 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_5 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_large_50bus_3 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_4" .
+
+cim:PTW_large_50bus_3_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_3 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 380.6 ;
+    cim:PowerTransformerEnd.ratedU 220.0 .
+
+cim:T_PT_large_50bus_3_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_6 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_large_50bus_3_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_3 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 153.1 ;
+    cim:PowerTransformerEnd.ratedU 127.02 .
+
+cim:T_PT_large_50bus_3_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_3 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_7 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_large_50bus_4 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_5" .
+
+cim:PTW_large_50bus_4_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_4 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 158.5 ;
+    cim:PowerTransformerEnd.ratedU 220.0 .
+
+cim:T_PT_large_50bus_4_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_8 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_large_50bus_4_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_4 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 228.8 ;
+    cim:PowerTransformerEnd.ratedU 127.02 .
+
+cim:T_PT_large_50bus_4_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_4 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_9 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_large_50bus_5 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_6" .
+
+cim:PTW_large_50bus_5_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_5 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 199.0 ;
+    cim:PowerTransformerEnd.ratedU 220.0 .
+
+cim:T_PT_large_50bus_5_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_10 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_large_50bus_5_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_5 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 437.4 ;
+    cim:PowerTransformerEnd.ratedU 127.02 .
+
+cim:T_PT_large_50bus_5_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_5 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_11 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_large_50bus_6 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_7" .
+
+cim:PTW_large_50bus_6_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_6 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 257.1 ;
+    cim:PowerTransformerEnd.ratedU 220.0 .
+
+cim:T_PT_large_50bus_6_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_12 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_large_50bus_6_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_6 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 156.9 ;
+    cim:PowerTransformerEnd.ratedU 127.02 .
+
+cim:T_PT_large_50bus_6_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_6 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_13 ;
+    cim:ACDCTerminal.sequenceNumber 2 .
+
+cim:PT_large_50bus_7 a cim:PowerTransformer ;
+    cim:IdentifiedObject.name "TRAFO_8" .
+
+cim:PTW_large_50bus_7_0 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_7 ;
+    cim:TransformerEnd.endNumber 1 ;
+    cim:PowerTransformerEnd.ratedS 353.0 ;
+    cim:PowerTransformerEnd.ratedU 220.0 .
+
+cim:T_PT_large_50bus_7_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_14 ;
+    cim:ACDCTerminal.sequenceNumber 1 .
+
+cim:PTW_large_50bus_7_1 a cim:PowerTransformerEnd ;
+    cim:PowerTransformerEnd.PowerTransformer cim:PT_large_50bus_7 ;
+    cim:TransformerEnd.endNumber 2 ;
+    cim:PowerTransformerEnd.ratedS 351.1 ;
+    cim:PowerTransformerEnd.ratedU 127.02 .
+
+cim:T_PT_large_50bus_7_1 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:PT_large_50bus_7 ;
+    cim:Terminal.ConnectivityNode cim:CN_large_50bus_15 ;
+    cim:ACDCTerminal.sequenceNumber 2 .

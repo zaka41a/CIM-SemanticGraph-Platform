@@ -152,7 +152,7 @@ const History = () => {
     totalTriples: history.reduce((acc, h) => acc + (h.triplesCount ?? 0), 0),
   };
   const maxTriples = Math.max(...history.map(h => h.triplesCount ?? 0), 1);
-  const latest = history.sort((a, b) => b.importDate.getTime() - a.importDate.getTime())[0];
+  const latest = [...history].sort((a, b) => b.importDate.getTime() - a.importDate.getTime())[0];
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <ChevronUp size={12} className="text-neutral-700" />;
@@ -179,11 +179,8 @@ const History = () => {
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl" />
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl shadow-lg shadow-accent-500/20">
-              <FileCheck size={28} className="text-white" />
-            </div>
             <div>
-              <h1 className="text-3xl font-bold text-white mb-1">Import History</h1>
+              <h1 className="text-3xl font-bold text-accent-500 mb-1">Import History</h1>
               <p className="text-neutral-300">Track and manage all CIM file imports to your Knowledge Graph</p>
             </div>
           </div>
@@ -227,7 +224,7 @@ const History = () => {
                 ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                 : latest.status === 'failed'
                 ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                : 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'
+                : 'bg-yellow-500/15 text-accent-500 border-yellow-500/30'
             }`}>
               {latest.status === 'success' && <CheckCircle2 size={13} />}
               {latest.status === 'failed' && <XCircle size={13} />}
@@ -251,10 +248,10 @@ const History = () => {
         <div className="card relative overflow-hidden border-yellow-500/20 bg-gradient-to-r from-yellow-500/5 to-transparent p-6">
           <div className="flex items-start gap-4">
             <div className="p-3 bg-yellow-500/20 rounded-xl flex-shrink-0">
-              {error ? <AlertTriangle size={22} className="text-yellow-400" /> : <Lightbulb size={22} className="text-yellow-400" />}
+              {error ? <AlertTriangle size={22} className="text-accent-500" /> : <Lightbulb size={22} className="text-accent-500" />}
             </div>
             <div className="flex-1">
-              <h4 className="font-semibold text-yellow-400 mb-1">
+              <h4 className="font-semibold text-accent-500 mb-1">
                 {error ? 'Could not load history' : 'No Import History Yet'}
               </h4>
               <p className="text-sm text-yellow-300/80 mb-3">
@@ -455,7 +452,7 @@ const History = () => {
                             </span>
                           )}
                           {item.status === 'processing' && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 rounded-full text-xs font-semibold">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-yellow-500/15 text-accent-500 border border-yellow-500/30 rounded-full text-xs font-semibold">
                               <Clock size={12} className="animate-spin" />
                               Processing
                             </span>

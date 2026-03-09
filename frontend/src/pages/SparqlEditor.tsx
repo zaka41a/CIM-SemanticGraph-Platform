@@ -129,7 +129,7 @@ ORDER BY DESC(?nominalVoltage)`,
     blue:    { iconBg: 'bg-sky-500/20',     iconText: 'text-sky-400',     border: 'hover:border-sky-500/30',    dot: 'bg-sky-500'    },
     purple:  { iconBg: 'bg-purple-500/20',  iconText: 'text-purple-400',  border: 'hover:border-purple-500/30', dot: 'bg-purple-500' },
     cyan:    { iconBg: 'bg-cyan-500/20',    iconText: 'text-cyan-400',    border: 'hover:border-cyan-500/30',   dot: 'bg-cyan-500'   },
-    yellow:  { iconBg: 'bg-yellow-500/20',  iconText: 'text-yellow-400',  border: 'hover:border-yellow-500/30', dot: 'bg-yellow-500' },
+    yellow:  { iconBg: 'bg-yellow-500/20',  iconText: 'text-accent-500',  border: 'hover:border-yellow-500/30', dot: 'bg-yellow-500' },
   };
 
   const handleExecute = async () => {
@@ -226,11 +226,8 @@ ORDER BY DESC(?nominalVoltage)`,
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent-500/5 rounded-full blur-3xl"></div>
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl shadow-lg shadow-accent-500/20">
-              <Code2 size={28} className="text-white" />
-            </div>
             <div>
-              <h1 className="text-3xl font-bold text-white mb-1">SPARQL Query Editor</h1>
+              <h1 className="text-3xl font-bold text-accent-500 mb-1">SPARQL Query Editor</h1>
               <p className="text-neutral-300">
                 Execute powerful queries against your CIM Knowledge Graph
               </p>
@@ -630,7 +627,7 @@ ORDER BY DESC(?nominalVoltage)`,
           {results && results.results.length === 0 && (
             <div className="card p-12 text-center animate-slide-up">
               <div className="w-14 h-14 bg-yellow-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Table2 size={24} className="text-yellow-400" />
+                <Table2 size={24} className="text-accent-500" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-1">No Results</h3>
               <p className="text-sm text-neutral-400">The query executed successfully but returned no matching data.</p>

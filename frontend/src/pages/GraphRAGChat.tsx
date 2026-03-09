@@ -194,8 +194,7 @@ const GraphRAGChat = () => {
         <header className="bg-primary-900/50 border-b border-primary-700/30 px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                <Bot className="w-6 h-6 text-accent-400" />
+              <h1 className="text-xl font-bold text-accent-500">
                 GraphRAG Chat
               </h1>
               <p className="text-sm text-neutral-400">Claude AI Agent with semantic search and load flow tools</p>

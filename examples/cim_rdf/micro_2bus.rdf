@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- CIM/XML  IEC 61970-552  –  micro_2bus -->
+<rdf:RDF
+  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+  xmlns:cim="http://iec.ch/TC57/CIM100#"
+  xmlns:md="http://iec.ch/TC57/61970-552/ModelDescription/1#">
+
+  <md:FullModel rdf:about="urn:uuid:7e5db1ff54f14443bb8c50511ece8e8f">
+    <md:Model.description>CIM test network – micro_2bus</md:Model.description>
+    <md:Model.version>1</md:Model.version>
+    <md:Model.profile>http://iec.ch/TC57/61970-552/ModelDescription/1</md:Model.profile>
+  </md:FullModel>
+
+  <cim:BaseVoltage rdf:ID="_2ed0d7a7c4c84b5ea2901d7f21676516">
+    <cim:IdentifiedObject.name>BV_10.5kV</cim:IdentifiedObject.name>
+    <cim:BaseVoltage.nominalVoltage>10.5</cim:BaseVoltage.nominalVoltage>
+  </cim:BaseVoltage>
+  <cim:Substation rdf:ID="_47431c74efee4513bd7627da994e4e63">
+    <cim:IdentifiedObject.name>SS_micro_2bus</cim:IdentifiedObject.name>
+  </cim:Substation>
+  <cim:VoltageLevel rdf:ID="_22d25ee5dc1f41d899afe022853ec9f2">
+    <cim:IdentifiedObject.name>VL_micro_2bus</cim:IdentifiedObject.name>
+    <cim:VoltageLevel.Substation rdf:resource="#_47431c74efee4513bd7627da994e4e63"/>
+    <cim:VoltageLevel.BaseVoltage rdf:resource="#_2ed0d7a7c4c84b5ea2901d7f21676516"/>
+  </cim:VoltageLevel>
+  <cim:ConnectivityNode rdf:ID="_d82553a28c61477ca4e7203662bf7b63">
+    <cim:IdentifiedObject.name>BUS_001</cim:IdentifiedObject.name>
+    <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_22d25ee5dc1f41d899afe022853ec9f2"/>
+  </cim:ConnectivityNode>
+  <cim:BusbarSection rdf:ID="_dd590679d69347da80c84348097e5761">
+    <cim:IdentifiedObject.name>BB_BUS_001</cim:IdentifiedObject.name>
+    <cim:ConductingEquipment.BaseVoltage rdf:resource="#_2ed0d7a7c4c84b5ea2901d7f21676516"/>
+  </cim:BusbarSection>
+  <cim:Terminal rdf:ID="_4f441714171244609bf5a9a85d14d064">
+    <cim:Terminal.ConductingEquipment rdf:resource="#_dd590679d69347da80c84348097e5761"/>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_d82553a28c61477ca4e7203662bf7b63"/>
+  </cim:Terminal>
+  <cim:ConnectivityNode rdf:ID="_9a7d9bde8ef2446d92d892d80f8ce5f1">
+    <cim:IdentifiedObject.name>BUS_002</cim:IdentifiedObject.name>
+    <cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_22d25ee5dc1f41d899afe022853ec9f2"/>
+  </cim:ConnectivityNode>
+  <cim:BusbarSection rdf:ID="_d78cda5fa1bb4e58bb8040d692f468c5">
+    <cim:IdentifiedObject.name>BB_BUS_002</cim:IdentifiedObject.name>
+    <cim:ConductingEquipment.BaseVoltage rdf:resource="#_2ed0d7a7c4c84b5ea2901d7f21676516"/>
+  </cim:BusbarSection>
+  <cim:Terminal rdf:ID="_6177993f4db947e3a310f709e4bf1aa7">
+    <cim:Terminal.ConductingEquipment rdf:resource="#_d78cda5fa1bb4e58bb8040d692f468c5"/>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_9a7d9bde8ef2446d92d892d80f8ce5f1"/>
+  </cim:Terminal>
+  <cim:ACLineSegment rdf:ID="_0a3dcee3f629413c9458530469c73ef2">
+    <cim:IdentifiedObject.name>L1_BUS_001_BUS_002</cim:IdentifiedObject.name>
+    <cim:Conductor.length>143.5</cim:Conductor.length>
+    <cim:ACLineSegment.r>0.5893</cim:ACLineSegment.r>
+    <cim:ACLineSegment.x>3.03</cim:ACLineSegment.x>
+    <cim:ACLineSegment.bch>5.656e-05</cim:ACLineSegment.bch>
+    <cim:ConductingEquipment.BaseVoltage rdf:resource="#_2ed0d7a7c4c84b5ea2901d7f21676516"/>
+  </cim:ACLineSegment>
+  <cim:Terminal rdf:ID="_2e3fed9bd9174522ba0c2a005af51b41">
+    <cim:Terminal.ConductingEquipment rdf:resource="#_0a3dcee3f629413c9458530469c73ef2"/>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_d82553a28c61477ca4e7203662bf7b63"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+  </cim:Terminal>
+  <cim:Terminal rdf:ID="_b1072a578f2742649d164a7416201df3">
+    <cim:Terminal.ConductingEquipment rdf:resource="#_0a3dcee3f629413c9458530469c73ef2"/>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_9a7d9bde8ef2446d92d892d80f8ce5f1"/>
+    <cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber>
+  </cim:Terminal>
+  <cim:GeneratingUnit rdf:ID="_8417fc7a363d42789c8f09ac93f33211">
+    <cim:IdentifiedObject.name>GEN_1_BUS_001</cim:IdentifiedObject.name>
+    <cim:GeneratingUnit.maxOperatingP>365.6</cim:GeneratingUnit.maxOperatingP>
+    <cim:GeneratingUnit.minOperatingP>36.6</cim:GeneratingUnit.minOperatingP>
+    <cim:GeneratingUnit.nominalP>292.5</cim:GeneratingUnit.nominalP>
+  </cim:GeneratingUnit>
+  <cim:SynchronousMachine rdf:ID="_fade65491a954dd88f6f6530eefe029b">
+    <cim:IdentifiedObject.name>SM_1</cim:IdentifiedObject.name>
+    <cim:SynchronousMachine.GeneratingUnit rdf:resource="#_8417fc7a363d42789c8f09ac93f33211"/>
+    <cim:ConductingEquipment.BaseVoltage rdf:resource="#_2ed0d7a7c4c84b5ea2901d7f21676516"/>
+    <cim:RegulatingCondEq.RegulatingControl rdf:resource="#_8417fc7a363d42789c8f09ac93f33211"/>
+  </cim:SynchronousMachine>
+  <cim:Terminal rdf:ID="_e59913cae0d74ef3a7ba7ba3176fc5c4">
+    <cim:Terminal.ConductingEquipment rdf:resource="#_fade65491a954dd88f6f6530eefe029b"/>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_d82553a28c61477ca4e7203662bf7b63"/>
+  </cim:Terminal>
+  <cim:EnergyConsumer rdf:ID="_478dff2523d4470796dc415617a8a7f2">
+    <cim:IdentifiedObject.name>LOAD_1_BUS_002</cim:IdentifiedObject.name>
+    <cim:EnergyConsumer.p>131.7</cim:EnergyConsumer.p>
+    <cim:EnergyConsumer.q>30.9</cim:EnergyConsumer.q>
+    <cim:ConductingEquipment.BaseVoltage rdf:resource="#_2ed0d7a7c4c84b5ea2901d7f21676516"/>
+  </cim:EnergyConsumer>
+  <cim:Terminal rdf:ID="_0d30522e385d4b788c4b98c69ed6c6dc">
+    <cim:Terminal.ConductingEquipment rdf:resource="#_478dff2523d4470796dc415617a8a7f2"/>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_9a7d9bde8ef2446d92d892d80f8ce5f1"/>
+  </cim:Terminal>
+  <cim:PowerTransformer rdf:ID="_262d1e88747b4d9990f98c6c5004a8cd">
+    <cim:IdentifiedObject.name>TRAFO_1</cim:IdentifiedObject.name>
+  </cim:PowerTransformer>
+  <cim:PowerTransformerEnd rdf:ID="_7b4b0340dcc948588fd29f60cadde814">
+    <cim:IdentifiedObject.name>TRAFO_1_W1</cim:IdentifiedObject.name>
+    <cim:PowerTransformerEnd.PowerTransformer rdf:resource="#_262d1e88747b4d9990f98c6c5004a8cd"/>
+    <cim:TransformerEnd.endNumber>1</cim:TransformerEnd.endNumber>
+    <cim:PowerTransformerEnd.ratedS>211.3</cim:PowerTransformerEnd.ratedS>
+    <cim:PowerTransformerEnd.ratedU>10.5</cim:PowerTransformerEnd.ratedU>
+    <cim:PowerTransformerEnd.r>1.7517</cim:PowerTransformerEnd.r>
+    <cim:PowerTransformerEnd.x>11.6233</cim:PowerTransformerEnd.x>
+  </cim:PowerTransformerEnd>
+  <cim:Terminal rdf:ID="_81c41d3b7e0e4105b4b8bd75b090743f">
+    <cim:Terminal.ConductingEquipment rdf:resource="#_262d1e88747b4d9990f98c6c5004a8cd"/>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_d82553a28c61477ca4e7203662bf7b63"/>
+    <cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber>
+  </cim:Terminal>
+  <cim:PowerTransformerEnd rdf:ID="_ef76185f9e6542738e7249202be1de3c">
+    <cim:IdentifiedObject.name>TRAFO_1_W2</cim:IdentifiedObject.name>
+    <cim:PowerTransformerEnd.PowerTransformer rdf:resource="#_262d1e88747b4d9990f98c6c5004a8cd"/>
+    <cim:TransformerEnd.endNumber>2</cim:TransformerEnd.endNumber>
+    <cim:PowerTransformerEnd.ratedS>163.9</cim:PowerTransformerEnd.ratedS>
+    <cim:PowerTransformerEnd.ratedU>6.062177826491071</cim:PowerTransformerEnd.ratedU>
+    <cim:PowerTransformerEnd.r>0.903</cim:PowerTransformerEnd.r>
+    <cim:PowerTransformerEnd.x>4.8902</cim:PowerTransformerEnd.x>
+  </cim:PowerTransformerEnd>
+  <cim:Terminal rdf:ID="_d1d3455998a34143b8c761d404ad78ef">
+    <cim:Terminal.ConductingEquipment rdf:resource="#_262d1e88747b4d9990f98c6c5004a8cd"/>
+    <cim:Terminal.ConnectivityNode rdf:resource="#_9a7d9bde8ef2446d92d892d80f8ce5f1"/>
+    <cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber>
+  </cim:Terminal>
+</rdf:RDF>

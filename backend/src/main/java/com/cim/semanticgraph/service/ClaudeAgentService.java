@@ -405,6 +405,22 @@ public class ClaudeAgentService {
         }
     }
 
+    /** Simple non-agentic Claude call with graph context — used as LLM fallback in GraphRAGService. */
+    @SuppressWarnings("unchecked")
+    public String queryWithContext(String question, String graphContext) {
+        String userMsg = "Context from CIM Knowledge Graph:\n" + graphContext
+                + "\n\nQuestion: " + question;
+        List<Map<String, Object>> messages = List.of(Map.of("role", "user", "content", userMsg));
+        Map<String, Object> response = callClaudeNoTools(messages);
+        if (response == null) return "Claude API call failed.";
+        List<Map<String, Object>> content = (List<Map<String, Object>>) response.get("content");
+        if (content == null || content.isEmpty()) return "No response from Claude.";
+        return content.stream()
+                .filter(b -> "text".equals(b.get("type")))
+                .map(b -> (String) b.get("text"))
+                .findFirst().orElse("No text response from Claude.");
+    }
+
     /** Call Claude with no tools — forces a plain text response. */
     @SuppressWarnings("unchecked")
     private Map<String, Object> callClaudeNoTools(List<Map<String, Object>> messages) {

@@ -3,8 +3,6 @@ package com.cim.semanticgraph.config;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.ontology.OntModelSpec;
-import org.apache.jena.query.Dataset;
-import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdfconnection.RDFConnection;
 import org.apache.jena.rdfconnection.RDFConnectionRemote;
@@ -41,10 +39,7 @@ public class JenaConfig {
     @Value("${cim.schema.base-uri}")
     private String cimBaseUri;
 
-    @Value("${jena.storage-mode:remote}")
-    private String storageMode;
-
-    @Value("${jena.fuseki.remote-url:}")
+    @Value("${jena.fuseki.remote-url}")
     private String fusekiRemoteUrl;
 
     @Value("${jena.fuseki.dataset-name:cim}")
@@ -57,7 +52,6 @@ public class JenaConfig {
     private String fusekiPassword;
 
     private final ResourceLoader resourceLoader;
-    private Dataset dataset;
     private RDFConnection rdfConnection;
 
     public JenaConfig(ResourceLoader resourceLoader) {
@@ -66,40 +60,19 @@ public class JenaConfig {
 
     @PostConstruct
     public void init() {
-        log.info("Storage Mode: {}", storageMode);
         log.info("Reasoning Enabled: {}", reasoningEnabled);
         log.info("Fuseki Endpoint: {}/{}", fusekiRemoteUrl, fusekiDatasetName);
     }
 
-    public boolean isRemoteMode() {
-        return "remote".equalsIgnoreCase(storageMode);
-    }
-
-    public RDFConnection getRdfConnection() {
-        return rdfConnection;
-    }
-
-    @Bean
-    public Dataset dataset() {
-        dataset = DatasetFactory.createTxnMem();
-        log.info("Initialized in-memory dataset placeholder for remote Fuseki mode");
-        return dataset;
-    }
-
     @Bean
     public RDFConnection rdfConnection() {
-        if (!isRemoteMode()) {
-            log.warn("Remote Fuseki mode disabled; RDFConnection not created.");
-            return null;
-        }
-
         if (fusekiRemoteUrl == null || fusekiRemoteUrl.isBlank()) {
-            throw new IllegalStateException("jena.fuseki.remote-url must be configured when storage mode is remote");
+            throw new IllegalStateException("jena.fuseki.remote-url must be configured");
         }
 
         String base = fusekiRemoteUrl.endsWith("/") ? fusekiRemoteUrl : fusekiRemoteUrl + "/";
         String endpoint = base + fusekiDatasetName;
-        log.info("Connecting to remote Fuseki endpoint: {} (user: {})", endpoint, fusekiUsername);
+        log.info("Connecting to Fuseki: {} (user: {})", endpoint, fusekiUsername);
 
         HttpClient httpClient = HttpClient.newBuilder()
                 .authenticator(new Authenticator() {
@@ -122,7 +95,7 @@ public class JenaConfig {
     }
 
     @Bean
-    public OntModel ontModel(Dataset dataset) {
+    public OntModel ontModel() {
         OntModelSpec spec = reasoningEnabled ? getOntModelSpec() : OntModelSpec.OWL_MEM;
         OntModel ontModel = ModelFactory.createOntologyModel(spec);
 
@@ -140,22 +113,21 @@ public class JenaConfig {
         if (!reasoningEnabled) {
             return null;
         }
-
         return switch (reasonerType.toUpperCase()) {
             case "OWL_MEM_RULE_INF" -> ReasonerRegistry.getOWLMicroReasoner();
-            case "RDFS_INF" -> ReasonerRegistry.getRDFSReasoner();
-            case "OWL_DL_MEM" -> ReasonerRegistry.getOWLReasoner();
-            case "TRANSITIVE" -> ReasonerRegistry.getTransitiveReasoner();
-            default -> ReasonerRegistry.getOWLMicroReasoner();
+            case "RDFS_INF"         -> ReasonerRegistry.getRDFSReasoner();
+            case "OWL_DL_MEM"       -> ReasonerRegistry.getOWLReasoner();
+            case "TRANSITIVE"       -> ReasonerRegistry.getTransitiveReasoner();
+            default                 -> ReasonerRegistry.getOWLMicroReasoner();
         };
     }
 
     private OntModelSpec getOntModelSpec() {
         return switch (reasonerType.toUpperCase()) {
             case "OWL_MEM_RULE_INF" -> OntModelSpec.OWL_MEM_RULE_INF;
-            case "RDFS_INF" -> OntModelSpec.OWL_MEM_RDFS_INF;
-            case "OWL_DL_MEM" -> OntModelSpec.OWL_DL_MEM;
-            default -> OntModelSpec.OWL_MEM_RULE_INF;
+            case "RDFS_INF"         -> OntModelSpec.OWL_MEM_RDFS_INF;
+            case "OWL_DL_MEM"       -> OntModelSpec.OWL_DL_MEM;
+            default                 -> OntModelSpec.OWL_MEM_RULE_INF;
         };
     }
 
@@ -172,19 +144,10 @@ public class JenaConfig {
     @PreDestroy
     public void cleanup() {
         log.info("Shutting down Jena resources...");
-        closeQuietly(rdfConnection, "RDFConnection");
-        if (dataset != null) {
-            try {
-                dataset.close();
-            } catch (Exception e) {
-                log.warn("Error closing Dataset: {}", e.getMessage());
+        if (rdfConnection != null) {
+            try { rdfConnection.close(); } catch (Exception e) {
+                log.warn("Error closing RDFConnection: {}", e.getMessage());
             }
-        }
-    }
-
-    private void closeQuietly(AutoCloseable resource, String name) {
-        if (resource != null) {
-            try { resource.close(); } catch (Exception e) { log.warn("Error closing {}: {}", name, e.getMessage()); }
         }
     }
 

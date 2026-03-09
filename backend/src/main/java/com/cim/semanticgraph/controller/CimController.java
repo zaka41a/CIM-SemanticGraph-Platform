@@ -156,13 +156,8 @@ public class CimController {
         log.info("Validation request received. Filename: {}", file.getOriginalFilename());
 
         try {
-            org.apache.jena.rdf.model.Model model;
-            if ("CIM/XML".equalsIgnoreCase(format)) {
-                model = cimTransformerService.transformCimXmlToRdf(file.getInputStream());
-            } else {
-                model = cimTransformerService.transformCimRdfToModel(
-                        file.getInputStream(), format);
-            }
+            org.apache.jena.rdf.model.Model model = cimTransformerService.transformCimRdfToModel(
+                    file.getInputStream(), format);
 
             ValidationResult validation = cimTransformerService.validateCimSchema(model);
 

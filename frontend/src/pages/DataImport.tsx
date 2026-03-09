@@ -47,11 +47,8 @@ const DataImport = () => {
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent-500/5 rounded-full blur-3xl"></div>
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl shadow-lg shadow-accent-500/20">
-              <Upload size={28} className="text-white" />
-            </div>
             <div>
-              <h1 className="text-3xl font-bold text-white mb-1">Data Import</h1>
+              <h1 className="text-3xl font-bold text-accent-500 mb-1">Data Import</h1>
               <p className="text-neutral-300">
                 Import CIM data files into the Knowledge Graph with semantic reasoning
               </p>
@@ -131,7 +128,7 @@ const DataImport = () => {
                   ))}
                 </div>
                 <div className="mt-3 flex items-start gap-2 text-xs text-neutral-400">
-                  <Lightbulb size={14} className="text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <Lightbulb size={14} className="text-accent-500 flex-shrink-0 mt-0.5" />
                   <span>Column names can be in English or French. First row must be headers.</span>
                 </div>
               </div>

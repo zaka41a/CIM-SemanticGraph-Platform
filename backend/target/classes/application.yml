@@ -3,6 +3,8 @@ spring:
     name: CIM-SemanticGraph-Platform
   profiles:
     active: default
+  config:
+    import: optional:file:.env[.properties]
   mvc:
     throw-exception-if-no-handler-found: true
   web:
@@ -38,7 +40,6 @@ server:
     mime-types: application/json,application/xml,text/html,text/xml,text/plain
 
 jena:
-  storage-mode: ${JENA_STORAGE_MODE:remote}
   fuseki:
     remote-url: ${JENA_FUSEKI_REMOTE_URL:http://localhost:3030}
     dataset-name: ${JENA_FUSEKI_DATASET:cim}
@@ -262,8 +263,6 @@ server:
   port: 8080
 
 jena:
-  tdb:
-    location: ./data/tdb2-dev
 
 ---
 spring:
@@ -280,9 +279,6 @@ server:
   port: 8080
 
 jena:
-  storage-mode: ${JENA_STORAGE_MODE:fuseki}
-  tdb:
-    location: /app/data/tdb2
   fuseki:
     remote-url: ${FUSEKI_URL:http://fuseki:3030}
 

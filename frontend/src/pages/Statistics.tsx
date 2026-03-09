@@ -226,11 +226,8 @@ const Statistics = () => {
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl shadow-lg shadow-accent-500/20">
-                <BarChart3 size={28} className="text-white" />
-              </div>
               <div>
-                <h1 className="text-3xl font-bold text-white mb-2">Network Statistics</h1>
+                <h1 className="text-3xl font-bold text-accent-500 mb-2">Network Statistics</h1>
                 <p className="text-neutral-300">
                   Real-time overview of your CIM Knowledge Graph
                 </p>

@@ -1,0 +1,58 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix cim:  <http://iec.ch/TC57/CIM100#> .
+@prefix md:   <http://iec.ch/TC57/61970-552/ModelDescription/1#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+
+# CIM Turtle – tiny_1bus  (1 buses, 0 lines)
+
+cim:BV_tiny_1bus a cim:BaseVoltage ;
+    cim:IdentifiedObject.name "BV_10.5kV" ;
+    cim:BaseVoltage.nominalVoltage 10.5 .
+
+cim:SS_tiny_1bus a cim:Substation ;
+    cim:IdentifiedObject.name "SS_tiny_1bus" .
+
+cim:VL_tiny_1bus a cim:VoltageLevel ;
+    cim:IdentifiedObject.name "VL_tiny_1bus" ;
+    cim:VoltageLevel.Substation cim:SS_tiny_1bus ;
+    cim:VoltageLevel.BaseVoltage cim:BV_tiny_1bus .
+
+cim:CN_tiny_1bus_0 a cim:ConnectivityNode ;
+    cim:IdentifiedObject.name "BUS_001" ;
+    cim:ConnectivityNode.ConnectivityNodeContainer cim:VL_tiny_1bus .
+
+cim:BB_tiny_1bus_0 a cim:BusbarSection ;
+    cim:IdentifiedObject.name "BB_BUS_001" ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_tiny_1bus .
+
+cim:T_BB_tiny_1bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:BB_tiny_1bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_tiny_1bus_0 .
+
+cim:GEN_tiny_1bus_0 a cim:GeneratingUnit ;
+    cim:IdentifiedObject.name "GEN_1" ;
+    cim:GeneratingUnit.maxOperatingP 150.4 ;
+    cim:GeneratingUnit.minOperatingP 15.0 ;
+    cim:GeneratingUnit.nominalP 120.3 .
+
+cim:SM_tiny_1bus_0 a cim:SynchronousMachine ;
+    cim:IdentifiedObject.name "SM_1" ;
+    cim:SynchronousMachine.GeneratingUnit cim:GEN_tiny_1bus_0 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_tiny_1bus .
+
+cim:T_GEN_tiny_1bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:SM_tiny_1bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_tiny_1bus_0 .
+
+cim:LOAD_tiny_1bus_0 a cim:EnergyConsumer ;
+    cim:IdentifiedObject.name "LOAD_1" ;
+    cim:EnergyConsumer.p 223.6 ;
+    cim:EnergyConsumer.q 67.8 ;
+    cim:ConductingEquipment.BaseVoltage cim:BV_tiny_1bus .
+
+cim:T_LOAD_tiny_1bus_0 a cim:Terminal ;
+    cim:Terminal.ConductingEquipment cim:LOAD_tiny_1bus_0 ;
+    cim:Terminal.ConnectivityNode cim:CN_tiny_1bus_0 .

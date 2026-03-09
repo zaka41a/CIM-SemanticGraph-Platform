@@ -26,6 +26,13 @@
     </properties>
 
     <dependencies>
+        <!-- Auto-load .env file -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -72,23 +79,6 @@
             <version>${jena.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.apache.jena</groupId>
-            <artifactId>jena-tdb2</artifactId>
-            <version>${jena.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.jena</groupId>
-            <artifactId>jena-fuseki-main</artifactId>
-            <version>${jena.version}</version>
-        </dependency>
-
-        <!-- Required by jena-fuseki-main for Prometheus metrics -->
-        <dependency>
-            <groupId>io.micrometer</groupId>
-            <artifactId>micrometer-registry-prometheus</artifactId>
-        </dependency>
 
         <!-- HTTP Client for Claude API -->
         <dependency>

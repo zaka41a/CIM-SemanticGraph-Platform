@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Context Builder for GraphRAG
@@ -25,8 +26,23 @@ public class ContextBuilder {
     @Value("${graphrag.context.include-inference}")
     private boolean includeInference;
 
+    // CIM type priority: lower number = higher priority in context
+    private static final Map<String, Integer> TYPE_PRIORITY = Map.ofEntries(
+        Map.entry("Substation", 1),
+        Map.entry("PowerTransformer", 2),
+        Map.entry("GeneratingUnit", 3),
+        Map.entry("SynchronousMachine", 3),
+        Map.entry("ACLineSegment", 4),
+        Map.entry("EnergyConsumer", 5),
+        Map.entry("VoltageLevel", 6),
+        Map.entry("BusbarSection", 7),
+        Map.entry("ConnectivityNode", 8),
+        Map.entry("Terminal", 9),
+        Map.entry("BaseVoltage", 10)
+    );
+
     /**
-     * Build context from RDF model
+     * Build context from RDF model, prioritizing important CIM types first.
      *
      * @param model      RDF model (subgraph)
      * @param maxTriples Maximum triples to include
@@ -45,9 +61,14 @@ public class ContextBuilder {
         // Group triples by subject
         Map<Resource, List<Statement>> triplesBySubject = groupTriplesBySubject(model);
 
-        // Build context for each entity
+        // Sort subjects by CIM type priority (important types first)
+        List<Map.Entry<Resource, List<Statement>>> sortedEntries = triplesBySubject.entrySet().stream()
+                .sorted(Comparator.comparingInt(e -> getTypePriority(e.getValue())))
+                .collect(Collectors.toList());
+
+        // Build context for each entity in priority order
         int triplesIncluded = 0;
-        for (Map.Entry<Resource, List<Statement>> entry : triplesBySubject.entrySet()) {
+        for (Map.Entry<Resource, List<Statement>> entry : sortedEntries) {
             if (triplesIncluded >= maxTriples) {
                 break;
             }
@@ -67,6 +88,22 @@ public class ContextBuilder {
         log.info("Context built: {} characters, {} triples", result.length(), triplesIncluded);
 
         return result;
+    }
+
+    /** Returns the CIM type priority score for a set of statements (lower = higher priority). */
+    private int getTypePriority(List<Statement> statements) {
+        for (Statement stmt : statements) {
+            if (stmt.getPredicate().equals(RDF.type) && stmt.getObject().isResource()) {
+                String typeUri = stmt.getObject().asResource().getURI();
+                if (typeUri != null) {
+                    String localName = typeUri.contains("#")
+                            ? typeUri.substring(typeUri.lastIndexOf('#') + 1)
+                            : typeUri.substring(typeUri.lastIndexOf('/') + 1);
+                    return TYPE_PRIORITY.getOrDefault(localName, 99);
+                }
+            }
+        }
+        return 99;
     }
 
     /**

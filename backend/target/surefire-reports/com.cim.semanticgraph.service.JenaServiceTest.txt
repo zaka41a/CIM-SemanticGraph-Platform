@@ -1,19 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.cim.semanticgraph.service.JenaServiceTest
 -------------------------------------------------------------------------------
-Tests run: 4, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 24.84 s <<< FAILURE! -- in com.cim.semanticgraph.service.JenaServiceTest
-com.cim.semanticgraph.service.JenaServiceTest.testExecuteSparqlSelect -- Time elapsed: 6.463 s <<< ERROR!
-java.lang.RuntimeException: SPARQL query execution failed: null
-	at com.cim.semanticgraph.service.JenaService.executeSparqlSelectEmbedded(JenaService.java:204)
-	at com.cim.semanticgraph.service.JenaService.executeSparqlSelect(JenaService.java:133)
-	at com.cim.semanticgraph.service.JenaServiceTest.testExecuteSparqlSelect(JenaServiceTest.java:111)
-	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
-Caused by: org.apache.jena.query.QueryCancelledException
-	at org.apache.jena.sparql.engine.iterator.QueryIteratorBase.hasNext(QueryIteratorBase.java:112)
-	at org.apache.jena.sparql.exec.RowSetStream.hasNext(RowSetStream.java:47)
-	at org.apache.jena.sparql.engine.ResultSetStream.hasNext(ResultSetStream.java:75)
-	at com.cim.semanticgraph.service.JenaService.executeSparqlSelectEmbedded(JenaService.java:183)
-	... 5 more
-
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.110 s -- in com.cim.semanticgraph.service.JenaServiceTest

@@ -35,4 +35,8 @@ public class GraphRAGResponse {
     private Boolean inferenceUsed = false;
 
     private Object metadata;
+
+    // RAGAS-lite quality metrics (computed post-generation)
+    private Double faithfulness;
+    private Double answerRelevance;
 }

@@ -1,17 +1,20 @@
 package com.cim.semanticgraph.service;
 
 import com.cim.semanticgraph.dto.GraphRAGResponse;
+import com.cim.semanticgraph.graphrag.AnswerEvaluator;
 import com.cim.semanticgraph.graphrag.ContextBuilder;
 import com.cim.semanticgraph.graphrag.GraphTraverser;
 import com.cim.semanticgraph.model.ChatHistory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,10 +29,12 @@ public class GraphRAGService {
     private final JenaService jenaService;
     private final OllamaService ollamaService;
     private final GroqService groqService;
+    private final ClaudeAgentService claudeAgentService;
     private final EmbeddingService embeddingService;
     private final QdrantService qdrantService;
     private final GraphTraverser graphTraverser;
     private final ContextBuilder contextBuilder;
+    private final AnswerEvaluator answerEvaluator;
     private final ChatHistoryService chatHistoryService;
     private final LoadFlowService loadFlowService;
 
@@ -72,39 +77,64 @@ public class GraphRAGService {
                 log.warn("No relevant entities found for query");
                 response = buildFallbackResponse(question, startTime);
             } else {
-                Model subgraph = relevantEntities.isEmpty()
-                        ? jenaService.getModelCopy()
-                        : retrieveSubgraph(relevantEntities);
-
                 log.debug("Step 3: Building LLM context");
-                String graphContext = contextBuilder.buildContext(subgraph, maxTriples);
-                if (!sparqlContext.isEmpty()) {
-                    graphContext = sparqlContext + "\n\n---\n\n" + graphContext;
+                String graphContext;
+                long subgraphSize = 0;
+                if (!sparqlContext.isEmpty() && relevantEntities.isEmpty()) {
+                    // SPARQL already has the answer — skip loading the full RDF model
+                    graphContext = sparqlContext;
+                    log.info("Using SPARQL-only context ({} chars)", graphContext.length());
+                } else {
+                    Model subgraph = relevantEntities.isEmpty()
+                            ? jenaService.getModelCopy()
+                            : retrieveSubgraph(relevantEntities);
+                    subgraphSize = subgraph.size();
+                    graphContext = contextBuilder.buildContext(subgraph, maxTriples);
+                    if (!sparqlContext.isEmpty()) {
+                        graphContext = sparqlContext + "\n\n---\n\n" + graphContext;
+                    }
                 }
+                // Hard cap: Groq free tier limit ~12k TPM → keep context under ~24k chars (~6k tokens)
+                graphContext = truncateContext(graphContext, 24_000);
 
                 log.debug("Step 4: Querying LLM");
                 String answer;
                 if (groqService.isConfigured()) {
                     log.info("Using Groq API for LLM query");
                     answer = groqService.queryWithContext(question, graphContext);
+                } else if (claudeAgentService.isConfigured()) {
+                    log.info("Using Claude API for LLM query (Groq not configured)");
+                    answer = claudeAgentService.queryWithContext(question, graphContext);
                 } else {
-                    log.info("Using Ollama for LLM query (Groq not configured)");
-                    answer = ollamaService.queryWithContext(question, graphContext);
+                    log.warn("No LLM configured (Groq/Claude keys missing). Trying Ollama as last resort.");
+                    try {
+                        answer = ollamaService.queryWithContext(question, graphContext);
+                    } catch (Exception ollamaEx) {
+                        throw new RuntimeException(
+                            "No LLM service is available. Please configure CLAUDE_API_KEY or GROQ_API_KEY " +
+                            "in backend/.env and restart the backend with: source backend/.env && mvn spring-boot:run", ollamaEx);
+                    }
                 }
 
                 long executionTime = System.currentTimeMillis() - startTime;
                 log.info("GraphRAG query completed in {}ms", executionTime);
+
+                AnswerEvaluator.EvaluationResult eval =
+                        answerEvaluator.evaluate(question, graphContext, answer);
+                log.info("Answer quality: {}", eval.summary());
 
                 response = GraphRAGResponse.builder()
                         .answer(answer)
                         .question(question)
                         .graphContext(graphContext)
                         .sources(relevantEntities)
-                        .triplesRetrieved((int) subgraph.size())
+                        .triplesRetrieved((int) subgraphSize)
                         .executionTimeMs(executionTime)
                         .llmModel(llmModel)
                         .inferenceUsed(true)
-                        .confidence(calculateConfidence(relevantEntities.size(), subgraph.size()))
+                        .confidence(calculateConfidence(relevantEntities.size(), subgraphSize))
+                        .faithfulness(eval.faithfulness())
+                        .answerRelevance(eval.answerRelevance())
                         .timestamp(LocalDateTime.now())
                         .build();
             }
@@ -165,9 +195,14 @@ public class GraphRAGService {
             Model subgraph = graphTraverser.traverse(equipmentUri, maxDepth);
             String context = contextBuilder.buildContext(subgraph, maxTriples);
 
-            String answer = groqService.isConfigured()
-                    ? groqService.analyzeImpact(equipmentId, context)
-                    : ollamaService.analyzeImpact(equipmentId, context);
+            String answer;
+            if (groqService.isConfigured()) {
+                answer = groqService.analyzeImpact(equipmentId, context);
+            } else if (claudeAgentService.isConfigured()) {
+                answer = claudeAgentService.queryWithContext("Analyze the impact of equipment: " + equipmentId, context);
+            } else {
+                answer = ollamaService.analyzeImpact(equipmentId, context);
+            }
 
             long executionTime = System.currentTimeMillis() - startTime;
 
@@ -209,9 +244,14 @@ public class GraphRAGService {
                     row.get("s"), row.get("p"), row.get("o")));
             }
 
-            String answer = groqService.isConfigured()
-                    ? groqService.verifyConsistency(context.toString())
-                    : ollamaService.verifyConsistency(context.toString());
+            String answer;
+            if (groqService.isConfigured()) {
+                answer = groqService.verifyConsistency(context.toString());
+            } else if (claudeAgentService.isConfigured()) {
+                answer = claudeAgentService.queryWithContext("Verify network consistency", context.toString());
+            } else {
+                answer = ollamaService.verifyConsistency(context.toString());
+            }
 
             long executionTime = System.currentTimeMillis() - startTime;
 
@@ -230,10 +270,26 @@ public class GraphRAGService {
         }
     }
 
+    /**
+     * Truncate context to maxChars to stay within LLM token limits.
+     * Cuts at the last newline before the limit to avoid mid-line truncation.
+     */
+    private String truncateContext(String context, int maxChars) {
+        if (context.length() <= maxChars) return context;
+        int cutAt = context.lastIndexOf('\n', maxChars);
+        if (cutAt < maxChars / 2) cutAt = maxChars;
+        log.warn("Context truncated from {} to {} chars to stay within LLM token limit", context.length(), cutAt);
+        return context.substring(0, cutAt) + "\n\n[Context truncated to fit token limit]";
+    }
+
     private List<String> findRelevantEntities(String question) {
         log.debug("Finding relevant entities for: {}", question);
 
-        // --- Primary path: Semantic vector search via Qdrant ---
+        // Hybrid fusion: run both vector and keyword search, then merge by weighted score
+        Map<String, Double> fusedScores = new LinkedHashMap<>();
+
+        // --- Vector search via Qdrant ---
+        boolean vectorSearchDone = false;
         if (qdrantService.isAvailable() && qdrantService.countPoints() > 0) {
             try {
                 float[] queryEmbedding = embeddingService.generateEmbedding(question);
@@ -241,32 +297,55 @@ public class GraphRAGService {
                         qdrantService.search(queryEmbedding, topK, similarityThreshold);
 
                 if (!results.isEmpty()) {
-                    List<String> entities = results.stream()
-                            .map(QdrantService.SearchResult::getUri)
-                            .filter(Objects::nonNull)
-                            .distinct()
-                            .toList();
-
                     log.info("Vector search found {} entities (top score: {})",
-                            entities.size(),
-                            String.format("%.3f", results.get(0).score()));
-
-                    return entities;
+                            results.size(), String.format("%.3f", results.get(0).score()));
+                    for (QdrantService.SearchResult r : results) {
+                        if (r.getUri() != null) {
+                            // Vector score weighted at 0.7
+                            fusedScores.merge(r.getUri(), r.score() * 0.7, Double::sum);
+                        }
+                    }
+                    vectorSearchDone = true;
+                } else {
+                    log.warn("Vector search returned no results above threshold {}", similarityThreshold);
                 }
-
-                log.warn("Vector search returned no results above threshold {}, falling back to keyword search",
-                        similarityThreshold);
             } catch (Exception e) {
-                log.warn("Vector search error, falling back to keyword search: {}", e.getMessage());
+                log.warn("Vector search error: {}", e.getMessage());
             }
         } else if (!qdrantService.isAvailable()) {
-            log.info("Qdrant not available, using keyword search");
+            log.info("Qdrant not available, using keyword search only");
         } else {
-            log.info("Qdrant index is empty (run a CIM import to index entities), using keyword search");
+            log.info("Qdrant index is empty (run a CIM import to index entities), using keyword search only");
         }
 
-        // --- Fallback path: Keyword-based SPARQL search ---
-        return findEntitiesByKeywords(question);
+        // --- Keyword-based SPARQL search (always run for hybrid fusion) ---
+        List<String> keywordEntities = findEntitiesByKeywords(question);
+        if (!keywordEntities.isEmpty()) {
+            // Keyword score weighted at 0.3, boosted if entity also found by vector
+            double keywordBase = 0.3;
+            for (int i = 0; i < keywordEntities.size(); i++) {
+                String uri = keywordEntities.get(i);
+                // Rank decay: first results more relevant
+                double rankScore = keywordBase * (1.0 - (i / (double) Math.max(keywordEntities.size(), 1)) * 0.5);
+                fusedScores.merge(uri, rankScore, Double::sum);
+            }
+        }
+
+        if (fusedScores.isEmpty()) {
+            return List.of();
+        }
+
+        // Sort by fused score descending, return top-K URIs
+        List<String> ranked = fusedScores.entrySet().stream()
+                .sorted(Map.Entry.<String, Double>comparingByValue(Comparator.reverseOrder()))
+                .map(Map.Entry::getKey)
+                .limit(topK)
+                .toList();
+
+        log.info("Hybrid search: {} entities (vector={}, keyword={})",
+                ranked.size(), vectorSearchDone, !keywordEntities.isEmpty());
+
+        return ranked;
     }
 
     // Maps natural language terms → CIM class names for type-based lookup
@@ -394,24 +473,28 @@ public class GraphRAGService {
     }
 
     private Model retrieveSubgraph(List<String> entityUris) {
-        log.debug("Retrieving subgraph for {} entities", entityUris.size());
+        log.debug("Retrieving subgraph for {} entities using GraphTraverser", entityUris.size());
 
-        StringBuilder constructQuery = new StringBuilder();
-        constructQuery.append("CONSTRUCT { ?s ?p ?o } WHERE {\n");
-        constructQuery.append("  ?s ?p ?o .\n");
-        constructQuery.append("  FILTER (\n");
+        Model combinedModel = ModelFactory.createDefaultModel();
 
-        for (int i = 0; i < entityUris.size(); i++) {
-            if (i > 0) constructQuery.append(" || ");
-            constructQuery.append(String.format("?s = <%s>", entityUris.get(i)));
+        // Deep traversal for top-3 most relevant entities (highest similarity rank)
+        int deepCount = Math.min(3, entityUris.size());
+        for (int i = 0; i < deepCount; i++) {
+            Model traversed = graphTraverser.traverse(entityUris.get(i), maxDepth);
+            combinedModel.add(traversed);
+            log.debug("Deep traverse [{}]: {} triples from {}", i, traversed.size(), entityUris.get(i));
         }
 
-        constructQuery.append("\n  )\n}");
+        // Immediate neighborhood for remaining entities
+        for (int i = deepCount; i < entityUris.size(); i++) {
+            Model neighborhood = graphTraverser.getNeighborhood(entityUris.get(i));
+            combinedModel.add(neighborhood);
+        }
 
-        Model subgraph = jenaService.executeSparqlConstruct(constructQuery.toString());
-        log.info("Retrieved subgraph with {} triples", subgraph.size());
+        log.info("GraphTraverser subgraph: {} triples ({} deep + {} neighborhood)",
+                combinedModel.size(), deepCount, entityUris.size() - deepCount);
 
-        return subgraph;
+        return combinedModel;
     }
 
     private String[] extractKeywords(String question) {
@@ -453,9 +536,14 @@ public class GraphRAGService {
     }
 
     private GraphRAGResponse buildFallbackResponse(String question, long startTime) {
-        String fallbackAnswer = groqService.isConfigured()
-                ? groqService.simpleQuery(question)
-                : ollamaService.simpleQuery(question);
+        String fallbackAnswer;
+        if (groqService.isConfigured()) {
+            fallbackAnswer = groqService.simpleQuery(question);
+        } else if (claudeAgentService.isConfigured()) {
+            fallbackAnswer = claudeAgentService.queryWithContext(question, "No specific CIM graph context available.");
+        } else {
+            fallbackAnswer = ollamaService.simpleQuery(question);
+        }
 
         return GraphRAGResponse.builder()
                 .answer(fallbackAnswer)
@@ -478,8 +566,11 @@ public class GraphRAGService {
         boolean wantsLines = q.contains("line") || q.contains("transmission") || q.contains("ligne");
         boolean wantsSubstations = q.contains("substation") || q.contains("poste") || q.contains("umspann");
         boolean wantsTransformers = q.contains("transform");
-        boolean wantsAll = q.contains("all") || q.contains("total") || q.contains("every") ||
-                           q.contains("how many") || q.contains("count") || q.contains("list");
+        // wantsAll only when NO specific type is mentioned — prevents fetching all categories for e.g. "total generation"
+        boolean specificTypeDetected = wantsGenerators || wantsLoads || wantsLines || wantsSubstations || wantsTransformers;
+        boolean wantsAll = !specificTypeDetected &&
+                           (q.contains("all") || q.contains("total") || q.contains("every") ||
+                            q.contains("how many") || q.contains("count") || q.contains("list"));
 
         if (wantsGenerators || wantsAll) {
             String sparql = """

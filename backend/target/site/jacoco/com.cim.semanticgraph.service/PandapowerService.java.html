@@ -97,60 +97,101 @@ public class PandapowerService {
     }
 
     /**
+     * Call Python /find-bus to resolve a natural language question to a CIM bus ID.
+     * Uses Qdrant semantic search (BusbarSection / TopologicalNode / ConnectivityNode).
+     *
+     * @param question  Natural language query, e.g. &quot;voltage at Berlin 380kV&quot;
+     * @return  The bus ID string, or null if not found / service unavailable
+     */
+    public String findBusSemantic(String question) {
+<span class="nc bnc" id="L107" title="All 4 branches missed.">        if (question == null || question.isBlank()) return null;</span>
+
+        try {
+<span class="nc" id="L110">            Map&lt;String, String&gt; requestBody = Map.of(&quot;question&quot;, question);</span>
+<span class="nc" id="L111">            HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L112">            headers.setContentType(MediaType.APPLICATION_JSON);</span>
+<span class="nc" id="L113">            HttpEntity&lt;Map&lt;String, String&gt;&gt; entity = new HttpEntity&lt;&gt;(requestBody, headers);</span>
+
+<span class="nc" id="L115">            ResponseEntity&lt;Map&gt; response = restTemplate.exchange(</span>
+                    serviceUrl + &quot;/find-bus&quot;,
+                    HttpMethod.POST,
+                    entity,
+                    Map.class
+            );
+
+<span class="nc" id="L122">            Map&lt;?, ?&gt; body = response.getBody();</span>
+<span class="nc bnc" id="L123" title="All 4 branches missed.">            if (body != null &amp;&amp; Boolean.TRUE.equals(body.get(&quot;found&quot;))) {</span>
+<span class="nc" id="L124">                String busId = (String) body.get(&quot;busId&quot;);</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">                double score = body.get(&quot;score&quot;) instanceof Number n ? n.doubleValue() : 0.0;</span>
+<span class="nc" id="L126">                log.info(&quot;Semantic bus search: '{}' → '{}' (score={})&quot;,</span>
+<span class="nc" id="L127">                        question, busId, String.format(&quot;%.3f&quot;, score));</span>
+<span class="nc" id="L128">                return busId;</span>
+            }
+
+<span class="nc" id="L131">            log.info(&quot;Semantic bus search returned no match for: '{}'&quot;, question);</span>
+<span class="nc" id="L132">            return null;</span>
+
+<span class="nc" id="L134">        } catch (Exception e) {</span>
+<span class="nc" id="L135">            log.warn(&quot;Semantic bus search failed (powerflow service unavailable?): {}&quot;, e.getMessage());</span>
+<span class="nc" id="L136">            return null;</span>
+        }
+    }
+
+    /**
      * Serialize NetworkModel to the JSON format expected by the Python service.
      * Matches the Python NetworkInput Pydantic model.
      */
     private Map&lt;String, Object&gt; serializeNetwork(NetworkModel network) {
-<span class="nc" id="L104">        Map&lt;String, Object&gt; networkMap = new HashMap&lt;&gt;();</span>
-<span class="nc bnc" id="L105" title="All 2 branches missed.">        networkMap.put(&quot;networkId&quot;, network.getNetworkId() != null ? network.getNetworkId() : &quot;cim-network&quot;);</span>
-<span class="nc bnc" id="L106" title="All 2 branches missed.">        networkMap.put(&quot;name&quot;, network.getName() != null ? network.getName() : &quot;CIM Network&quot;);</span>
-<span class="nc bnc" id="L107" title="All 2 branches missed.">        networkMap.put(&quot;baseMva&quot;, network.getBaseMva() &gt; 0 ? network.getBaseMva() : 100.0);</span>
+<span class="nc" id="L145">        Map&lt;String, Object&gt; networkMap = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">        networkMap.put(&quot;networkId&quot;, network.getNetworkId() != null ? network.getNetworkId() : &quot;cim-network&quot;);</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">        networkMap.put(&quot;name&quot;, network.getName() != null ? network.getName() : &quot;CIM Network&quot;);</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">        networkMap.put(&quot;baseMva&quot;, network.getBaseMva() &gt; 0 ? network.getBaseMva() : 100.0);</span>
 
         // Serialize buses
-<span class="nc" id="L110">        List&lt;Map&lt;String, Object&gt;&gt; busList = new ArrayList&lt;&gt;();</span>
-<span class="nc bnc" id="L111" title="All 2 branches missed.">        for (Bus bus : network.getBuses()) {</span>
-<span class="nc" id="L112">            Map&lt;String, Object&gt; busMap = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L113">            busMap.put(&quot;id&quot;, bus.getId());</span>
-<span class="nc bnc" id="L114" title="All 2 branches missed.">            busMap.put(&quot;name&quot;, bus.getName() != null ? bus.getName() : bus.getId());</span>
-<span class="nc" id="L115">            busMap.put(&quot;index&quot;, bus.getIndex());</span>
-<span class="nc" id="L116">            busMap.put(&quot;type&quot;, bus.getType().name());</span>
-<span class="nc bnc" id="L117" title="All 2 branches missed.">            busMap.put(&quot;baseVoltageKv&quot;, bus.getBaseVoltageKv() &gt; 0 ? bus.getBaseVoltageKv() : 110.0);</span>
-<span class="nc bnc" id="L118" title="All 2 branches missed.">            busMap.put(&quot;voltageMagnitude&quot;, bus.getVoltageMagnitude() &gt; 0 ? bus.getVoltageMagnitude() : 1.0);</span>
-<span class="nc" id="L119">            busMap.put(&quot;voltageAngle&quot;, bus.getVoltageAngle());</span>
-<span class="nc" id="L120">            busMap.put(&quot;generationMw&quot;, bus.getGenerationMw());</span>
-<span class="nc" id="L121">            busMap.put(&quot;generationMvar&quot;, bus.getGenerationMvar());</span>
-<span class="nc" id="L122">            busMap.put(&quot;generationMinMvar&quot;, bus.getGenerationMinMvar());</span>
-<span class="nc" id="L123">            busMap.put(&quot;generationMaxMvar&quot;, bus.getGenerationMaxMvar());</span>
-<span class="nc" id="L124">            busMap.put(&quot;loadMw&quot;, bus.getLoadMw());</span>
-<span class="nc" id="L125">            busMap.put(&quot;loadMvar&quot;, bus.getLoadMvar());</span>
-<span class="nc bnc" id="L126" title="All 2 branches missed.">            busMap.put(&quot;voltageMin&quot;, bus.getVoltageMin() &gt; 0 ? bus.getVoltageMin() : 0.95);</span>
-<span class="nc bnc" id="L127" title="All 2 branches missed.">            busMap.put(&quot;voltageMax&quot;, bus.getVoltageMax() &gt; 0 ? bus.getVoltageMax() : 1.05);</span>
-<span class="nc" id="L128">            busMap.put(&quot;inService&quot;, bus.isInService());</span>
-<span class="nc" id="L129">            busList.add(busMap);</span>
-<span class="nc" id="L130">        }</span>
-<span class="nc" id="L131">        networkMap.put(&quot;buses&quot;, busList);</span>
+<span class="nc" id="L151">        List&lt;Map&lt;String, Object&gt;&gt; busList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">        for (Bus bus : network.getBuses()) {</span>
+<span class="nc" id="L153">            Map&lt;String, Object&gt; busMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L154">            busMap.put(&quot;id&quot;, bus.getId());</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">            busMap.put(&quot;name&quot;, bus.getName() != null ? bus.getName() : bus.getId());</span>
+<span class="nc" id="L156">            busMap.put(&quot;index&quot;, bus.getIndex());</span>
+<span class="nc" id="L157">            busMap.put(&quot;type&quot;, bus.getType().name());</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">            busMap.put(&quot;baseVoltageKv&quot;, bus.getBaseVoltageKv() &gt; 0 ? bus.getBaseVoltageKv() : 110.0);</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">            busMap.put(&quot;voltageMagnitude&quot;, bus.getVoltageMagnitude() &gt; 0 ? bus.getVoltageMagnitude() : 1.0);</span>
+<span class="nc" id="L160">            busMap.put(&quot;voltageAngle&quot;, bus.getVoltageAngle());</span>
+<span class="nc" id="L161">            busMap.put(&quot;generationMw&quot;, bus.getGenerationMw());</span>
+<span class="nc" id="L162">            busMap.put(&quot;generationMvar&quot;, bus.getGenerationMvar());</span>
+<span class="nc" id="L163">            busMap.put(&quot;generationMinMvar&quot;, bus.getGenerationMinMvar());</span>
+<span class="nc" id="L164">            busMap.put(&quot;generationMaxMvar&quot;, bus.getGenerationMaxMvar());</span>
+<span class="nc" id="L165">            busMap.put(&quot;loadMw&quot;, bus.getLoadMw());</span>
+<span class="nc" id="L166">            busMap.put(&quot;loadMvar&quot;, bus.getLoadMvar());</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">            busMap.put(&quot;voltageMin&quot;, bus.getVoltageMin() &gt; 0 ? bus.getVoltageMin() : 0.95);</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">            busMap.put(&quot;voltageMax&quot;, bus.getVoltageMax() &gt; 0 ? bus.getVoltageMax() : 1.05);</span>
+<span class="nc" id="L169">            busMap.put(&quot;inService&quot;, bus.isInService());</span>
+<span class="nc" id="L170">            busList.add(busMap);</span>
+<span class="nc" id="L171">        }</span>
+<span class="nc" id="L172">        networkMap.put(&quot;buses&quot;, busList);</span>
 
         // Serialize branches
-<span class="nc" id="L134">        List&lt;Map&lt;String, Object&gt;&gt; branchList = new ArrayList&lt;&gt;();</span>
-<span class="nc bnc" id="L135" title="All 2 branches missed.">        for (Branch branch : network.getBranches()) {</span>
-<span class="nc" id="L136">            Map&lt;String, Object&gt; branchMap = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L137">            branchMap.put(&quot;id&quot;, branch.getId());</span>
-<span class="nc bnc" id="L138" title="All 2 branches missed.">            branchMap.put(&quot;name&quot;, branch.getName() != null ? branch.getName() : branch.getId());</span>
-<span class="nc" id="L139">            branchMap.put(&quot;type&quot;, branch.getType().name());</span>
-<span class="nc" id="L140">            branchMap.put(&quot;fromBusId&quot;, branch.getFromBusId());</span>
-<span class="nc" id="L141">            branchMap.put(&quot;toBusId&quot;, branch.getToBusId());</span>
-<span class="nc" id="L142">            branchMap.put(&quot;resistance&quot;, branch.getResistance());</span>
-<span class="nc" id="L143">            branchMap.put(&quot;reactance&quot;, branch.getReactance());</span>
-<span class="nc" id="L144">            branchMap.put(&quot;susceptance&quot;, branch.getSusceptance());</span>
-<span class="nc" id="L145">            branchMap.put(&quot;turnsRatio&quot;, branch.getTurnsRatio());</span>
-<span class="nc" id="L146">            branchMap.put(&quot;phaseShift&quot;, branch.getPhaseShift());</span>
-<span class="nc bnc" id="L147" title="All 2 branches missed.">            branchMap.put(&quot;ratingMva&quot;, branch.getRatingMva() &gt; 0 ? branch.getRatingMva() : 100.0);</span>
-<span class="nc" id="L148">            branchMap.put(&quot;inService&quot;, branch.isInService());</span>
-<span class="nc" id="L149">            branchList.add(branchMap);</span>
-<span class="nc" id="L150">        }</span>
-<span class="nc" id="L151">        networkMap.put(&quot;branches&quot;, branchList);</span>
+<span class="nc" id="L175">        List&lt;Map&lt;String, Object&gt;&gt; branchList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">        for (Branch branch : network.getBranches()) {</span>
+<span class="nc" id="L177">            Map&lt;String, Object&gt; branchMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L178">            branchMap.put(&quot;id&quot;, branch.getId());</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">            branchMap.put(&quot;name&quot;, branch.getName() != null ? branch.getName() : branch.getId());</span>
+<span class="nc" id="L180">            branchMap.put(&quot;type&quot;, branch.getType().name());</span>
+<span class="nc" id="L181">            branchMap.put(&quot;fromBusId&quot;, branch.getFromBusId());</span>
+<span class="nc" id="L182">            branchMap.put(&quot;toBusId&quot;, branch.getToBusId());</span>
+<span class="nc" id="L183">            branchMap.put(&quot;resistance&quot;, branch.getResistance());</span>
+<span class="nc" id="L184">            branchMap.put(&quot;reactance&quot;, branch.getReactance());</span>
+<span class="nc" id="L185">            branchMap.put(&quot;susceptance&quot;, branch.getSusceptance());</span>
+<span class="nc" id="L186">            branchMap.put(&quot;turnsRatio&quot;, branch.getTurnsRatio());</span>
+<span class="nc" id="L187">            branchMap.put(&quot;phaseShift&quot;, branch.getPhaseShift());</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">            branchMap.put(&quot;ratingMva&quot;, branch.getRatingMva() &gt; 0 ? branch.getRatingMva() : 100.0);</span>
+<span class="nc" id="L189">            branchMap.put(&quot;inService&quot;, branch.isInService());</span>
+<span class="nc" id="L190">            branchList.add(branchMap);</span>
+<span class="nc" id="L191">        }</span>
+<span class="nc" id="L192">        networkMap.put(&quot;branches&quot;, branchList);</span>
 
-<span class="nc" id="L153">        return networkMap;</span>
+<span class="nc" id="L194">        return networkMap;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

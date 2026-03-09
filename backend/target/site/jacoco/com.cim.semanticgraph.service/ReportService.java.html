@@ -3,14 +3,29 @@
 import com.cim.semanticgraph.dto.LoadFlowResponse;
 import com.itextpdf.kernel.colors.ColorConstants;
 import com.itextpdf.kernel.colors.DeviceRgb;
+import com.itextpdf.kernel.events.Event;
+import com.itextpdf.kernel.events.IEventHandler;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
+import com.itextpdf.kernel.font.PdfFont;
+import com.itextpdf.kernel.font.PdfFontFactory;
+import com.itextpdf.io.font.constants.StandardFonts;
+import com.itextpdf.kernel.geom.PageSize;
+import com.itextpdf.kernel.geom.Rectangle;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.*;
+import com.itextpdf.layout.properties.AreaBreakType;
+import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -19,270 +34,1171 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
-<span class="nc" id="L22">@Slf4j</span>
+<span class="nc" id="L37">@Slf4j</span>
 @Service
-<span class="nc" id="L24">@RequiredArgsConstructor</span>
+<span class="nc" id="L39">@RequiredArgsConstructor</span>
 public class ReportService {
 
     private final LoadFlowService loadFlowService;
-    private final JenaService jenaService;
+    private final JenaService     jenaService;
+    private final GroqService     groqService;
 
-<span class="nc" id="L30">    private static final DeviceRgb PRIMARY_COLOR = new DeviceRgb(59, 130, 246);</span>
-<span class="nc" id="L31">    private static final DeviceRgb SUCCESS_COLOR = new DeviceRgb(34, 197, 94);</span>
-<span class="nc" id="L32">    private static final DeviceRgb WARNING_COLOR = new DeviceRgb(251, 146, 60);</span>
-<span class="nc" id="L33">    private static final DeviceRgb ERROR_COLOR = new DeviceRgb(239, 68, 68);</span>
+    @Value(&quot;${cim.namespaces.cim:http://iec.ch/TC57/CIM100#}&quot;)
+    private String cimNamespace;
 
-    public byte[] generateLoadFlowReport() {
-<span class="nc" id="L36">        log.info(&quot;Generating Load Flow report...&quot;);</span>
+    // ── Brand Colors ──────────────────────────────────────────────────────────
+<span class="nc" id="L50">    private static final DeviceRgb NAVY        = new DeviceRgb(10,  20,  50);</span>
+<span class="nc" id="L51">    private static final DeviceRgb BLUE        = new DeviceRgb(59,  130, 246);</span>
+<span class="nc" id="L52">    private static final DeviceRgb BLUE_LIGHT  = new DeviceRgb(96,  165, 250);</span>
+<span class="nc" id="L53">    private static final DeviceRgb CYAN        = new DeviceRgb(6,   182, 212);</span>
+<span class="nc" id="L54">    private static final DeviceRgb GREEN       = new DeviceRgb(34,  197, 94);</span>
+<span class="nc" id="L55">    private static final DeviceRgb GREEN_DARK  = new DeviceRgb(21,  128, 61);</span>
+<span class="nc" id="L56">    private static final DeviceRgb ORANGE      = new DeviceRgb(251, 146, 60);</span>
+<span class="nc" id="L57">    private static final DeviceRgb RED         = new DeviceRgb(239, 68,  68);</span>
+<span class="nc" id="L58">    private static final DeviceRgb PURPLE      = new DeviceRgb(139, 92,  246);</span>
+<span class="nc" id="L59">    private static final DeviceRgb GRAY        = new DeviceRgb(107, 114, 128);</span>
+<span class="nc" id="L60">    private static final DeviceRgb WHITE        = new DeviceRgb(255, 255, 255);</span>
+<span class="nc" id="L61">    private static final DeviceRgb LIGHT_BG    = new DeviceRgb(248, 250, 252);</span>
+<span class="nc" id="L62">    private static final DeviceRgb HEADER_BG   = new DeviceRgb(219, 234, 254);</span>
+<span class="nc" id="L63">    private static final DeviceRgb ROW_ALT     = new DeviceRgb(241, 245, 249);</span>
+
+    // ── SPARQL Queries ────────────────────────────────────────────────────────
+    private static final String GEN_QUERY = &quot;&quot;&quot;
+        PREFIX cim: &lt;%s&gt;
+        SELECT ?name ?maxP ?minP ?type WHERE {
+            ?g a cim:GeneratingUnit .
+            ?g cim:IdentifiedObject.name ?name .
+            OPTIONAL { ?g cim:GeneratingUnit.maxOperatingP ?maxP }
+            OPTIONAL { ?g cim:GeneratingUnit.minOperatingP ?minP }
+            OPTIONAL { ?g a ?type . FILTER(?type != cim:GeneratingUnit) }
+        } ORDER BY ?name
+        &quot;&quot;&quot;;
+
+    private static final String LOAD_QUERY = &quot;&quot;&quot;
+        PREFIX cim: &lt;%s&gt;
+        SELECT ?name ?p ?q WHERE {
+            ?l a cim:EnergyConsumer .
+            ?l cim:IdentifiedObject.name ?name .
+            OPTIONAL { ?l cim:EnergyConsumer.p ?p }
+            OPTIONAL { ?l cim:EnergyConsumer.q ?q }
+        } ORDER BY ?name
+        &quot;&quot;&quot;;
+
+    private static final String LINE_QUERY = &quot;&quot;&quot;
+        PREFIX cim: &lt;%s&gt;
+        SELECT ?name ?r ?x ?bch WHERE {
+            ?l a cim:ACLineSegment .
+            ?l cim:IdentifiedObject.name ?name .
+            OPTIONAL { ?l cim:ACLineSegment.r ?r }
+            OPTIONAL { ?l cim:ACLineSegment.x ?x }
+            OPTIONAL { ?l cim:ACLineSegment.bch ?bch }
+        } ORDER BY ?name
+        &quot;&quot;&quot;;
+
+    private static final String TRAFO_QUERY = &quot;&quot;&quot;
+        PREFIX cim: &lt;%s&gt;
+        SELECT ?name WHERE {
+            ?t a cim:PowerTransformer .
+            ?t cim:IdentifiedObject.name ?name .
+        } ORDER BY ?name
+        &quot;&quot;&quot;;
+
+    private static final String SUB_QUERY = &quot;&quot;&quot;
+        PREFIX cim: &lt;%s&gt;
+        SELECT ?name WHERE {
+            ?s a cim:Substation .
+            ?s cim:IdentifiedObject.name ?name .
+        } ORDER BY ?name
+        &quot;&quot;&quot;;
+
+    private static final String VL_QUERY = &quot;&quot;&quot;
+        PREFIX cim: &lt;%s&gt;
+        SELECT DISTINCT ?vkv WHERE {
+            ?bv a cim:BaseVoltage .
+            ?bv cim:BaseVoltage.nominalVoltage ?vkv .
+        } ORDER BY ?vkv
+        &quot;&quot;&quot;;
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  MAIN — Full CIM Report
+    // ═════════════════════════════════════════════════════════════════════════
+
+    public byte[] generateFullCIMReport() {
+<span class="nc" id="L127">        log.info(&quot;Generating comprehensive CIM Full Report...&quot;);</span>
+
+        // ── 1. Collect data ──────────────────────────────────────────────────
+<span class="nc" id="L130">        Map&lt;String, Object&gt; graphStats   = jenaService.getGraphStatistics();</span>
+<span class="nc" id="L131">        List&lt;Map&lt;String,String&gt;&gt; gens    = sparql(GEN_QUERY.formatted(cimNamespace));</span>
+<span class="nc" id="L132">        List&lt;Map&lt;String,String&gt;&gt; loads   = sparql(LOAD_QUERY.formatted(cimNamespace));</span>
+<span class="nc" id="L133">        List&lt;Map&lt;String,String&gt;&gt; lines   = sparql(LINE_QUERY.formatted(cimNamespace));</span>
+<span class="nc" id="L134">        List&lt;Map&lt;String,String&gt;&gt; trafos  = sparql(TRAFO_QUERY.formatted(cimNamespace));</span>
+<span class="nc" id="L135">        List&lt;Map&lt;String,String&gt;&gt; subs    = sparql(SUB_QUERY.formatted(cimNamespace));</span>
+<span class="nc" id="L136">        List&lt;Map&lt;String,String&gt;&gt; vlevels = sparql(VL_QUERY.formatted(cimNamespace));</span>
+
+<span class="nc" id="L138">        LoadFlowResponse lf = null;</span>
+<span class="nc" id="L139">        try { lf = loadFlowService.calculateLoadFlow(); }</span>
+<span class="nc" id="L140">        catch (Exception e) { log.warn(&quot;Load flow unavailable for report: {}&quot;, e.getMessage()); }</span>
+
+        // ── 2. AI narrative ──────────────────────────────────────────────────
+<span class="nc" id="L143">        String aiSummary  = buildAISummary(graphStats, gens, loads, lines, trafos, subs, lf);</span>
+<span class="nc" id="L144">        String aiAdvice   = buildAIRecommendations(graphStats, gens, loads, lines, lf);</span>
+
+        // ── 3. Build PDF ─────────────────────────────────────────────────────
+        try {
+<span class="nc" id="L148">            ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="nc" id="L149">            PdfWriter   writer   = new PdfWriter(baos);</span>
+<span class="nc" id="L150">            PdfDocument pdf      = new PdfDocument(writer);</span>
+            // Page-number footer added via event handler (pages may be flushed before close)
+<span class="nc" id="L152">            pdf.addEventHandler(PdfDocumentEvent.END_PAGE, new PageNumberHandler());</span>
+<span class="nc" id="L153">            Document    document = new Document(pdf, PageSize.A4);</span>
+<span class="nc" id="L154">            document.setMargins(50, 45, 50, 45);</span>
+
+<span class="nc" id="L156">            coverPage(pdf, document, graphStats, gens, loads, lines, subs);</span>
+
+<span class="nc" id="L158">            document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));</span>
+<span class="nc" id="L159">            sectionExecutiveSummary(document, aiSummary, graphStats, gens, loads, lf);</span>
+
+<span class="nc" id="L161">            document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));</span>
+<span class="nc" id="L162">            sectionKnowledgeGraph(document, graphStats);</span>
+
+<span class="nc" id="L164">            sectionNetworkInventory(document, graphStats, vlevels);</span>
+
+<span class="nc" id="L166">            document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));</span>
+<span class="nc" id="L167">            sectionGenerators(document, gens);</span>
+
+<span class="nc" id="L169">            sectionLoads(document, loads);</span>
+
+<span class="nc" id="L171">            document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));</span>
+<span class="nc" id="L172">            sectionLines(document, lines);</span>
+
+<span class="nc" id="L174">            sectionTransformers(document, trafos);</span>
+<span class="nc" id="L175">            sectionSubstations(document, subs);</span>
+
+<span class="nc bnc" id="L177" title="All 2 branches missed.">            if (lf != null) {</span>
+<span class="nc" id="L178">                document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));</span>
+<span class="nc" id="L179">                sectionPowerFlow(document, lf);</span>
+            }
+
+<span class="nc" id="L182">            document.add(new AreaBreak(AreaBreakType.NEXT_PAGE));</span>
+<span class="nc" id="L183">            sectionRecommendations(document, aiAdvice);</span>
+
+<span class="nc" id="L185">            document.close();</span>
+<span class="nc" id="L186">            log.info(&quot;Full CIM Report generated successfully&quot;);</span>
+<span class="nc" id="L187">            return baos.toByteArray();</span>
+
+<span class="nc" id="L189">        } catch (Exception e) {</span>
+<span class="nc" id="L190">            log.error(&quot;Error generating full CIM report&quot;, e);</span>
+<span class="nc" id="L191">            throw new RuntimeException(&quot;Full report generation failed: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  COVER PAGE
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void coverPage(PdfDocument pdf, Document doc, Map&lt;String,Object&gt; stats,
+                           List&lt;Map&lt;String,String&gt;&gt; gens, List&lt;Map&lt;String,String&gt;&gt; loads,
+                           List&lt;Map&lt;String,String&gt;&gt; lines, List&lt;Map&lt;String,String&gt;&gt; subs) {
+
+        // Add first content to force the first page to be created before accessing it
+<span class="nc" id="L204">        doc.add(new Paragraph(&quot;\n\n\n\n&quot;));</span>
+
+        // Now the first page exists — draw colored background via low-level canvas
+<span class="nc" id="L207">        PdfPage  page   = pdf.getFirstPage();</span>
+<span class="nc" id="L208">        PdfCanvas canvas = new PdfCanvas(page);</span>
+
+        // Full navy background
+<span class="nc" id="L211">        canvas.setFillColor(NAVY)</span>
+<span class="nc" id="L212">              .rectangle(0, 0, PageSize.A4.getWidth(), PageSize.A4.getHeight())</span>
+<span class="nc" id="L213">              .fill();</span>
+
+        // Blue accent bar (top)
+<span class="nc" id="L216">        canvas.setFillColor(BLUE)</span>
+<span class="nc" id="L217">              .rectangle(0, PageSize.A4.getHeight() - 8, PageSize.A4.getWidth(), 8)</span>
+<span class="nc" id="L218">              .fill();</span>
+
+        // Cyan accent bar (bottom)
+<span class="nc" id="L221">        canvas.setFillColor(CYAN)</span>
+<span class="nc" id="L222">              .rectangle(0, 0, PageSize.A4.getWidth(), 6)</span>
+<span class="nc" id="L223">              .fill();</span>
+
+<span class="nc" id="L225">        canvas.release();</span>
+
+<span class="nc" id="L227">        Paragraph badge = new Paragraph(&quot;CIM SEMANTIC GRAPH PLATFORM&quot;)</span>
+<span class="nc" id="L228">            .setFontSize(9).setBold()</span>
+<span class="nc" id="L229">            .setFontColor(CYAN)</span>
+<span class="nc" id="L230">            .setTextAlignment(TextAlignment.CENTER)</span>
+<span class="nc" id="L231">            .setCharacterSpacing(4);</span>
+<span class="nc" id="L232">        doc.add(badge);</span>
+
+<span class="nc" id="L234">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+
+        // Main title
+<span class="nc" id="L237">        Paragraph title = new Paragraph(&quot;CIM Network&quot;)</span>
+<span class="nc" id="L238">            .setFontSize(42).setBold()</span>
+<span class="nc" id="L239">            .setFontColor(ColorConstants.WHITE)</span>
+<span class="nc" id="L240">            .setTextAlignment(TextAlignment.CENTER);</span>
+<span class="nc" id="L241">        doc.add(title);</span>
+
+<span class="nc" id="L243">        Paragraph title2 = new Paragraph(&quot;Complete Analysis Report&quot;)</span>
+<span class="nc" id="L244">            .setFontSize(36).setBold()</span>
+<span class="nc" id="L245">            .setFontColor(BLUE_LIGHT)</span>
+<span class="nc" id="L246">            .setTextAlignment(TextAlignment.CENTER);</span>
+<span class="nc" id="L247">        doc.add(title2);</span>
+
+<span class="nc" id="L249">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+
+        // Blue horizontal rule
+<span class="nc" id="L252">        Table rule = new Table(UnitValue.createPercentArray(new float[]{1}))</span>
+<span class="nc" id="L253">            .setWidth(UnitValue.createPercentValue(50))</span>
+<span class="nc" id="L254">            .setHorizontalAlignment(HorizontalAlignment.CENTER);</span>
+<span class="nc" id="L255">        rule.addCell(new Cell().setHeight(3).setBackgroundColor(BLUE).setBorder(Border.NO_BORDER));</span>
+<span class="nc" id="L256">        doc.add(rule);</span>
+
+<span class="nc" id="L258">        doc.add(new Paragraph(&quot;\n\n&quot;));</span>
+
+        // Subtitle
+<span class="nc" id="L261">        Paragraph subtitle = new Paragraph(&quot;AI-Generated Technical Report — IEC 61970 CIM Standard&quot;)</span>
+<span class="nc" id="L262">            .setFontSize(12).setFontColor(GRAY)</span>
+<span class="nc" id="L263">            .setTextAlignment(TextAlignment.CENTER);</span>
+<span class="nc" id="L264">        doc.add(subtitle);</span>
+
+<span class="nc" id="L266">        doc.add(new Paragraph(&quot;\n\n\n&quot;));</span>
+
+        // Stats cards row on cover (4 boxes)
+<span class="nc" id="L269">        double totalGenMw   = sumDouble(gens, &quot;maxP&quot;);</span>
+<span class="nc" id="L270">        double totalLoadMw  = sumDouble(loads, &quot;p&quot;);</span>
+<span class="nc" id="L271">        long   totalTriples = toLong(stats.get(&quot;totalTriples&quot;));</span>
+
+<span class="nc" id="L273">        Table statsRow = new Table(UnitValue.createPercentArray(new float[]{1,1,1,1}))</span>
+<span class="nc" id="L274">            .setWidth(UnitValue.createPercentValue(90))</span>
+<span class="nc" id="L275">            .setHorizontalAlignment(HorizontalAlignment.CENTER);</span>
+
+<span class="nc" id="L277">        addCoverStat(statsRow, String.valueOf(subs.size()),        &quot;Substations&quot;,  CYAN);</span>
+<span class="nc" id="L278">        addCoverStat(statsRow, String.valueOf(gens.size()),        &quot;Generators&quot;,   GREEN);</span>
+<span class="nc" id="L279">        addCoverStat(statsRow, String.format(&quot;%.0f MW&quot;,totalGenMw),&quot;Capacity&quot;,    BLUE_LIGHT);</span>
+<span class="nc" id="L280">        addCoverStat(statsRow, String.format(&quot;%,d&quot;, totalTriples), &quot;RDF Triples&quot;, ORANGE);</span>
+
+<span class="nc" id="L282">        doc.add(statsRow);</span>
+
+<span class="nc" id="L284">        doc.add(new Paragraph(&quot;\n\n\n\n\n\n&quot;));</span>
+
+        // Generation info
+<span class="nc" id="L287">        Paragraph gen = new Paragraph(&quot;Generated by AI — Claude + GraphRAG + Apache Jena Fuseki&quot;)</span>
+<span class="nc" id="L288">            .setFontSize(9).setFontColor(GRAY)</span>
+<span class="nc" id="L289">            .setTextAlignment(TextAlignment.CENTER);</span>
+<span class="nc" id="L290">        doc.add(gen);</span>
+
+<span class="nc" id="L292">        Paragraph date = new Paragraph(LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;MMMM dd, yyyy — HH:mm&quot;)))</span>
+<span class="nc" id="L293">            .setFontSize(10).setBold().setFontColor(GRAY)</span>
+<span class="nc" id="L294">            .setTextAlignment(TextAlignment.CENTER);</span>
+<span class="nc" id="L295">        doc.add(date);</span>
+<span class="nc" id="L296">    }</span>
+
+    private void addCoverStat(Table table, String value, String label, DeviceRgb color) {
+<span class="nc" id="L299">        Cell cell = new Cell()</span>
+<span class="nc" id="L300">            .setBackgroundColor(new DeviceRgb(255,255,255) /* white overlay hack — use padding */)</span>
+<span class="nc" id="L301">            .setBorder(Border.NO_BORDER)</span>
+<span class="nc" id="L302">            .setPadding(10)</span>
+<span class="nc" id="L303">            .setMargin(4);</span>
+
+        // Nested small table for the card
+<span class="nc" id="L306">        Table card = new Table(UnitValue.createPercentArray(new float[]{1}))</span>
+<span class="nc" id="L307">            .setWidth(UnitValue.createPercentValue(95));</span>
+
+<span class="nc" id="L309">        card.addCell(new Cell()</span>
+<span class="nc" id="L310">            .add(new Paragraph(value).setFontSize(22).setBold().setFontColor(color)</span>
+<span class="nc" id="L311">                .setTextAlignment(TextAlignment.CENTER))</span>
+<span class="nc" id="L312">            .setBackgroundColor(new DeviceRgb(20, 30, 65))</span>
+<span class="nc" id="L313">            .setBorder(new SolidBorder(color, 1.5f))</span>
+<span class="nc" id="L314">            .setPadding(8));</span>
+
+<span class="nc" id="L316">        card.addCell(new Cell()</span>
+<span class="nc" id="L317">            .add(new Paragraph(label).setFontSize(9).setFontColor(GRAY)</span>
+<span class="nc" id="L318">                .setTextAlignment(TextAlignment.CENTER))</span>
+<span class="nc" id="L319">            .setBackgroundColor(new DeviceRgb(20, 30, 65))</span>
+<span class="nc" id="L320">            .setBorder(Border.NO_BORDER)</span>
+<span class="nc" id="L321">            .setPaddingBottom(6));</span>
+
+<span class="nc" id="L323">        cell.add(card);</span>
+<span class="nc" id="L324">        table.addCell(cell.setBackgroundColor(NAVY).setBorder(Border.NO_BORDER));</span>
+<span class="nc" id="L325">    }</span>
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 1 — EXECUTIVE SUMMARY
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void sectionExecutiveSummary(Document doc, String aiText, Map&lt;String,Object&gt; stats,
+                                         List&lt;Map&lt;String,String&gt;&gt; gens,
+                                         List&lt;Map&lt;String,String&gt;&gt; loads,
+                                         LoadFlowResponse lf) {
+<span class="nc" id="L335">        sectionHeader(doc, &quot;1&quot;, &quot;Executive Summary&quot;, BLUE);</span>
+
+        // AI generated text
+<span class="nc bnc" id="L338" title="All 4 branches missed.">        if (aiText != null &amp;&amp; !aiText.isBlank()) {</span>
+<span class="nc bnc" id="L339" title="All 2 branches missed.">            for (String para : aiText.split(&quot;\n\n&quot;)) {</span>
+<span class="nc bnc" id="L340" title="All 2 branches missed.">                if (para.isBlank()) continue;</span>
+<span class="nc" id="L341">                String cleaned = para.replaceAll(&quot;^#+\\s*&quot;, &quot;&quot;).replaceAll(&quot;\\*\\*(.*?)\\*\\*&quot;, &quot;$1&quot;).trim();</span>
+<span class="nc" id="L342">                doc.add(new Paragraph(cleaned)</span>
+<span class="nc" id="L343">                    .setFontSize(10.5f)</span>
+<span class="nc" id="L344">                    .setMultipliedLeading(1.5f)</span>
+<span class="nc" id="L345">                    .setTextAlignment(TextAlignment.JUSTIFIED)</span>
+<span class="nc" id="L346">                    .setMarginBottom(8));</span>
+            }
+        }
+
+<span class="nc" id="L350">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+
+        // Key metrics highlight table
+<span class="nc" id="L353">        subsectionHeader(doc, &quot;Key Performance Indicators&quot;, BLUE);</span>
+
+<span class="nc" id="L355">        double totalGen   = sumDouble(gens, &quot;maxP&quot;);</span>
+<span class="nc" id="L356">        double totalLoad  = sumDouble(loads, &quot;p&quot;);</span>
+<span class="nc bnc" id="L357" title="All 2 branches missed.">        double loadFactor = totalGen &gt; 0 ? (totalLoad / totalGen * 100) : 0;</span>
+
+<span class="nc" id="L359">        Table kpi = new Table(UnitValue.createPercentArray(new float[]{2,1,2,1}))</span>
+<span class="nc" id="L360">            .setWidth(UnitValue.createPercentValue(100));</span>
+
+        // Row headers style
+<span class="nc" id="L363">        addKpiRow(kpi, &quot;Total Generation Capacity&quot;, String.format(&quot;%.1f MW&quot;, totalGen),</span>
+<span class="nc" id="L364">                        &quot;Total Network Load&quot;,         String.format(&quot;%.1f MW&quot;, totalLoad));</span>
+<span class="nc" id="L365">        addKpiRow(kpi, &quot;Load Factor&quot;,                 String.format(&quot;%.1f%%&quot;, loadFactor),</span>
+<span class="nc" id="L366">                        &quot;Generators&quot;,                  String.valueOf(gens.size()));</span>
+
+<span class="nc bnc" id="L368" title="All 4 branches missed.">        if (lf != null &amp;&amp; lf.getStatistics() != null) {</span>
+<span class="nc" id="L369">            LoadFlowResponse.SystemStatistics s = lf.getStatistics();</span>
+<span class="nc" id="L370">            addKpiRow(kpi, &quot;Active Power Losses&quot;,   String.format(&quot;%.3f MW (%.2f%%)&quot;, s.getTotalLossesMw(), s.getLossPercentage()),</span>
+<span class="nc bnc" id="L371" title="All 2 branches missed.">                           &quot;Load Flow Convergence&quot;,  lf.isConverged() ? &quot;✓ Converged&quot; : &quot;✗ Not Converged&quot;);</span>
+<span class="nc" id="L372">            addKpiRow(kpi, &quot;Min Voltage&quot;,            String.format(&quot;%.4f pu  [%s]&quot;, s.getMinVoltagePu(), s.getMinVoltageBus()),</span>
+<span class="nc" id="L373">                           &quot;Max Voltage&quot;,             String.format(&quot;%.4f pu  [%s]&quot;, s.getMaxVoltagePu(), s.getMaxVoltageBus()));</span>
+<span class="nc bnc" id="L374" title="All 2 branches missed.">            addKpiRow(kpi, &quot;Violations&quot;,             String.valueOf(lf.getViolations() != null ? lf.getViolations().size() : 0),</span>
+<span class="nc bnc" id="L375" title="All 2 branches missed.">                           &quot;Calculation Method&quot;,      lf.getCalculationMethod() != null ? lf.getCalculationMethod() : &quot;Newton-Raphson&quot;);</span>
+        }
+
+<span class="nc" id="L378">        doc.add(kpi);</span>
+<span class="nc" id="L379">    }</span>
+
+    private void addKpiRow(Table table, String k1, String v1, String k2, String v2) {
+<span class="nc" id="L382">        table.addCell(new Cell().add(new Paragraph(k1).setBold().setFontSize(9))</span>
+<span class="nc" id="L383">            .setBackgroundColor(HEADER_BG).setPadding(6).setBorder(new SolidBorder(BLUE, 0.5f)));</span>
+<span class="nc" id="L384">        table.addCell(new Cell().add(new Paragraph(v1).setFontSize(9).setFontColor(BLUE))</span>
+<span class="nc" id="L385">            .setPadding(6).setBorder(new SolidBorder(BLUE, 0.5f)));</span>
+<span class="nc" id="L386">        table.addCell(new Cell().add(new Paragraph(k2).setBold().setFontSize(9))</span>
+<span class="nc" id="L387">            .setBackgroundColor(HEADER_BG).setPadding(6).setBorder(new SolidBorder(BLUE, 0.5f)));</span>
+<span class="nc" id="L388">        table.addCell(new Cell().add(new Paragraph(v2).setFontSize(9).setFontColor(BLUE))</span>
+<span class="nc" id="L389">            .setPadding(6).setBorder(new SolidBorder(BLUE, 0.5f)));</span>
+<span class="nc" id="L390">    }</span>
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 2 — KNOWLEDGE GRAPH
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void sectionKnowledgeGraph(Document doc, Map&lt;String,Object&gt; stats) {
+<span class="nc" id="L397">        sectionHeader(doc, &quot;2&quot;, &quot;Knowledge Graph — RDF Triple Store&quot;, PURPLE);</span>
+
+<span class="nc" id="L399">        doc.add(new Paragraph(</span>
+            &quot;The CIM data is persisted as RDF triples in Apache Jena Fuseki, a professional SPARQL 1.1 &quot;
+          + &quot;triple store following the IEC 61970 CIM ontology. The table below shows the current state &quot;
+          + &quot;of the knowledge graph.&quot;)
+<span class="nc" id="L403">            .setFontSize(10).setMultipliedLeading(1.4f).setMarginBottom(10));</span>
+
+        // Two-column layout
+<span class="nc" id="L406">        Table layout = new Table(UnitValue.createPercentArray(new float[]{1,1}))</span>
+<span class="nc" id="L407">            .setWidth(UnitValue.createPercentValue(100)).setMarginBottom(12);</span>
+
+        // Left: RDF stats
+<span class="nc" id="L410">        Table leftTable = new Table(UnitValue.createPercentArray(new float[]{2,1}))</span>
+<span class="nc" id="L411">            .setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L412">        addColoredHeaderRow(leftTable, 2, &quot;Graph Metrics&quot;, PURPLE);</span>
+<span class="nc" id="L413">        addDataRow(leftTable, &quot;Total RDF Triples&quot;,    fmt(stats.get(&quot;totalTriples&quot;)), 0);</span>
+<span class="nc" id="L414">        addDataRow(leftTable, &quot;Unique Subjects&quot;,       fmt(stats.get(&quot;totalSubjects&quot;)), 1);</span>
+<span class="nc" id="L415">        addDataRow(leftTable, &quot;Unique Predicates&quot;,     fmt(stats.get(&quot;totalPredicates&quot;)), 0);</span>
+<span class="nc" id="L416">        addDataRow(leftTable, &quot;CIM Classes Used&quot;,      fmt(stats.get(&quot;totalClasses&quot;)), 1);</span>
+
+        // Right: Equipment stats
+<span class="nc" id="L419">        Table rightTable = new Table(UnitValue.createPercentArray(new float[]{2,1}))</span>
+<span class="nc" id="L420">            .setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L421">        addColoredHeaderRow(rightTable, 2, &quot;CIM Entities&quot;, PURPLE);</span>
+<span class="nc" id="L422">        addDataRow(rightTable, &quot;Connectivity Nodes&quot;,   fmt(stats.get(&quot;connectivityNodes&quot;)), 0);</span>
+<span class="nc" id="L423">        addDataRow(rightTable, &quot;Terminals&quot;,             fmt(stats.get(&quot;terminals&quot;)), 1);</span>
+<span class="nc" id="L424">        addDataRow(rightTable, &quot;Voltage Levels&quot;,        fmt(stats.get(&quot;voltageLevels&quot;)), 0);</span>
+<span class="nc" id="L425">        addDataRow(rightTable, &quot;Base Voltages&quot;,         fmt(stats.get(&quot;baseVoltages&quot;)), 1);</span>
+
+<span class="nc" id="L427">        layout.addCell(new Cell().add(leftTable).setBorder(Border.NO_BORDER).setPaddingRight(8));</span>
+<span class="nc" id="L428">        layout.addCell(new Cell().add(rightTable).setBorder(Border.NO_BORDER).setPaddingLeft(8));</span>
+<span class="nc" id="L429">        doc.add(layout);</span>
+
+        // Storage info box
+<span class="nc" id="L432">        Table infoBox = new Table(UnitValue.createPercentArray(new float[]{1}))</span>
+<span class="nc" id="L433">            .setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L434">        infoBox.addCell(new Cell()</span>
+<span class="nc" id="L435">            .add(new Paragraph(&quot;⚡  Storage: Apache Jena Fuseki  ·  Protocol: SPARQL 1.1  ·  Standard: IEC 61970 CIM100  ·  Reasoning: OWL Micro Reasoner&quot;)</span>
+<span class="nc" id="L436">                .setFontSize(9).setFontColor(PURPLE).setTextAlignment(TextAlignment.CENTER))</span>
+<span class="nc" id="L437">            .setBackgroundColor(new DeviceRgb(245, 243, 255))</span>
+<span class="nc" id="L438">            .setBorder(new SolidBorder(PURPLE, 1))</span>
+<span class="nc" id="L439">            .setPadding(8));</span>
+<span class="nc" id="L440">        doc.add(infoBox);</span>
+<span class="nc" id="L441">    }</span>
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 3 — NETWORK INVENTORY
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void sectionNetworkInventory(Document doc, Map&lt;String,Object&gt; stats, List&lt;Map&lt;String,String&gt;&gt; vlevels) {
+<span class="nc" id="L448">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L449">        sectionHeader(doc, &quot;3&quot;, &quot;Network Inventory&quot;, CYAN);</span>
+
+<span class="nc" id="L451">        Table inv = new Table(UnitValue.createPercentArray(new float[]{3,1,1}))</span>
+<span class="nc" id="L452">            .setWidth(UnitValue.createPercentValue(100));</span>
+
+<span class="nc" id="L454">        addColoredHeaderRow(inv, 3, &quot;CIM Equipment Summary&quot;, CYAN);</span>
+<span class="nc" id="L455">        addDataRow(inv, &quot;Substations (Substation)&quot;,                   fmt(stats.get(&quot;substations&quot;)), 0);</span>
+<span class="nc" id="L456">        addDataRow(inv, &quot;Power Transformers (PowerTransformer)&quot;,       fmt(stats.get(&quot;transformers&quot;)), 1);</span>
+<span class="nc" id="L457">        addDataRow(inv, &quot;AC Transmission Lines (ACLineSegment)&quot;,       fmt(stats.get(&quot;transmissionLines&quot;)), 0);</span>
+<span class="nc" id="L458">        addDataRow(inv, &quot;Synchronous Generators (GeneratingUnit)&quot;,     fmt(stats.get(&quot;generators&quot;)), 1);</span>
+<span class="nc" id="L459">        addDataRow(inv, &quot;Energy Consumers / Loads (EnergyConsumer)&quot;,   fmt(stats.get(&quot;loads&quot;)), 0);</span>
+<span class="nc" id="L460">        addDataRow(inv, &quot;Circuit Breakers (Breaker)&quot;,                  fmt(stats.get(&quot;breakers&quot;)), 1);</span>
+<span class="nc" id="L461">        addDataRow(inv, &quot;Disconnectors (Disconnector)&quot;,                 fmt(stats.get(&quot;disconnectors&quot;)), 0);</span>
+<span class="nc" id="L462">        addDataRow(inv, &quot;Busbar Sections (BusbarSection)&quot;,             fmt(stats.get(&quot;busbarSections&quot;)), 1);</span>
+
+<span class="nc" id="L464">        doc.add(inv);</span>
+<span class="nc" id="L465">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+
+<span class="nc bnc" id="L467" title="All 2 branches missed.">        if (!vlevels.isEmpty()) {</span>
+<span class="nc" id="L468">            subsectionHeader(doc, &quot;Voltage Levels Present&quot;, CYAN);</span>
+<span class="nc" id="L469">            StringBuilder vl = new StringBuilder();</span>
+<span class="nc bnc" id="L470" title="All 2 branches missed.">            for (Map&lt;String,String&gt; r : vlevels) {</span>
+<span class="nc" id="L471">                String v = r.getOrDefault(&quot;vkv&quot;,&quot;?&quot;);</span>
+<span class="nc" id="L472">                try { vl.append(String.format(&quot;%.0f kV  &quot;, Double.parseDouble(v))); }</span>
+<span class="nc" id="L473">                catch (NumberFormatException e) { vl.append(v).append(&quot;  &quot;); }</span>
+<span class="nc" id="L474">            }</span>
+<span class="nc" id="L475">            doc.add(new Paragraph(vl.toString().trim())</span>
+<span class="nc" id="L476">                .setFontSize(11).setBold().setFontColor(CYAN).setMarginBottom(6));</span>
+        }
+<span class="nc" id="L478">    }</span>
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 4 — GENERATORS
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void sectionGenerators(Document doc, List&lt;Map&lt;String,String&gt;&gt; gens) {
+<span class="nc" id="L485">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L486">        sectionHeader(doc, &quot;4&quot;, &quot;Generation Fleet&quot;, GREEN);</span>
+
+<span class="nc" id="L488">        double totalMax = sumDouble(gens, &quot;maxP&quot;);</span>
+<span class="nc" id="L489">        double totalMin = sumDouble(gens, &quot;minP&quot;);</span>
+
+<span class="nc" id="L491">        doc.add(new Paragraph(String.format(</span>
+            &quot;The network contains %d generating units with a total installed capacity of %.1f MW &quot;
+          + &quot;(minimum operating capacity: %.1f MW).&quot;,
+<span class="nc" id="L494">            gens.size(), totalMax, totalMin))</span>
+<span class="nc" id="L495">            .setFontSize(10).setMultipliedLeading(1.4f).setMarginBottom(10));</span>
+
+<span class="nc" id="L497">        Table table = new Table(UnitValue.createPercentArray(new float[]{4, 2, 2}))</span>
+<span class="nc" id="L498">            .setWidth(UnitValue.createPercentValue(100));</span>
+
+<span class="nc" id="L500">        addColoredHeaderRow3(table, &quot;Generator Name&quot;, &quot;Max P (MW)&quot;, &quot;Min P (MW)&quot;, GREEN);</span>
+
+<span class="nc" id="L502">        int row = 0;</span>
+<span class="nc bnc" id="L503" title="All 2 branches missed.">        for (Map&lt;String,String&gt; g : gens) {</span>
+<span class="nc bnc" id="L504" title="All 2 branches missed.">            DeviceRgb bg = (row++ % 2 == 0) ? WHITE : ROW_ALT;</span>
+<span class="nc" id="L505">            table.addCell(cellData(g.getOrDefault(&quot;name&quot;,&quot;?&quot;), bg));</span>
+<span class="nc" id="L506">            table.addCell(cellData(formatMW(g.get(&quot;maxP&quot;)), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L507">            table.addCell(cellData(formatMW(g.get(&quot;minP&quot;)), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L508">        }</span>
+
+        // Total row
+<span class="nc" id="L511">        table.addCell(new Cell().add(new Paragraph(&quot;TOTAL&quot;).setBold().setFontSize(9))</span>
+<span class="nc" id="L512">            .setBackgroundColor(HEADER_BG).setPadding(5).setBorder(new SolidBorder(GREEN, 0.5f)));</span>
+<span class="nc" id="L513">        table.addCell(new Cell().add(new Paragraph(String.format(&quot;%.1f MW&quot;, totalMax)).setBold().setFontColor(GREEN).setFontSize(9))</span>
+<span class="nc" id="L514">            .setBackgroundColor(HEADER_BG).setPadding(5).setTextAlignment(TextAlignment.RIGHT).setBorder(new SolidBorder(GREEN, 0.5f)));</span>
+<span class="nc" id="L515">        table.addCell(new Cell().add(new Paragraph(String.format(&quot;%.1f MW&quot;, totalMin)).setBold().setFontSize(9))</span>
+<span class="nc" id="L516">            .setBackgroundColor(HEADER_BG).setPadding(5).setTextAlignment(TextAlignment.RIGHT).setBorder(new SolidBorder(GREEN, 0.5f)));</span>
+
+<span class="nc" id="L518">        doc.add(table);</span>
+<span class="nc" id="L519">    }</span>
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 5 — LOADS
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void sectionLoads(Document doc, List&lt;Map&lt;String,String&gt;&gt; loads) {
+<span class="nc" id="L526">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L527">        sectionHeader(doc, &quot;5&quot;, &quot;Load Profile&quot;, ORANGE);</span>
+
+<span class="nc" id="L529">        double totalP = sumDouble(loads, &quot;p&quot;);</span>
+<span class="nc" id="L530">        double totalQ = sumDouble(loads, &quot;q&quot;);</span>
+
+<span class="nc" id="L532">        doc.add(new Paragraph(String.format(</span>
+            &quot;%d energy consumers — Total active power: %.1f MW, Total reactive power: %.1f MVAr.&quot;,
+<span class="nc" id="L534">            loads.size(), totalP, totalQ))</span>
+<span class="nc" id="L535">            .setFontSize(10).setMultipliedLeading(1.4f).setMarginBottom(10));</span>
+
+<span class="nc" id="L537">        Table table = new Table(UnitValue.createPercentArray(new float[]{4, 2, 2}))</span>
+<span class="nc" id="L538">            .setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L539">        addColoredHeaderRow3(table, &quot;Consumer Name&quot;, &quot;P (MW)&quot;, &quot;Q (MVAr)&quot;, ORANGE);</span>
+
+<span class="nc" id="L541">        int row = 0;</span>
+<span class="nc bnc" id="L542" title="All 2 branches missed.">        for (Map&lt;String,String&gt; l : loads) {</span>
+<span class="nc bnc" id="L543" title="All 2 branches missed.">            DeviceRgb bg = (row++ % 2 == 0) ? WHITE : ROW_ALT;</span>
+<span class="nc" id="L544">            table.addCell(cellData(l.getOrDefault(&quot;name&quot;,&quot;?&quot;), bg));</span>
+<span class="nc" id="L545">            table.addCell(cellData(formatMW(l.get(&quot;p&quot;)), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L546">            table.addCell(cellData(formatMW(l.get(&quot;q&quot;)), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L547">        }</span>
+
+<span class="nc" id="L549">        table.addCell(new Cell().add(new Paragraph(&quot;TOTAL&quot;).setBold().setFontSize(9))</span>
+<span class="nc" id="L550">            .setBackgroundColor(new DeviceRgb(255,244,230)).setPadding(5).setBorder(new SolidBorder(ORANGE, 0.5f)));</span>
+<span class="nc" id="L551">        table.addCell(new Cell().add(new Paragraph(String.format(&quot;%.1f MW&quot;, totalP)).setBold().setFontColor(ORANGE).setFontSize(9))</span>
+<span class="nc" id="L552">            .setBackgroundColor(new DeviceRgb(255,244,230)).setPadding(5).setTextAlignment(TextAlignment.RIGHT).setBorder(new SolidBorder(ORANGE, 0.5f)));</span>
+<span class="nc" id="L553">        table.addCell(new Cell().add(new Paragraph(String.format(&quot;%.1f MVAr&quot;, totalQ)).setBold().setFontSize(9))</span>
+<span class="nc" id="L554">            .setBackgroundColor(new DeviceRgb(255,244,230)).setPadding(5).setTextAlignment(TextAlignment.RIGHT).setBorder(new SolidBorder(ORANGE, 0.5f)));</span>
+
+<span class="nc" id="L556">        doc.add(table);</span>
+<span class="nc" id="L557">    }</span>
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 6 — LINES
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void sectionLines(Document doc, List&lt;Map&lt;String,String&gt;&gt; lines) {
+<span class="nc" id="L564">        sectionHeader(doc, &quot;6&quot;, &quot;Transmission Lines&quot;, CYAN);</span>
+
+<span class="nc" id="L566">        doc.add(new Paragraph(String.format(</span>
+            &quot;The network contains %d AC transmission line segments (ACLineSegment). &quot;
+<span class="nc" id="L568">          + &quot;Impedance values are in physical Ohms referred to system base.&quot;, lines.size()))</span>
+<span class="nc" id="L569">            .setFontSize(10).setMultipliedLeading(1.4f).setMarginBottom(10));</span>
+
+<span class="nc" id="L571">        Table table = new Table(UnitValue.createPercentArray(new float[]{4, 1.5f, 1.5f, 1.5f}))</span>
+<span class="nc" id="L572">            .setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L573">        addColoredHeaderRow4(table, &quot;Line Name&quot;, &quot;R (Ω)&quot;, &quot;X (Ω)&quot;, &quot;Bch (S)&quot;, CYAN);</span>
+
+<span class="nc" id="L575">        int row = 0;</span>
+<span class="nc bnc" id="L576" title="All 2 branches missed.">        for (Map&lt;String,String&gt; l : lines) {</span>
+<span class="nc bnc" id="L577" title="All 2 branches missed.">            DeviceRgb bg = (row++ % 2 == 0) ? WHITE : ROW_ALT;</span>
+<span class="nc" id="L578">            table.addCell(cellData(l.getOrDefault(&quot;name&quot;,&quot;?&quot;), bg));</span>
+<span class="nc" id="L579">            table.addCell(cellData(fmtOhm(l.get(&quot;r&quot;)), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L580">            table.addCell(cellData(fmtOhm(l.get(&quot;x&quot;)), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L581">            table.addCell(cellData(fmtSci(l.get(&quot;bch&quot;)), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L582">        }</span>
+
+<span class="nc" id="L584">        doc.add(table);</span>
+<span class="nc" id="L585">    }</span>
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 7 — TRANSFORMERS &amp; SUBSTATIONS
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void sectionTransformers(Document doc, List&lt;Map&lt;String,String&gt;&gt; trafos) {
+<span class="nc" id="L592">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L593">        sectionHeader(doc, &quot;7&quot;, &quot;Power Transformers &amp; Substations&quot;, PURPLE);</span>
+
+<span class="nc" id="L595">        doc.add(new Paragraph(String.format(&quot;%d power transformers:&quot;, trafos.size()))</span>
+<span class="nc" id="L596">            .setFontSize(10).setMarginBottom(8));</span>
+
+<span class="nc" id="L598">        Table table = new Table(UnitValue.createPercentArray(new float[]{1, 5}))</span>
+<span class="nc" id="L599">            .setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L600">        addColoredHeaderRow2(table, &quot;#&quot;, &quot;Transformer Name&quot;, PURPLE);</span>
+
+<span class="nc" id="L602">        int idx = 1;</span>
+<span class="nc bnc" id="L603" title="All 2 branches missed.">        for (Map&lt;String,String&gt; t : trafos) {</span>
+<span class="nc bnc" id="L604" title="All 2 branches missed.">            DeviceRgb bg = (idx % 2 == 0) ? ROW_ALT : WHITE;</span>
+<span class="nc" id="L605">            table.addCell(new Cell().add(new Paragraph(String.valueOf(idx)).setFontSize(9))</span>
+<span class="nc" id="L606">                .setBackgroundColor(bg).setPadding(5).setTextAlignment(TextAlignment.CENTER)</span>
+<span class="nc" id="L607">                .setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f)));</span>
+<span class="nc" id="L608">            table.addCell(cellData(t.getOrDefault(&quot;name&quot;,&quot;?&quot;), bg));</span>
+<span class="nc" id="L609">            idx++;</span>
+<span class="nc" id="L610">        }</span>
+<span class="nc" id="L611">        doc.add(table);</span>
+<span class="nc" id="L612">    }</span>
+
+    private void sectionSubstations(Document doc, List&lt;Map&lt;String,String&gt;&gt; subs) {
+<span class="nc" id="L615">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L616">        doc.add(new Paragraph(String.format(&quot;Substations (%d):&quot;, subs.size()))</span>
+<span class="nc" id="L617">            .setFontSize(11).setBold().setFontColor(PURPLE).setMarginBottom(6));</span>
+
+        // Grid layout — 3 columns
+<span class="nc" id="L620">        Table grid = new Table(UnitValue.createPercentArray(new float[]{1,1,1}))</span>
+<span class="nc" id="L621">            .setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc bnc" id="L622" title="All 2 branches missed.">        for (Map&lt;String,String&gt; s : subs) {</span>
+<span class="nc" id="L623">            grid.addCell(new Cell()</span>
+<span class="nc" id="L624">                .add(new Paragraph(&quot;■  &quot; + s.getOrDefault(&quot;name&quot;,&quot;?&quot;)).setFontSize(9))</span>
+<span class="nc" id="L625">                .setBackgroundColor(new DeviceRgb(245, 243, 255))</span>
+<span class="nc" id="L626">                .setBorder(new SolidBorder(PURPLE, 0.3f)).setPadding(5));</span>
+<span class="nc" id="L627">        }</span>
+<span class="nc" id="L628">        doc.add(grid);</span>
+<span class="nc" id="L629">    }</span>
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 8 — POWER FLOW
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void sectionPowerFlow(Document doc, LoadFlowResponse lf) {
+<span class="nc" id="L636">        sectionHeader(doc, &quot;8&quot;, &quot;Power Flow Analysis (AC Newton-Raphson)&quot;, BLUE);</span>
+
+        // Convergence banner
+<span class="nc" id="L639">        boolean ok = lf.isConverged();</span>
+<span class="nc bnc" id="L640" title="All 2 branches missed.">        DeviceRgb bannerColor = ok ? new DeviceRgb(220, 252, 231) : new DeviceRgb(254, 226, 226);</span>
+<span class="nc bnc" id="L641" title="All 2 branches missed.">        DeviceRgb textColor   = ok ? GREEN_DARK : RED;</span>
+<span class="nc" id="L642">        Table banner = new Table(UnitValue.createPercentArray(new float[]{1}))</span>
+<span class="nc" id="L643">            .setWidth(UnitValue.createPercentValue(100)).setMarginBottom(12);</span>
+<span class="nc" id="L644">        banner.addCell(new Cell()</span>
+<span class="nc bnc" id="L645" title="All 2 branches missed.">            .add(new Paragraph((ok ? &quot;✓  CONVERGED&quot; : &quot;✗  DID NOT CONVERGE&quot;)</span>
+<span class="nc" id="L646">                    + &quot;  —  Method: &quot; + lf.getCalculationMethod()</span>
+<span class="nc" id="L647">                    + &quot;  |  Iterations: &quot; + lf.getIterations()</span>
+<span class="nc" id="L648">                    + &quot;  |  Exec time: &quot; + lf.getExecutionTimeMs() + &quot; ms&quot;)</span>
+<span class="nc" id="L649">                .setBold().setFontSize(11).setFontColor(textColor).setTextAlignment(TextAlignment.CENTER))</span>
+<span class="nc" id="L650">            .setBackgroundColor(bannerColor)</span>
+<span class="nc" id="L651">            .setBorder(new SolidBorder(textColor, 1.5f)).setPadding(10));</span>
+<span class="nc" id="L652">        doc.add(banner);</span>
+
+        // System statistics
+<span class="nc" id="L655">        LoadFlowResponse.SystemStatistics s = lf.getStatistics();</span>
+<span class="nc bnc" id="L656" title="All 2 branches missed.">        if (s != null) {</span>
+<span class="nc" id="L657">            subsectionHeader(doc, &quot;System Power Balance&quot;, BLUE);</span>
+<span class="nc" id="L658">            Table bal = new Table(UnitValue.createPercentArray(new float[]{2,1,2,1}))</span>
+<span class="nc" id="L659">                .setWidth(UnitValue.createPercentValue(100)).setMarginBottom(10);</span>
+<span class="nc" id="L660">            addKpiRow(bal, &quot;Total Generation&quot;, String.format(&quot;%.2f MW / %.2f MVAr&quot;, s.getTotalGenerationMw(), s.getTotalGenerationMvar()),</span>
+<span class="nc" id="L661">                           &quot;Total Load&quot;,        String.format(&quot;%.2f MW / %.2f MVAr&quot;, s.getTotalLoadMw(), s.getTotalLoadMvar()));</span>
+<span class="nc" id="L662">            addKpiRow(bal, &quot;Active Losses&quot;,     String.format(&quot;%.4f MW (%.3f%%)&quot;, s.getTotalLossesMw(), s.getLossPercentage()),</span>
+<span class="nc" id="L663">                           &quot;Reactive Losses&quot;,    String.format(&quot;%.4f MVAr&quot;, s.getTotalLossesMvar()));</span>
+<span class="nc" id="L664">            addKpiRow(bal, &quot;Min Voltage&quot;,        String.format(&quot;%.4f pu — %s&quot;, s.getMinVoltagePu(), s.getMinVoltageBus()),</span>
+<span class="nc" id="L665">                           &quot;Max Voltage&quot;,         String.format(&quot;%.4f pu — %s&quot;, s.getMaxVoltagePu(), s.getMaxVoltageBus()));</span>
+<span class="nc" id="L666">            addKpiRow(bal, &quot;Average Voltage&quot;,    String.format(&quot;%.4f pu&quot;, s.getAvgVoltagePu()),</span>
+<span class="nc" id="L667">                           &quot;Total Buses/Branches&quot;, s.getTotalBuses() + &quot; / &quot; + s.getTotalBranches());</span>
+<span class="nc" id="L668">            doc.add(bal);</span>
+        }
+
+        // Bus results table (all buses)
+<span class="nc bnc" id="L672" title="All 4 branches missed.">        if (lf.getBusResults() != null &amp;&amp; !lf.getBusResults().isEmpty()) {</span>
+<span class="nc" id="L673">            subsectionHeader(doc, &quot;Bus Voltage Results — All Buses&quot;, BLUE);</span>
+<span class="nc" id="L674">            Table bt = new Table(UnitValue.createPercentArray(new float[]{4, 1.5f, 1.5f, 1.5f, 1.5f, 1.5f}))</span>
+<span class="nc" id="L675">                .setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L676">            addColoredHeaderRow6(bt, &quot;Bus Name&quot;, &quot;Type&quot;, &quot;V (pu)&quot;, &quot;V (kV)&quot;, &quot;Angle (°)&quot;, &quot;Status&quot;, BLUE);</span>
+
+<span class="nc" id="L678">            int row = 0;</span>
+<span class="nc bnc" id="L679" title="All 2 branches missed.">            for (LoadFlowResponse.BusResult b : lf.getBusResults()) {</span>
+<span class="nc bnc" id="L680" title="All 2 branches missed.">                DeviceRgb bg = (row++ % 2 == 0) ? WHITE : ROW_ALT;</span>
+<span class="nc" id="L681">                boolean within = b.isWithinLimits();</span>
+<span class="nc bnc" id="L682" title="All 2 branches missed.">                bt.addCell(cellData(b.getBusName() != null ? b.getBusName() : b.getBusId(), bg));</span>
+<span class="nc" id="L683">                bt.addCell(cellData(b.getBusType(), bg).setTextAlignment(TextAlignment.CENTER));</span>
+<span class="nc" id="L684">                bt.addCell(cellData(String.format(&quot;%.4f&quot;, b.getVoltageMagnitude()), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L685">                bt.addCell(cellData(String.format(&quot;%.2f&quot;, b.getVoltageKv()), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L686">                bt.addCell(cellData(String.format(&quot;%.2f&quot;, b.getVoltageAngle()), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L687">                bt.addCell(new Cell()</span>
+<span class="nc bnc" id="L688" title="All 2 branches missed.">                    .add(new Paragraph(within ? &quot;✓ OK&quot; : &quot;⚠ VIOL&quot;).setFontSize(8).setBold()</span>
+<span class="nc bnc" id="L689" title="All 2 branches missed.">                        .setFontColor(within ? GREEN_DARK : RED))</span>
+<span class="nc bnc" id="L690" title="All 2 branches missed.">                    .setBackgroundColor(within ? new DeviceRgb(220,252,231) : new DeviceRgb(254,226,226))</span>
+<span class="nc" id="L691">                    .setPadding(4).setTextAlignment(TextAlignment.CENTER)</span>
+<span class="nc" id="L692">                    .setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f)));</span>
+<span class="nc" id="L693">            }</span>
+<span class="nc" id="L694">            doc.add(bt);</span>
+        }
+
+        // Branch results
+<span class="nc bnc" id="L698" title="All 4 branches missed.">        if (lf.getBranchResults() != null &amp;&amp; !lf.getBranchResults().isEmpty()) {</span>
+<span class="nc" id="L699">            doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L700">            subsectionHeader(doc, &quot;Branch Loading Results&quot;, BLUE);</span>
+<span class="nc" id="L701">            Table brt = new Table(UnitValue.createPercentArray(new float[]{3.5f, 1.5f, 2, 1.5f, 1.5f}))</span>
+<span class="nc" id="L702">                .setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L703">            addColoredHeaderRow5(brt, &quot;Branch Name&quot;, &quot;Type&quot;, &quot;P Flow (MW)&quot;, &quot;Losses (MW)&quot;, &quot;Loading %&quot;, BLUE);</span>
+
+<span class="nc" id="L705">            int row = 0;</span>
+<span class="nc bnc" id="L706" title="All 2 branches missed.">            for (LoadFlowResponse.BranchResult b : lf.getBranchResults()) {</span>
+<span class="nc bnc" id="L707" title="All 2 branches missed.">                DeviceRgb bg   = (row++ % 2 == 0) ? WHITE : ROW_ALT;</span>
+<span class="nc" id="L708">                boolean over   = b.isOverloaded();</span>
+<span class="nc bnc" id="L709" title="All 2 branches missed.">                DeviceRgb lColor = b.getLoadingPercentage() &gt; 80 ? ORANGE : GREEN_DARK;</span>
+<span class="nc bnc" id="L710" title="All 2 branches missed.">                if (over) lColor = RED;</span>
+
+<span class="nc bnc" id="L712" title="All 2 branches missed.">                brt.addCell(cellData(b.getBranchName() != null ? b.getBranchName() : b.getBranchId(), bg));</span>
+<span class="nc" id="L713">                brt.addCell(cellData(b.getBranchType(), bg).setTextAlignment(TextAlignment.CENTER));</span>
+<span class="nc" id="L714">                brt.addCell(cellData(String.format(&quot;%.3f&quot;, b.getFromActivePowerMw()), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L715">                brt.addCell(cellData(String.format(&quot;%.4f&quot;, b.getLossActivePowerMw()), bg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L716">                brt.addCell(new Cell()</span>
+<span class="nc" id="L717">                    .add(new Paragraph(String.format(&quot;%.1f%%&quot;, b.getLoadingPercentage())).setFontSize(9).setBold().setFontColor(lColor))</span>
+<span class="nc bnc" id="L718" title="All 2 branches missed.">                    .setBackgroundColor(over ? new DeviceRgb(254,226,226) : bg)</span>
+<span class="nc" id="L719">                    .setPadding(4).setTextAlignment(TextAlignment.RIGHT)</span>
+<span class="nc" id="L720">                    .setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f)));</span>
+<span class="nc" id="L721">            }</span>
+<span class="nc" id="L722">            doc.add(brt);</span>
+        }
+
+        // Violations
+<span class="nc bnc" id="L726" title="All 4 branches missed.">        if (lf.getViolations() != null &amp;&amp; !lf.getViolations().isEmpty()) {</span>
+<span class="nc" id="L727">            doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L728">            subsectionHeader(doc, &quot;Constraint Violations&quot;, RED);</span>
+<span class="nc" id="L729">            Table vt = new Table(UnitValue.createPercentArray(new float[]{2, 1.5f, 4, 1.5f, 1.5f}))</span>
+<span class="nc" id="L730">                .setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L731">            addColoredHeaderRow5(vt, &quot;Element&quot;, &quot;Type&quot;, &quot;Description&quot;, &quot;Severity&quot;, &quot;Deviation&quot;, RED);</span>
+
+<span class="nc bnc" id="L733" title="All 2 branches missed.">            for (LoadFlowResponse.Violation v : lf.getViolations()) {</span>
+<span class="nc" id="L734">                boolean critical = &quot;CRITICAL&quot;.equals(v.getSeverity());</span>
+<span class="nc bnc" id="L735" title="All 2 branches missed.">                DeviceRgb rowBg = critical ? new DeviceRgb(254,226,226) : new DeviceRgb(255,247,237);</span>
+<span class="nc bnc" id="L736" title="All 2 branches missed.">                vt.addCell(cellData(v.getElementName() != null ? v.getElementName() : v.getElementId(), rowBg));</span>
+<span class="nc" id="L737">                vt.addCell(cellData(v.getType(), rowBg).setTextAlignment(TextAlignment.CENTER));</span>
+<span class="nc" id="L738">                vt.addCell(cellData(v.getDescription(), rowBg));</span>
+<span class="nc" id="L739">                vt.addCell(new Cell().add(new Paragraph(v.getSeverity()).setFontSize(9).setBold()</span>
+<span class="nc bnc" id="L740" title="All 2 branches missed.">                        .setFontColor(critical ? RED : ORANGE))</span>
+<span class="nc" id="L741">                    .setBackgroundColor(rowBg).setPadding(5)</span>
+<span class="nc" id="L742">                    .setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f)).setTextAlignment(TextAlignment.CENTER));</span>
+<span class="nc" id="L743">                vt.addCell(cellData(String.format(&quot;%.2f%%&quot;, v.getViolationPercentage()), rowBg).setTextAlignment(TextAlignment.RIGHT));</span>
+<span class="nc" id="L744">            }</span>
+<span class="nc" id="L745">            doc.add(vt);</span>
+<span class="nc" id="L746">        } else {</span>
+<span class="nc" id="L747">            doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L748">            Table okBox = new Table(UnitValue.createPercentArray(new float[]{1})).setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L749">            okBox.addCell(new Cell()</span>
+<span class="nc" id="L750">                .add(new Paragraph(&quot;✓  No constraint violations detected — All buses and branches operate within limits.&quot;)</span>
+<span class="nc" id="L751">                    .setFontSize(10).setBold().setFontColor(GREEN_DARK).setTextAlignment(TextAlignment.CENTER))</span>
+<span class="nc" id="L752">                .setBackgroundColor(new DeviceRgb(220,252,231))</span>
+<span class="nc" id="L753">                .setBorder(new SolidBorder(GREEN, 1)).setPadding(10));</span>
+<span class="nc" id="L754">            doc.add(okBox);</span>
+        }
+<span class="nc" id="L756">    }</span>
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  SECTION 9 — AI RECOMMENDATIONS
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private void sectionRecommendations(Document doc, String aiText) {
+<span class="nc" id="L763">        sectionHeader(doc, &quot;9&quot;, &quot;AI Analysis &amp; Recommendations&quot;, CYAN);</span>
+
+<span class="nc" id="L765">        doc.add(new Paragraph(&quot;The following analysis and recommendations were generated by the AI engine &quot;</span>
+            + &quot;(Claude / GraphRAG) based on the complete network data and power flow results.&quot;)
+<span class="nc" id="L767">            .setFontSize(10).setMultipliedLeading(1.4f).setItalic().setMarginBottom(12));</span>
+
+<span class="nc bnc" id="L769" title="All 4 branches missed.">        if (aiText != null &amp;&amp; !aiText.isBlank()) {</span>
+            // Split into paragraphs and headings
+<span class="nc bnc" id="L771" title="All 2 branches missed.">            for (String line : aiText.split(&quot;\n&quot;)) {</span>
+<span class="nc bnc" id="L772" title="All 2 branches missed.">                if (line.isBlank()) { doc.add(new Paragraph(&quot;\n&quot;).setFontSize(4)); continue; }</span>
+<span class="nc" id="L773">                String clean = line.trim();</span>
+<span class="nc bnc" id="L774" title="All 2 branches missed.">                if (clean.startsWith(&quot;##&quot;)) {</span>
+<span class="nc" id="L775">                    doc.add(new Paragraph(clean.replaceAll(&quot;^#+\\s*&quot;, &quot;&quot;))</span>
+<span class="nc" id="L776">                        .setFontSize(11).setBold().setFontColor(CYAN).setMarginTop(10).setMarginBottom(4));</span>
+<span class="nc bnc" id="L777" title="All 4 branches missed.">                } else if (clean.startsWith(&quot;-&quot;) || clean.startsWith(&quot;•&quot;)) {</span>
+<span class="nc" id="L778">                    doc.add(new Paragraph(&quot;• &quot; + clean.replaceAll(&quot;^[-•]\\s*&quot;,&quot;&quot;).replaceAll(&quot;\\*\\*(.*?)\\*\\*&quot;,&quot;$1&quot;))</span>
+<span class="nc" id="L779">                        .setFontSize(10).setMarginLeft(12).setMultipliedLeading(1.4f));</span>
+                } else {
+<span class="nc" id="L781">                    doc.add(new Paragraph(clean.replaceAll(&quot;\\*\\*(.*?)\\*\\*&quot;,&quot;$1&quot;))</span>
+<span class="nc" id="L782">                        .setFontSize(10).setMultipliedLeading(1.5f).setTextAlignment(TextAlignment.JUSTIFIED));</span>
+                }
+            }
+        } else {
+<span class="nc" id="L786">            doc.add(new Paragraph(&quot;AI analysis unavailable — configure GROQ_API_KEY or CLAUDE_API_KEY.&quot;)</span>
+<span class="nc" id="L787">                .setFontSize(10).setFontColor(GRAY).setItalic());</span>
+        }
+
+        // Final footer box
+<span class="nc" id="L791">        doc.add(new Paragraph(&quot;\n\n&quot;));</span>
+<span class="nc" id="L792">        Table footer = new Table(UnitValue.createPercentArray(new float[]{1})).setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L793">        footer.addCell(new Cell()</span>
+<span class="nc" id="L794">            .add(new Paragraph(&quot;Report generated by CIM SemanticGraph Platform  ·  &quot;</span>
+                + &quot;Powered by Apache Jena Fuseki + Claude AI + pandapower  ·  &quot;
+<span class="nc" id="L796">                + LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;dd/MM/yyyy HH:mm:ss&quot;)))</span>
+<span class="nc" id="L797">                .setFontSize(8).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER))</span>
+<span class="nc" id="L798">            .setBackgroundColor(LIGHT_BG).setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.5f)).setPadding(8));</span>
+<span class="nc" id="L799">        doc.add(footer);</span>
+<span class="nc" id="L800">    }</span>
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  AI NARRATIVE GENERATION
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private String buildAISummary(Map&lt;String,Object&gt; stats, List&lt;Map&lt;String,String&gt;&gt; gens,
+                                   List&lt;Map&lt;String,String&gt;&gt; loads, List&lt;Map&lt;String,String&gt;&gt; lines,
+                                   List&lt;Map&lt;String,String&gt;&gt; trafos, List&lt;Map&lt;String,String&gt;&gt; subs,
+                                   LoadFlowResponse lf) {
+<span class="nc bnc" id="L810" title="All 2 branches missed.">        if (!groqService.isConfigured()) return defaultSummary(stats, gens, loads, lines, subs, lf);</span>
+
+<span class="nc" id="L812">        double totalGenMw  = sumDouble(gens, &quot;maxP&quot;);</span>
+<span class="nc" id="L813">        double totalLoadMw = sumDouble(loads, &quot;p&quot;);</span>
+<span class="nc bnc" id="L814" title="All 2 branches missed.">        String lfInfo = lf != null</span>
+<span class="nc" id="L815">            ? String.format(&quot;Load flow: %s, losses=%.3f MW (%.2f%%), minV=%.4f pu, maxV=%.4f pu.&quot;,</span>
+<span class="nc bnc" id="L816" title="All 2 branches missed.">                lf.isConverged() ? &quot;converged&quot; : &quot;NOT converged&quot;,</span>
+<span class="nc bnc" id="L817" title="All 2 branches missed.">                lf.getStatistics() != null ? lf.getStatistics().getTotalLossesMw() : 0,</span>
+<span class="nc bnc" id="L818" title="All 2 branches missed.">                lf.getStatistics() != null ? lf.getStatistics().getLossPercentage() : 0,</span>
+<span class="nc bnc" id="L819" title="All 2 branches missed.">                lf.getStatistics() != null ? lf.getStatistics().getMinVoltagePu() : 0,</span>
+<span class="nc bnc" id="L820" title="All 2 branches missed.">                lf.getStatistics() != null ? lf.getStatistics().getMaxVoltagePu() : 0)</span>
+<span class="nc" id="L821">            : &quot;Load flow not available.&quot;;</span>
+
+<span class="nc" id="L823">        String prompt = String.format(&quot;&quot;&quot;</span>
+            Write a concise professional executive summary (3 paragraphs, plain text, no markdown headers) \
+            for a CIM power network with these characteristics:
+            - %d substations, %d generators (%.0f MW total capacity), %d loads (%.0f MW), \
+            %d transmission lines, %d transformers
+            - RDF triples: %s, CIM classes: %s
+            - %s
+            Focus on: network scale, generation/load balance, and operational status. Be precise and technical.
+            &quot;&quot;&quot;,
+<span class="nc" id="L832">            subs.size(), gens.size(), totalGenMw, loads.size(), totalLoadMw,</span>
+<span class="nc" id="L833">            lines.size(), trafos.size(),</span>
+<span class="nc" id="L834">            fmt(stats.get(&quot;totalTriples&quot;)), fmt(stats.get(&quot;totalClasses&quot;)),</span>
+            lfInfo);
 
         try {
-<span class="nc" id="L39">            ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
-<span class="nc" id="L40">            PdfWriter writer = new PdfWriter(baos);</span>
-<span class="nc" id="L41">            PdfDocument pdf = new PdfDocument(writer);</span>
-<span class="nc" id="L42">            Document document = new Document(pdf);</span>
+<span class="nc" id="L838">            return groqService.simpleQuery(prompt);</span>
+<span class="nc" id="L839">        } catch (Exception e) {</span>
+<span class="nc" id="L840">            log.warn(&quot;AI summary failed: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L841">            return defaultSummary(stats, gens, loads, lines, subs, lf);</span>
+        }
+    }
 
-<span class="nc" id="L44">            LoadFlowResponse loadFlowResult = loadFlowService.calculateLoadFlow();</span>
-<span class="nc" id="L45">            LoadFlowResponse.SystemStatistics stats = loadFlowResult.getStatistics();</span>
+    private String buildAIRecommendations(Map&lt;String,Object&gt; stats, List&lt;Map&lt;String,String&gt;&gt; gens,
+                                           List&lt;Map&lt;String,String&gt;&gt; loads, List&lt;Map&lt;String,String&gt;&gt; lines,
+                                           LoadFlowResponse lf) {
+<span class="nc bnc" id="L848" title="All 2 branches missed.">        if (!groqService.isConfigured()) return defaultRecommendations(lf);</span>
 
-<span class="nc" id="L47">            addReportHeader(document, &quot;Load Flow Analysis Report&quot;);</span>
+<span class="nc" id="L850">        double totalGenMw  = sumDouble(gens, &quot;maxP&quot;);</span>
+<span class="nc" id="L851">        double totalLoadMw = sumDouble(loads, &quot;p&quot;);</span>
+<span class="nc bnc" id="L852" title="All 4 branches missed.">        int violations = lf != null &amp;&amp; lf.getViolations() != null ? lf.getViolations().size() : 0;</span>
+<span class="nc bnc" id="L853" title="All 2 branches missed.">        String lfSummary = lf != null</span>
+<span class="nc" id="L854">            ? String.format(&quot;converged=%b, violations=%d, losses=%.3f MW, minV=%.4f pu&quot;,</span>
+<span class="nc" id="L855">                lf.isConverged(), violations,</span>
+<span class="nc bnc" id="L856" title="All 2 branches missed.">                lf.getStatistics() != null ? lf.getStatistics().getTotalLossesMw() : 0,</span>
+<span class="nc bnc" id="L857" title="All 2 branches missed.">                lf.getStatistics() != null ? lf.getStatistics().getMinVoltagePu() : 0)</span>
+<span class="nc" id="L858">            : &quot;no load flow data&quot;;</span>
 
-<span class="nc" id="L49">            addSection(document, &quot;Report Information&quot;);</span>
-<span class="nc" id="L50">            addKeyValue(document, &quot;Generated on&quot;, LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;dd/MM/yyyy HH:mm:ss&quot;)));</span>
-<span class="nc" id="L51">            addKeyValue(document, &quot;Calculation Time&quot;, loadFlowResult.getExecutionTimeMs() + &quot; ms&quot;);</span>
-<span class="nc bnc" id="L52" title="All 2 branches missed.">            addKeyValue(document, &quot;Convergence Status&quot;, loadFlowResult.isConverged() ? &quot;Converged&quot; : &quot;Failed&quot;);</span>
-<span class="nc" id="L53">            addKeyValue(document, &quot;Iterations&quot;, String.valueOf(loadFlowResult.getIterations()));</span>
+<span class="nc" id="L860">        String prompt = String.format(&quot;&quot;&quot;</span>
+            As a power systems engineer, provide 5-7 technical recommendations for this CIM network:
+            - %d generators (%.0f MW), %d loads (%.0f MW), %d lines
+            - Power flow: %s
+            Use markdown bullet points. Be specific and technical. Focus on: voltage control, \
+            loss reduction, N-1 security, reactive power compensation, and data quality improvements.
+            &quot;&quot;&quot;,
+<span class="nc" id="L867">            gens.size(), totalGenMw, loads.size(), totalLoadMw, lines.size(), lfSummary);</span>
 
-<span class="nc" id="L55">            addSection(document, &quot;System Overview&quot;);</span>
-<span class="nc bnc" id="L56" title="All 2 branches missed.">            if (stats != null) {</span>
-<span class="nc" id="L57">                addKeyValue(document, &quot;Total Buses&quot;, String.valueOf(stats.getTotalBuses()));</span>
-<span class="nc" id="L58">                addKeyValue(document, &quot;Total Branches&quot;, String.valueOf(stats.getTotalBranches()));</span>
-<span class="nc" id="L59">                addKeyValue(document, &quot;Total Generation&quot;, String.format(&quot;%.2f MW / %.2f MVAr&quot;,</span>
-<span class="nc" id="L60">                    stats.getTotalGenerationMw(), stats.getTotalGenerationMvar()));</span>
-<span class="nc" id="L61">                addKeyValue(document, &quot;Total Load&quot;, String.format(&quot;%.2f MW / %.2f MVAr&quot;,</span>
-<span class="nc" id="L62">                    stats.getTotalLoadMw(), stats.getTotalLoadMvar()));</span>
-<span class="nc" id="L63">                addKeyValue(document, &quot;Total Losses&quot;, String.format(&quot;%.2f MW (%.2f%%)&quot;,</span>
-<span class="nc" id="L64">                    stats.getTotalLossesMw(), stats.getLossPercentage()));</span>
-<span class="nc" id="L65">                addKeyValue(document, &quot;Voltage Range&quot;, String.format(&quot;%.3f to %.3f pu&quot;,</span>
-<span class="nc" id="L66">                    stats.getMinVoltagePu(), stats.getMaxVoltagePu()));</span>
+        try {
+<span class="nc" id="L870">            return groqService.simpleQuery(prompt);</span>
+<span class="nc" id="L871">        } catch (Exception e) {</span>
+<span class="nc" id="L872">            log.warn(&quot;AI recommendations failed: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L873">            return defaultRecommendations(lf);</span>
+        }
+    }
+
+    private String defaultSummary(Map&lt;String,Object&gt; s, List&lt;Map&lt;String,String&gt;&gt; gens,
+                                   List&lt;Map&lt;String,String&gt;&gt; loads, List&lt;Map&lt;String,String&gt;&gt; lines,
+                                   List&lt;Map&lt;String,String&gt;&gt; subs, LoadFlowResponse lf) {
+<span class="nc" id="L880">        double totalGen  = sumDouble(gens, &quot;maxP&quot;);</span>
+<span class="nc" id="L881">        double totalLoad = sumDouble(loads, &quot;p&quot;);</span>
+
+        String lfPart;
+<span class="nc bnc" id="L884" title="All 2 branches missed.">        if (lf != null) {</span>
+<span class="nc bnc" id="L885" title="All 2 branches missed.">            double losses    = lf.getStatistics() != null ? lf.getStatistics().getTotalLossesMw()   : 0;</span>
+<span class="nc bnc" id="L886" title="All 2 branches missed.">            double lossPct   = lf.getStatistics() != null ? lf.getStatistics().getLossPercentage()   : 0;</span>
+<span class="nc bnc" id="L887" title="All 2 branches missed.">            double minV      = lf.getStatistics() != null ? lf.getStatistics().getMinVoltagePu()     : 0;</span>
+<span class="nc bnc" id="L888" title="All 2 branches missed.">            double maxV      = lf.getStatistics() != null ? lf.getStatistics().getMaxVoltagePu()     : 1;</span>
+            lfPart = &quot;The AC Newton-Raphson power flow &quot;
+<span class="nc bnc" id="L890" title="All 2 branches missed.">                   + (lf.isConverged() ? &quot;converged successfully&quot; : &quot;did not converge&quot;)</span>
+<span class="nc" id="L891">                   + &quot; after &quot; + lf.getIterations() + &quot; iterations. &quot;</span>
+<span class="nc" id="L892">                   + &quot;Network losses are &quot; + String.format(&quot;%.3f&quot;, losses) + &quot; MW (&quot;</span>
+<span class="nc" id="L893">                   + String.format(&quot;%.2f&quot;, lossPct) + &quot;%). &quot;</span>
+<span class="nc" id="L894">                   + &quot;Voltage magnitudes range from &quot; + String.format(&quot;%.4f&quot;, minV)</span>
+<span class="nc" id="L895">                   + &quot; pu to &quot; + String.format(&quot;%.4f&quot;, maxV) + &quot; pu across all buses.&quot;;</span>
+<span class="nc" id="L896">        } else {</span>
+<span class="nc" id="L897">            lfPart = &quot;Power flow analysis data is not yet available for this report.&quot;;</span>
+        }
+
+<span class="nc" id="L900">        return &quot;This report covers the CIM power network modelled according to the IEC 61970 standard and stored &quot;</span>
+<span class="nc" id="L901">             + &quot;as RDF triples in Apache Jena Fuseki. The network comprises &quot; + subs.size() + &quot; substations, &quot;</span>
+<span class="nc" id="L902">             + gens.size() + &quot; generating units with a total installed capacity of &quot;</span>
+<span class="nc" id="L903">             + String.format(&quot;%.1f&quot;, totalGen) + &quot; MW, &quot; + loads.size()</span>
+<span class="nc" id="L904">             + &quot; energy consumers with a total active load of &quot; + String.format(&quot;%.1f&quot;, totalLoad) + &quot; MW, &quot;</span>
+<span class="nc" id="L905">             + &quot;and &quot; + lines.size() + &quot; AC transmission line segments.\n\n&quot;</span>
+<span class="nc" id="L906">             + &quot;The knowledge graph contains &quot; + fmt(s.get(&quot;totalTriples&quot;)) + &quot; RDF triples representing the complete &quot;</span>
+             + &quot;network topology, equipment parameters, and connectivity. All CIM entities are modelled using standard &quot;
+             + &quot;CIM100 classes and properties, enabling interoperability and SPARQL-based semantic queries.\n\n&quot;
+             + lfPart;
+    }
+
+    private String defaultRecommendations(LoadFlowResponse lf) {
+<span class="nc" id="L913">        StringBuilder sb = new StringBuilder();</span>
+<span class="nc" id="L914">        sb.append(&quot;## Technical Recommendations\n\n&quot;);</span>
+<span class="nc" id="L915">        sb.append(&quot;- Verify that all transformer terminals are correctly linked to their ConnectivityNodes to ensure accurate power flow convergence.\n&quot;);</span>
+<span class="nc" id="L916">        sb.append(&quot;- Review the reactive power compensation strategy — busbar sections without shunt compensation may exhibit voltage deviations under heavy load.\n&quot;);</span>
+<span class="nc" id="L917">        sb.append(&quot;- Ensure all ACLineSegment elements have valid impedance values (r, x, bch) to improve power flow accuracy.\n&quot;);</span>
+<span class="nc" id="L918">        sb.append(&quot;- Implement N-1 contingency analysis to identify critical branches whose outage would cause cascading failures.\n&quot;);</span>
+<span class="nc" id="L919">        sb.append(&quot;- Consider re-indexing the Qdrant vector database after any major data changes to maintain semantic search accuracy.\n&quot;);</span>
+<span class="nc bnc" id="L920" title="All 6 branches missed.">        if (lf != null &amp;&amp; lf.getViolations() != null &amp;&amp; !lf.getViolations().isEmpty()) {</span>
+<span class="nc" id="L921">            sb.append(String.format(&quot;- Address %d constraint violation(s) detected in the power flow: prioritize CRITICAL severity violations first.\n&quot;,</span>
+<span class="nc" id="L922">                lf.getViolations().size()));</span>
+        }
+<span class="nc bnc" id="L924" title="All 6 branches missed.">        if (lf != null &amp;&amp; lf.getStatistics() != null &amp;&amp; lf.getStatistics().getLossPercentage() &gt; 3.0) {</span>
+<span class="nc" id="L925">            sb.append(String.format(&quot;- Active power losses of %.2f%% exceed 3%% — investigate high-impedance lines and consider reactive compensation.\n&quot;,</span>
+<span class="nc" id="L926">                lf.getStatistics().getLossPercentage()));</span>
+        }
+<span class="nc" id="L928">        return sb.toString();</span>
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  EXISTING PUBLIC METHODS (unchanged API)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    public byte[] generateLoadFlowReport() {
+<span class="nc" id="L936">        log.info(&quot;Generating Load Flow report...&quot;);</span>
+        try {
+<span class="nc" id="L938">            ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="nc" id="L939">            PdfWriter   writer   = new PdfWriter(baos);</span>
+<span class="nc" id="L940">            PdfDocument pdf      = new PdfDocument(writer);</span>
+<span class="nc" id="L941">            Document    document = new Document(pdf, PageSize.A4);</span>
+<span class="nc" id="L942">            document.setMargins(50, 45, 50, 45);</span>
+
+<span class="nc" id="L944">            LoadFlowResponse lf = loadFlowService.calculateLoadFlow();</span>
+<span class="nc" id="L945">            LoadFlowResponse.SystemStatistics stats = lf.getStatistics();</span>
+
+<span class="nc" id="L947">            addReportHeader(document, &quot;Load Flow Analysis Report&quot;);</span>
+<span class="nc" id="L948">            addSection(document, &quot;Report Information&quot;);</span>
+<span class="nc" id="L949">            addKeyValue(document, &quot;Generated on&quot;,        ts());</span>
+<span class="nc" id="L950">            addKeyValue(document, &quot;Calculation Time&quot;,    lf.getExecutionTimeMs() + &quot; ms&quot;);</span>
+<span class="nc bnc" id="L951" title="All 2 branches missed.">            addKeyValue(document, &quot;Convergence Status&quot;,  lf.isConverged() ? &quot;Converged&quot; : &quot;Failed&quot;);</span>
+<span class="nc" id="L952">            addKeyValue(document, &quot;Iterations&quot;,          String.valueOf(lf.getIterations()));</span>
+
+<span class="nc bnc" id="L954" title="All 2 branches missed.">            if (stats != null) {</span>
+<span class="nc" id="L955">                addSection(document, &quot;System Overview&quot;);</span>
+<span class="nc" id="L956">                addKeyValue(document, &quot;Total Buses&quot;,       String.valueOf(stats.getTotalBuses()));</span>
+<span class="nc" id="L957">                addKeyValue(document, &quot;Total Branches&quot;,    String.valueOf(stats.getTotalBranches()));</span>
+<span class="nc" id="L958">                addKeyValue(document, &quot;Total Generation&quot;,  String.format(&quot;%.2f MW / %.2f MVAr&quot;, stats.getTotalGenerationMw(), stats.getTotalGenerationMvar()));</span>
+<span class="nc" id="L959">                addKeyValue(document, &quot;Total Load&quot;,        String.format(&quot;%.2f MW / %.2f MVAr&quot;, stats.getTotalLoadMw(), stats.getTotalLoadMvar()));</span>
+<span class="nc" id="L960">                addKeyValue(document, &quot;Total Losses&quot;,      String.format(&quot;%.2f MW (%.2f%%)&quot;, stats.getTotalLossesMw(), stats.getLossPercentage()));</span>
+<span class="nc" id="L961">                addKeyValue(document, &quot;Voltage Range&quot;,     String.format(&quot;%.3f to %.3f pu&quot;, stats.getMinVoltagePu(), stats.getMaxVoltagePu()));</span>
             }
 
-<span class="nc bnc" id="L69" title="All 4 branches missed.">            if (loadFlowResult.getViolations() != null &amp;&amp; !loadFlowResult.getViolations().isEmpty()) {</span>
-<span class="nc" id="L70">                addSection(document, &quot;Violations Detected&quot;);</span>
-<span class="nc" id="L71">                Table violationTable = createViolationTable(loadFlowResult.getViolations());</span>
-<span class="nc" id="L72">                document.add(violationTable);</span>
-<span class="nc" id="L73">            } else {</span>
-<span class="nc" id="L74">                addSection(document, &quot;Violations&quot;);</span>
-<span class="nc" id="L75">                document.add(new Paragraph(&quot;No violations detected&quot;).setFontColor(SUCCESS_COLOR));</span>
+<span class="nc bnc" id="L964" title="All 4 branches missed.">            if (lf.getViolations() != null &amp;&amp; !lf.getViolations().isEmpty()) {</span>
+<span class="nc" id="L965">                addSection(document, &quot;Violations&quot;);</span>
+<span class="nc" id="L966">                document.add(createViolationTable(lf.getViolations()));</span>
+            } else {
+<span class="nc" id="L968">                addSection(document, &quot;Violations&quot;);</span>
+<span class="nc" id="L969">                document.add(new Paragraph(&quot;No violations detected&quot;).setFontColor(GREEN));</span>
             }
 
-<span class="nc bnc" id="L78" title="All 4 branches missed.">            if (loadFlowResult.getBusResults() != null &amp;&amp; !loadFlowResult.getBusResults().isEmpty()) {</span>
-<span class="nc" id="L79">                addSection(document, &quot;Bus Voltages (Top 10)&quot;);</span>
-<span class="nc" id="L80">                Table busTable = createBusVoltageTable(loadFlowResult.getBusResults());</span>
-<span class="nc" id="L81">                document.add(busTable);</span>
+<span class="nc bnc" id="L972" title="All 4 branches missed.">            if (lf.getBusResults() != null &amp;&amp; !lf.getBusResults().isEmpty()) {</span>
+<span class="nc" id="L973">                addSection(document, &quot;Bus Voltages (Top 10)&quot;);</span>
+<span class="nc" id="L974">                document.add(createBusVoltageTable(lf.getBusResults()));</span>
             }
 
-<span class="nc" id="L84">            addFooter(document);</span>
-
-<span class="nc" id="L86">            document.close();</span>
-<span class="nc" id="L87">            log.info(&quot;Load Flow report generated successfully&quot;);</span>
-<span class="nc" id="L88">            return baos.toByteArray();</span>
-
-<span class="nc" id="L90">        } catch (Exception e) {</span>
-<span class="nc" id="L91">            log.error(&quot;Error generating Load Flow report&quot;, e);</span>
-<span class="nc" id="L92">            throw new RuntimeException(&quot;Failed to generate Load Flow report: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L977">            addFooter(document);</span>
+<span class="nc" id="L978">            document.close();</span>
+<span class="nc" id="L979">            return baos.toByteArray();</span>
+<span class="nc" id="L980">        } catch (Exception e) {</span>
+<span class="nc" id="L981">            throw new RuntimeException(&quot;Failed to generate Load Flow report: &quot; + e.getMessage(), e);</span>
         }
     }
 
     public byte[] generateDataQualityReport(List&lt;Map&lt;String, Object&gt;&gt; issues) {
-<span class="nc" id="L97">        log.info(&quot;Generating Data Quality report...&quot;);</span>
-
+<span class="nc" id="L986">        log.info(&quot;Generating Data Quality report...&quot;);</span>
         try {
-<span class="nc" id="L100">            ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
-<span class="nc" id="L101">            PdfWriter writer = new PdfWriter(baos);</span>
-<span class="nc" id="L102">            PdfDocument pdf = new PdfDocument(writer);</span>
-<span class="nc" id="L103">            Document document = new Document(pdf);</span>
+<span class="nc" id="L988">            ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
+<span class="nc" id="L989">            PdfWriter writer = new PdfWriter(baos);</span>
+<span class="nc" id="L990">            PdfDocument pdf  = new PdfDocument(writer);</span>
+<span class="nc" id="L991">            Document doc     = new Document(pdf, PageSize.A4);</span>
 
-<span class="nc" id="L105">            addReportHeader(document, &quot;Data Quality Report&quot;);</span>
+<span class="nc" id="L993">            addReportHeader(doc, &quot;Data Quality Report&quot;);</span>
+<span class="nc" id="L994">            addSection(doc, &quot;Report Information&quot;);</span>
+<span class="nc" id="L995">            addKeyValue(doc, &quot;Generated on&quot;,      ts());</span>
+<span class="nc" id="L996">            addKeyValue(doc, &quot;Total Issues Found&quot;, String.valueOf(issues.size()));</span>
 
-<span class="nc" id="L107">            addSection(document, &quot;Report Information&quot;);</span>
-<span class="nc" id="L108">            addKeyValue(document, &quot;Generated on&quot;, LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;dd/MM/yyyy HH:mm:ss&quot;)));</span>
-<span class="nc" id="L109">            addKeyValue(document, &quot;Total Issues Found&quot;, String.valueOf(issues.size()));</span>
+<span class="nc" id="L998">            long errors   = issues.stream().filter(i -&gt; &quot;ERROR&quot;.equals(i.get(&quot;severity&quot;))).count();</span>
+<span class="nc" id="L999">            long warnings = issues.stream().filter(i -&gt; &quot;WARNING&quot;.equals(i.get(&quot;severity&quot;))).count();</span>
+<span class="nc" id="L1000">            addSection(doc, &quot;Issues Summary&quot;);</span>
+<span class="nc" id="L1001">            addKeyValue(doc, &quot;Errors&quot;,   String.valueOf(errors));</span>
+<span class="nc" id="L1002">            addKeyValue(doc, &quot;Warnings&quot;, String.valueOf(warnings));</span>
 
-<span class="nc" id="L111">            long errors = issues.stream().filter(i -&gt; &quot;ERROR&quot;.equals(i.get(&quot;severity&quot;))).count();</span>
-<span class="nc" id="L112">            long warnings = issues.stream().filter(i -&gt; &quot;WARNING&quot;.equals(i.get(&quot;severity&quot;))).count();</span>
-
-<span class="nc" id="L114">            addSection(document, &quot;Issues Summary&quot;);</span>
-<span class="nc" id="L115">            addKeyValue(document, &quot;Errors&quot;, String.valueOf(errors));</span>
-<span class="nc" id="L116">            addKeyValue(document, &quot;Warnings&quot;, String.valueOf(warnings));</span>
-
-<span class="nc" id="L118">            addSection(document, &quot;Detailed Issues&quot;);</span>
-<span class="nc bnc" id="L119" title="All 2 branches missed.">            for (Map&lt;String, Object&gt; issue : issues) {</span>
-<span class="nc" id="L120">                Table issueTable = new Table(UnitValue.createPercentArray(new float[]{1, 3}));</span>
-<span class="nc" id="L121">                issueTable.setWidth(UnitValue.createPercentValue(100));</span>
-
-<span class="nc" id="L123">                String severity = (String) issue.get(&quot;severity&quot;);</span>
-<span class="nc bnc" id="L124" title="All 2 branches missed.">                DeviceRgb color = &quot;ERROR&quot;.equals(severity) ? ERROR_COLOR : WARNING_COLOR;</span>
-
-<span class="nc" id="L126">                issueTable.addCell(new Cell().add(new Paragraph(&quot;Category&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
-<span class="nc" id="L127">                issueTable.addCell(new Cell().add(new Paragraph((String) issue.get(&quot;category&quot;))));</span>
-
-<span class="nc" id="L129">                issueTable.addCell(new Cell().add(new Paragraph(&quot;Severity&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
-<span class="nc" id="L130">                issueTable.addCell(new Cell().add(new Paragraph(severity)));</span>
-
-<span class="nc" id="L132">                issueTable.addCell(new Cell().add(new Paragraph(&quot;Message&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
-<span class="nc" id="L133">                issueTable.addCell(new Cell().add(new Paragraph((String) issue.get(&quot;message&quot;))));</span>
-
-<span class="nc" id="L135">                issueTable.addCell(new Cell().add(new Paragraph(&quot;Affected Items&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
-<span class="nc" id="L136">                issueTable.addCell(new Cell().add(new Paragraph(String.valueOf(issue.get(&quot;count&quot;)))));</span>
-
-<span class="nc" id="L138">                document.add(issueTable);</span>
-<span class="nc" id="L139">                document.add(new Paragraph(&quot;\n&quot;));</span>
-<span class="nc" id="L140">            }</span>
-
-<span class="nc" id="L142">            addFooter(document);</span>
-
-<span class="nc" id="L144">            document.close();</span>
-<span class="nc" id="L145">            log.info(&quot;Data Quality report generated successfully&quot;);</span>
-<span class="nc" id="L146">            return baos.toByteArray();</span>
-
-<span class="nc" id="L148">        } catch (Exception e) {</span>
-<span class="nc" id="L149">            log.error(&quot;Error generating Data Quality report&quot;, e);</span>
-<span class="nc" id="L150">            throw new RuntimeException(&quot;Failed to generate Data Quality report: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L1004">            addSection(doc, &quot;Detailed Issues&quot;);</span>
+<span class="nc bnc" id="L1005" title="All 2 branches missed.">            for (Map&lt;String,Object&gt; issue : issues) {</span>
+<span class="nc" id="L1006">                String sev = (String) issue.get(&quot;severity&quot;);</span>
+<span class="nc bnc" id="L1007" title="All 2 branches missed.">                DeviceRgb color = &quot;ERROR&quot;.equals(sev) ? RED : ORANGE;</span>
+<span class="nc" id="L1008">                Table t = new Table(UnitValue.createPercentArray(new float[]{1,3})).setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L1009">                t.addCell(new Cell().add(new Paragraph(&quot;Category&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L1010">                t.addCell(new Cell().add(new Paragraph((String)issue.get(&quot;category&quot;))));</span>
+<span class="nc" id="L1011">                t.addCell(new Cell().add(new Paragraph(&quot;Severity&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L1012">                t.addCell(new Cell().add(new Paragraph(sev)));</span>
+<span class="nc" id="L1013">                t.addCell(new Cell().add(new Paragraph(&quot;Message&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L1014">                t.addCell(new Cell().add(new Paragraph((String)issue.get(&quot;message&quot;))));</span>
+<span class="nc" id="L1015">                t.addCell(new Cell().add(new Paragraph(&quot;Count&quot;)).setBackgroundColor(color).setFontColor(ColorConstants.WHITE));</span>
+<span class="nc" id="L1016">                t.addCell(new Cell().add(new Paragraph(String.valueOf(issue.get(&quot;count&quot;)))));</span>
+<span class="nc" id="L1017">                doc.add(t);</span>
+<span class="nc" id="L1018">                doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L1019">            }</span>
+<span class="nc" id="L1020">            addFooter(doc);</span>
+<span class="nc" id="L1021">            doc.close();</span>
+<span class="nc" id="L1022">            return baos.toByteArray();</span>
+<span class="nc" id="L1023">        } catch (Exception e) {</span>
+<span class="nc" id="L1024">            throw new RuntimeException(&quot;Failed to generate Data Quality report: &quot; + e.getMessage(), e);</span>
         }
     }
 
     public byte[] generateNetworkStatisticsReport() {
-<span class="nc" id="L155">        log.info(&quot;Generating Network Statistics report...&quot;);</span>
-
-        try {
-<span class="nc" id="L158">            ByteArrayOutputStream baos = new ByteArrayOutputStream();</span>
-<span class="nc" id="L159">            PdfWriter writer = new PdfWriter(baos);</span>
-<span class="nc" id="L160">            PdfDocument pdf = new PdfDocument(writer);</span>
-<span class="nc" id="L161">            Document document = new Document(pdf);</span>
-
-<span class="nc" id="L163">            addReportHeader(document, &quot;Network Statistics Report&quot;);</span>
-
-<span class="nc" id="L165">            addSection(document, &quot;Report Information&quot;);</span>
-<span class="nc" id="L166">            addKeyValue(document, &quot;Generated on&quot;, LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;dd/MM/yyyy HH:mm:ss&quot;)));</span>
-
-<span class="nc" id="L168">            Map&lt;String, Object&gt; stats = jenaService.getGraphStatistics();</span>
-
-<span class="nc" id="L170">            addSection(document, &quot;Knowledge Graph Statistics&quot;);</span>
-<span class="nc" id="L171">            addKeyValue(document, &quot;Total Triples&quot;, String.valueOf(stats.get(&quot;totalTriples&quot;)));</span>
-<span class="nc" id="L172">            addKeyValue(document, &quot;Total Subjects&quot;, String.valueOf(stats.get(&quot;totalSubjects&quot;)));</span>
-<span class="nc" id="L173">            addKeyValue(document, &quot;Total Predicates&quot;, String.valueOf(stats.get(&quot;totalPredicates&quot;)));</span>
-<span class="nc" id="L174">            addKeyValue(document, &quot;Total Classes&quot;, String.valueOf(stats.get(&quot;totalClasses&quot;)));</span>
-
-<span class="nc" id="L176">            addSection(document, &quot;CIM Equipment Statistics&quot;);</span>
-<span class="nc" id="L177">            addKeyValue(document, &quot;Substations&quot;, String.valueOf(stats.get(&quot;substations&quot;)));</span>
-<span class="nc" id="L178">            addKeyValue(document, &quot;Generators&quot;, String.valueOf(stats.get(&quot;generators&quot;)));</span>
-<span class="nc" id="L179">            addKeyValue(document, &quot;Transmission Lines&quot;, String.valueOf(stats.get(&quot;transmissionLines&quot;)));</span>
-
-<span class="nc" id="L181">            addFooter(document);</span>
-
-<span class="nc" id="L183">            document.close();</span>
-<span class="nc" id="L184">            log.info(&quot;Network Statistics report generated successfully&quot;);</span>
-<span class="nc" id="L185">            return baos.toByteArray();</span>
-
-<span class="nc" id="L187">        } catch (Exception e) {</span>
-<span class="nc" id="L188">            log.error(&quot;Error generating Network Statistics report&quot;, e);</span>
-<span class="nc" id="L189">            throw new RuntimeException(&quot;Failed to generate Network Statistics report: &quot; + e.getMessage(), e);</span>
-        }
+        // Delegate to the full report for Dashboard
+<span class="nc" id="L1030">        return generateFullCIMReport();</span>
     }
 
-    private void addReportHeader(Document document, String title) {
-<span class="nc" id="L194">        Paragraph header = new Paragraph(title)</span>
-<span class="nc" id="L195">            .setFontSize(24)</span>
-<span class="nc" id="L196">            .setBold()</span>
-<span class="nc" id="L197">            .setFontColor(PRIMARY_COLOR)</span>
-<span class="nc" id="L198">            .setTextAlignment(TextAlignment.CENTER);</span>
-<span class="nc" id="L199">        document.add(header);</span>
+    // ═════════════════════════════════════════════════════════════════════════
+    //  HELPERS — Layout
+    // ═════════════════════════════════════════════════════════════════════════
 
-<span class="nc" id="L201">        Paragraph subtitle = new Paragraph(&quot;CIM-SemanticGraph-Platform&quot;)</span>
-<span class="nc" id="L202">            .setFontSize(12)</span>
-<span class="nc" id="L203">            .setFontColor(ColorConstants.GRAY)</span>
-<span class="nc" id="L204">            .setTextAlignment(TextAlignment.CENTER);</span>
-<span class="nc" id="L205">        document.add(subtitle);</span>
+    private void sectionHeader(Document doc, String num, String title, DeviceRgb color) {
+<span class="nc" id="L1038">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L1039">        Table bar = new Table(UnitValue.createPercentArray(new float[]{1})).setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L1040">        bar.addCell(new Cell()</span>
+<span class="nc" id="L1041">            .add(new Paragraph(&quot;  &quot; + num + &quot;.  &quot; + title.toUpperCase()).setFontSize(14).setBold()</span>
+<span class="nc" id="L1042">                .setFontColor(ColorConstants.WHITE))</span>
+<span class="nc" id="L1043">            .setBackgroundColor(color).setBorder(Border.NO_BORDER).setPadding(8));</span>
+<span class="nc" id="L1044">        doc.add(bar);</span>
+<span class="nc" id="L1045">        doc.add(new Paragraph(&quot;\n&quot;).setFontSize(4));</span>
+<span class="nc" id="L1046">    }</span>
 
-<span class="nc" id="L207">        document.add(new Paragraph(&quot;\n&quot;));</span>
-<span class="nc" id="L208">    }</span>
+    private void subsectionHeader(Document doc, String title, DeviceRgb color) {
+<span class="nc" id="L1049">        doc.add(new Paragraph(title).setFontSize(11).setBold().setFontColor(color).setMarginTop(8).setMarginBottom(4));</span>
+<span class="nc" id="L1050">    }</span>
 
-    private void addSection(Document document, String sectionTitle) {
-<span class="nc" id="L211">        document.add(new Paragraph(&quot;\n&quot;));</span>
-<span class="nc" id="L212">        Paragraph section = new Paragraph(sectionTitle)</span>
-<span class="nc" id="L213">            .setFontSize(16)</span>
-<span class="nc" id="L214">            .setBold()</span>
-<span class="nc" id="L215">            .setFontColor(PRIMARY_COLOR);</span>
-<span class="nc" id="L216">        document.add(section);</span>
-<span class="nc" id="L217">        document.add(new Paragraph(&quot;\n&quot;));</span>
-<span class="nc" id="L218">    }</span>
+    private void addColoredHeaderRow(Table table, int cols, String label, DeviceRgb color) {
+<span class="nc" id="L1053">        table.addHeaderCell(new Cell(1, cols)</span>
+<span class="nc" id="L1054">            .add(new Paragraph(label).setFontSize(9).setBold().setFontColor(ColorConstants.WHITE))</span>
+<span class="nc" id="L1055">            .setBackgroundColor(color).setPadding(6).setBorder(Border.NO_BORDER));</span>
+<span class="nc" id="L1056">    }</span>
 
-    private void addKeyValue(Document document, String key, String value) {
-<span class="nc" id="L221">        Table table = new Table(UnitValue.createPercentArray(new float[]{2, 3}));</span>
-<span class="nc" id="L222">        table.setWidth(UnitValue.createPercentValue(100));</span>
+    private void addColoredHeaderRow2(Table t, String h1, String h2, DeviceRgb c) {
+<span class="nc bnc" id="L1059" title="All 2 branches missed.">        for (String h : new String[]{h1, h2})</span>
+<span class="nc" id="L1060">            t.addHeaderCell(new Cell().add(new Paragraph(h).setFontSize(9).setBold().setFontColor(ColorConstants.WHITE))</span>
+<span class="nc" id="L1061">                .setBackgroundColor(c).setPadding(5).setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f)));</span>
+<span class="nc" id="L1062">    }</span>
 
-<span class="nc" id="L224">        table.addCell(new Cell().add(new Paragraph(key).setBold()));</span>
-<span class="nc" id="L225">        table.addCell(new Cell().add(new Paragraph(value)));</span>
+    private void addColoredHeaderRow3(Table t, String h1, String h2, String h3, DeviceRgb c) {
+<span class="nc bnc" id="L1065" title="All 2 branches missed.">        for (String h : new String[]{h1, h2, h3})</span>
+<span class="nc" id="L1066">            t.addHeaderCell(new Cell().add(new Paragraph(h).setFontSize(9).setBold().setFontColor(ColorConstants.WHITE))</span>
+<span class="nc" id="L1067">                .setBackgroundColor(c).setPadding(5).setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f)));</span>
+<span class="nc" id="L1068">    }</span>
 
-<span class="nc" id="L227">        document.add(table);</span>
-<span class="nc" id="L228">    }</span>
+    private void addColoredHeaderRow4(Table t, String h1, String h2, String h3, String h4, DeviceRgb c) {
+<span class="nc bnc" id="L1071" title="All 2 branches missed.">        for (String h : new String[]{h1, h2, h3, h4})</span>
+<span class="nc" id="L1072">            t.addHeaderCell(new Cell().add(new Paragraph(h).setFontSize(9).setBold().setFontColor(ColorConstants.WHITE))</span>
+<span class="nc" id="L1073">                .setBackgroundColor(c).setPadding(5).setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f)));</span>
+<span class="nc" id="L1074">    }</span>
+
+    private void addColoredHeaderRow5(Table t, String h1, String h2, String h3, String h4, String h5, DeviceRgb c) {
+<span class="nc bnc" id="L1077" title="All 2 branches missed.">        for (String h : new String[]{h1, h2, h3, h4, h5})</span>
+<span class="nc" id="L1078">            t.addHeaderCell(new Cell().add(new Paragraph(h).setFontSize(9).setBold().setFontColor(ColorConstants.WHITE))</span>
+<span class="nc" id="L1079">                .setBackgroundColor(c).setPadding(5).setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f)));</span>
+<span class="nc" id="L1080">    }</span>
+
+    private void addColoredHeaderRow6(Table t, String h1, String h2, String h3, String h4, String h5, String h6, DeviceRgb c) {
+<span class="nc bnc" id="L1083" title="All 2 branches missed.">        for (String h : new String[]{h1, h2, h3, h4, h5, h6})</span>
+<span class="nc" id="L1084">            t.addHeaderCell(new Cell().add(new Paragraph(h).setFontSize(9).setBold().setFontColor(ColorConstants.WHITE))</span>
+<span class="nc" id="L1085">                .setBackgroundColor(c).setPadding(5).setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f)));</span>
+<span class="nc" id="L1086">    }</span>
+
+    private void addDataRow(Table table, String key, String value, int alt) {
+<span class="nc bnc" id="L1089" title="All 2 branches missed.">        DeviceRgb bg = alt == 1 ? ROW_ALT : WHITE;</span>
+<span class="nc" id="L1090">        table.addCell(new Cell().add(new Paragraph(key).setFontSize(9)).setBackgroundColor(bg).setPadding(5).setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f)));</span>
+<span class="nc" id="L1091">        table.addCell(new Cell().add(new Paragraph(value).setFontSize(9).setBold()).setBackgroundColor(bg).setPadding(5).setTextAlignment(TextAlignment.RIGHT).setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f)));</span>
+<span class="nc" id="L1092">    }</span>
+
+    private Cell cellData(String text, DeviceRgb bg) {
+<span class="nc" id="L1095">        return new Cell()</span>
+<span class="nc bnc" id="L1096" title="All 2 branches missed.">            .add(new Paragraph(text != null ? text : &quot;—&quot;).setFontSize(9))</span>
+<span class="nc" id="L1097">            .setBackgroundColor(bg).setPadding(5)</span>
+<span class="nc" id="L1098">            .setBorder(new SolidBorder(ColorConstants.LIGHT_GRAY, 0.3f));</span>
+    }
+
+    /** iText7 event handler: writes &quot;Page N&quot; in the footer of every page as it closes. */
+    private static class PageNumberHandler implements IEventHandler {
+        @Override
+        public void handleEvent(Event event) {
+<span class="nc" id="L1105">            PdfDocumentEvent docEvent = (PdfDocumentEvent) event;</span>
+<span class="nc" id="L1106">            PdfDocument pdf  = docEvent.getDocument();</span>
+<span class="nc" id="L1107">            PdfPage     page = docEvent.getPage();</span>
+<span class="nc" id="L1108">            int         num  = pdf.getPageNumber(page);</span>
+            try {
+<span class="nc" id="L1110">                PdfFont font   = PdfFontFactory.createFont(StandardFonts.HELVETICA);</span>
+<span class="nc" id="L1111">                PdfCanvas canvas = new PdfCanvas(page);</span>
+<span class="nc" id="L1112">                canvas.beginText()</span>
+<span class="nc" id="L1113">                      .setFontAndSize(font, 8)</span>
+<span class="nc" id="L1114">                      .moveText(PageSize.A4.getWidth() / 2 - 20, 22)</span>
+<span class="nc" id="L1115">                      .showText(&quot;Page &quot; + num)</span>
+<span class="nc" id="L1116">                      .endText()</span>
+<span class="nc" id="L1117">                      .release();</span>
+<span class="nc" id="L1118">            } catch (Exception ignored) {</span>
+                // non-critical — skip page number if font fails
+<span class="nc" id="L1120">            }</span>
+<span class="nc" id="L1121">        }</span>
+    }
+
+    // ── Kept for backward compat ──────────────────────────────────────────────
+
+    private void addReportHeader(Document doc, String title) {
+<span class="nc" id="L1127">        doc.add(new Paragraph(title).setFontSize(24).setBold().setFontColor(BLUE).setTextAlignment(TextAlignment.CENTER));</span>
+<span class="nc" id="L1128">        doc.add(new Paragraph(&quot;CIM-SemanticGraph-Platform&quot;).setFontSize(12).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER));</span>
+<span class="nc" id="L1129">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L1130">    }</span>
+
+    private void addSection(Document doc, String t) {
+<span class="nc" id="L1133">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L1134">        doc.add(new Paragraph(t).setFontSize(16).setBold().setFontColor(BLUE));</span>
+<span class="nc" id="L1135">        doc.add(new Paragraph(&quot;\n&quot;));</span>
+<span class="nc" id="L1136">    }</span>
+
+    private void addKeyValue(Document doc, String key, String value) {
+<span class="nc" id="L1139">        Table t = new Table(UnitValue.createPercentArray(new float[]{2,3})).setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L1140">        t.addCell(new Cell().add(new Paragraph(key).setBold()));</span>
+<span class="nc" id="L1141">        t.addCell(new Cell().add(new Paragraph(value)));</span>
+<span class="nc" id="L1142">        doc.add(t);</span>
+<span class="nc" id="L1143">    }</span>
 
     private Table createViolationTable(List&lt;LoadFlowResponse.Violation&gt; violations) {
-<span class="nc" id="L231">        Table table = new Table(UnitValue.createPercentArray(new float[]{2, 3, 2, 2}));</span>
-<span class="nc" id="L232">        table.setWidth(UnitValue.createPercentValue(100));</span>
-
-<span class="nc" id="L234">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Type&quot;).setBold()).setBackgroundColor(ERROR_COLOR).setFontColor(ColorConstants.WHITE));</span>
-<span class="nc" id="L235">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Description&quot;).setBold()).setBackgroundColor(ERROR_COLOR).setFontColor(ColorConstants.WHITE));</span>
-<span class="nc" id="L236">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Severity&quot;).setBold()).setBackgroundColor(ERROR_COLOR).setFontColor(ColorConstants.WHITE));</span>
-<span class="nc" id="L237">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Value&quot;).setBold()).setBackgroundColor(ERROR_COLOR).setFontColor(ColorConstants.WHITE));</span>
-
-<span class="nc bnc" id="L239" title="All 2 branches missed.">        for (LoadFlowResponse.Violation v : violations) {</span>
-<span class="nc bnc" id="L240" title="All 2 branches missed.">            table.addCell(new Cell().add(new Paragraph(v.getType() != null ? v.getType() : &quot;N/A&quot;)));</span>
-<span class="nc bnc" id="L241" title="All 2 branches missed.">            table.addCell(new Cell().add(new Paragraph(v.getDescription() != null ? v.getDescription() : &quot;N/A&quot;)));</span>
-<span class="nc bnc" id="L242" title="All 2 branches missed.">            table.addCell(new Cell().add(new Paragraph(v.getSeverity() != null ? v.getSeverity() : &quot;N/A&quot;)).setFontColor(</span>
-<span class="nc bnc" id="L243" title="All 2 branches missed.">                &quot;CRITICAL&quot;.equals(v.getSeverity()) ? ERROR_COLOR : WARNING_COLOR));</span>
-<span class="nc" id="L244">            table.addCell(new Cell().add(new Paragraph(String.format(&quot;%.2f%%&quot;, v.getViolationPercentage()))));</span>
-<span class="nc" id="L245">        }</span>
-
-<span class="nc" id="L247">        return table;</span>
+<span class="nc" id="L1146">        Table t = new Table(UnitValue.createPercentArray(new float[]{2,3,2,2})).setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L1147">        addColoredHeaderRow4(t, &quot;Type&quot;, &quot;Description&quot;, &quot;Severity&quot;, &quot;Value&quot;, RED);</span>
+<span class="nc bnc" id="L1148" title="All 2 branches missed.">        for (LoadFlowResponse.Violation v : violations) {</span>
+<span class="nc bnc" id="L1149" title="All 2 branches missed.">            t.addCell(new Cell().add(new Paragraph(v.getType() != null ? v.getType() : &quot;N/A&quot;)));</span>
+<span class="nc bnc" id="L1150" title="All 2 branches missed.">            t.addCell(new Cell().add(new Paragraph(v.getDescription() != null ? v.getDescription() : &quot;N/A&quot;)));</span>
+<span class="nc bnc" id="L1151" title="All 2 branches missed.">            t.addCell(new Cell().add(new Paragraph(v.getSeverity() != null ? v.getSeverity() : &quot;N/A&quot;))</span>
+<span class="nc bnc" id="L1152" title="All 2 branches missed.">                .setFontColor(&quot;CRITICAL&quot;.equals(v.getSeverity()) ? RED : ORANGE));</span>
+<span class="nc" id="L1153">            t.addCell(new Cell().add(new Paragraph(String.format(&quot;%.2f%%&quot;, v.getViolationPercentage()))));</span>
+<span class="nc" id="L1154">        }</span>
+<span class="nc" id="L1155">        return t;</span>
     }
 
     private Table createBusVoltageTable(List&lt;LoadFlowResponse.BusResult&gt; busResults) {
-<span class="nc" id="L251">        Table table = new Table(UnitValue.createPercentArray(new float[]{3, 2, 2, 2}));</span>
-<span class="nc" id="L252">        table.setWidth(UnitValue.createPercentValue(100));</span>
-
-<span class="nc" id="L254">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Bus Name&quot;).setBold()).setBackgroundColor(PRIMARY_COLOR).setFontColor(ColorConstants.WHITE));</span>
-<span class="nc" id="L255">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Voltage (pu)&quot;).setBold()).setBackgroundColor(PRIMARY_COLOR).setFontColor(ColorConstants.WHITE));</span>
-<span class="nc" id="L256">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Angle (deg)&quot;).setBold()).setBackgroundColor(PRIMARY_COLOR).setFontColor(ColorConstants.WHITE));</span>
-<span class="nc" id="L257">        table.addHeaderCell(new Cell().add(new Paragraph(&quot;Status&quot;).setBold()).setBackgroundColor(PRIMARY_COLOR).setFontColor(ColorConstants.WHITE));</span>
-
-<span class="nc" id="L259">        int count = 0;</span>
-<span class="nc bnc" id="L260" title="All 2 branches missed.">        for (LoadFlowResponse.BusResult bv : busResults) {</span>
-<span class="nc bnc" id="L261" title="All 2 branches missed.">            if (count++ &gt;= 10) break;</span>
-
-<span class="nc bnc" id="L263" title="All 2 branches missed.">            table.addCell(new Cell().add(new Paragraph(bv.getBusName() != null ? bv.getBusName() : bv.getBusId())));</span>
-<span class="nc" id="L264">            table.addCell(new Cell().add(new Paragraph(String.format(&quot;%.3f&quot;, bv.getVoltageMagnitude()))));</span>
-<span class="nc" id="L265">            table.addCell(new Cell().add(new Paragraph(String.format(&quot;%.2f&quot;, bv.getVoltageAngle()))));</span>
-<span class="nc bnc" id="L266" title="All 2 branches missed.">            table.addCell(new Cell().add(new Paragraph(bv.isWithinLimits() ? &quot;OK&quot; : &quot;Violation&quot;))</span>
-<span class="nc bnc" id="L267" title="All 2 branches missed.">                .setFontColor(bv.isWithinLimits() ? SUCCESS_COLOR : ERROR_COLOR));</span>
-<span class="nc" id="L268">        }</span>
-
-<span class="nc" id="L270">        return table;</span>
+<span class="nc" id="L1159">        Table t = new Table(UnitValue.createPercentArray(new float[]{3,2,2,2})).setWidth(UnitValue.createPercentValue(100));</span>
+<span class="nc" id="L1160">        addColoredHeaderRow4(t, &quot;Bus Name&quot;, &quot;Voltage (pu)&quot;, &quot;Angle (deg)&quot;, &quot;Status&quot;, BLUE);</span>
+<span class="nc" id="L1161">        int count = 0;</span>
+<span class="nc bnc" id="L1162" title="All 2 branches missed.">        for (LoadFlowResponse.BusResult bv : busResults) {</span>
+<span class="nc bnc" id="L1163" title="All 2 branches missed.">            if (count++ &gt;= 10) break;</span>
+<span class="nc bnc" id="L1164" title="All 2 branches missed.">            t.addCell(new Cell().add(new Paragraph(bv.getBusName() != null ? bv.getBusName() : bv.getBusId())));</span>
+<span class="nc" id="L1165">            t.addCell(new Cell().add(new Paragraph(String.format(&quot;%.3f&quot;, bv.getVoltageMagnitude()))));</span>
+<span class="nc" id="L1166">            t.addCell(new Cell().add(new Paragraph(String.format(&quot;%.2f&quot;, bv.getVoltageAngle()))));</span>
+<span class="nc bnc" id="L1167" title="All 2 branches missed.">            t.addCell(new Cell().add(new Paragraph(bv.isWithinLimits() ? &quot;OK&quot; : &quot;Violation&quot;))</span>
+<span class="nc bnc" id="L1168" title="All 2 branches missed.">                .setFontColor(bv.isWithinLimits() ? GREEN : RED));</span>
+<span class="nc" id="L1169">        }</span>
+<span class="nc" id="L1170">        return t;</span>
     }
 
-    private void addFooter(Document document) {
-<span class="nc" id="L274">        document.add(new Paragraph(&quot;\n\n&quot;));</span>
-<span class="nc" id="L275">        Paragraph footer = new Paragraph(&quot;Generated by CIM-SemanticGraph-Platform&quot;)</span>
-<span class="nc" id="L276">            .setFontSize(10)</span>
-<span class="nc" id="L277">            .setFontColor(ColorConstants.GRAY)</span>
-<span class="nc" id="L278">            .setTextAlignment(TextAlignment.CENTER);</span>
-<span class="nc" id="L279">        document.add(footer);</span>
+    private void addFooter(Document doc) {
+<span class="nc" id="L1174">        doc.add(new Paragraph(&quot;\n\n&quot;));</span>
+<span class="nc" id="L1175">        doc.add(new Paragraph(&quot;Generated by CIM-SemanticGraph-Platform&quot;).setFontSize(10).setFontColor(GRAY).setTextAlignment(TextAlignment.CENTER));</span>
+<span class="nc" id="L1176">        doc.add(new Paragraph(ts()).setFontSize(8).setFontColor(ColorConstants.LIGHT_GRAY).setTextAlignment(TextAlignment.CENTER));</span>
+<span class="nc" id="L1177">    }</span>
 
-<span class="nc" id="L281">        Paragraph timestamp = new Paragraph(LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;dd/MM/yyyy HH:mm:ss&quot;)))</span>
-<span class="nc" id="L282">            .setFontSize(8)</span>
-<span class="nc" id="L283">            .setFontColor(ColorConstants.LIGHT_GRAY)</span>
-<span class="nc" id="L284">            .setTextAlignment(TextAlignment.CENTER);</span>
-<span class="nc" id="L285">        document.add(timestamp);</span>
-<span class="nc" id="L286">    }</span>
+    // ── SPARQL ────────────────────────────────────────────────────────────────
+
+    private List&lt;Map&lt;String,String&gt;&gt; sparql(String query) {
+<span class="nc" id="L1182">        try { return jenaService.executeSparqlSelect(query); }</span>
+<span class="nc" id="L1183">        catch (Exception e) { log.warn(&quot;SPARQL in report failed: {}&quot;, e.getMessage()); return List.of(); }</span>
+    }
+
+    // ── Formatting ────────────────────────────────────────────────────────────
+
+<span class="nc bnc" id="L1188" title="All 2 branches missed.">    private String fmt(Object v)      { return v == null ? &quot;0&quot; : String.format(&quot;%,d&quot;, toLong(v)); }</span>
+<span class="nc bnc" id="L1189" title="All 2 branches missed.">    private long toLong(Object v)     { if (v == null) return 0; try { return Long.parseLong(v.toString().replaceAll(&quot;[^0-9]&quot;,&quot;&quot;)); } catch (Exception e) { return 0; } }</span>
+<span class="nc bnc" id="L1190" title="All 4 branches missed.">    private String formatMW(String v) { if (v == null || v.isBlank()) return &quot;—&quot;; try { return String.format(&quot;%.1f&quot;, Double.parseDouble(v)); } catch (Exception e) { return v; } }</span>
+<span class="nc bnc" id="L1191" title="All 4 branches missed.">    private String fmtOhm(String v)   { if (v == null || v.isBlank()) return &quot;—&quot;; try { return String.format(&quot;%.4f&quot;, Double.parseDouble(v)); } catch (Exception e) { return v; } }</span>
+<span class="nc bnc" id="L1192" title="All 4 branches missed.">    private String fmtSci(String v)   { if (v == null || v.isBlank()) return &quot;—&quot;; try { return String.format(&quot;%.2e&quot;, Double.parseDouble(v)); } catch (Exception e) { return v; } }</span>
+<span class="nc" id="L1193">    private String ts()               { return LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;dd/MM/yyyy HH:mm:ss&quot;)); }</span>
+
+    private double sumDouble(List&lt;Map&lt;String,String&gt;&gt; rows, String key) {
+<span class="nc" id="L1196">        double total = 0;</span>
+<span class="nc bnc" id="L1197" title="All 2 branches missed.">        for (Map&lt;String,String&gt; r : rows) {</span>
+<span class="nc" id="L1198">            String v = r.get(key);</span>
+<span class="nc bnc" id="L1199" title="All 2 branches missed.">            if (v != null) try { total += Double.parseDouble(v); } catch (NumberFormatException ignored) {}</span>
+<span class="nc" id="L1200">        }</span>
+<span class="nc" id="L1201">        return total;</span>
+    }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

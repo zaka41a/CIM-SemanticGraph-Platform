@@ -29,11 +29,8 @@ export const LoadFlowHeader = ({
         {/* Title Row */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl shadow-lg shadow-accent-500/20">
-              <Zap size={28} className="text-white" />
-            </div>
             <div>
-              <h1 className="text-3xl font-bold text-white mb-1">Load Flow Analysis</h1>
+              <h1 className="text-3xl font-bold text-accent-500 mb-1">Load Flow Analysis</h1>
               <p className="text-neutral-300">Power system load flow calculations and network analysis</p>
             </div>
           </div>

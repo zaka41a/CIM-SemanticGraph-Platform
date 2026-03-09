@@ -56,7 +56,6 @@ services:
       - SERVER_PORT=8080
 
       # Jena Fuseki Configuration
-      - JENA_STORAGE_MODE=remote
       - JENA_FUSEKI_REMOTE_URL=http://fuseki:3030
       - JENA_FUSEKI_DATASET=cim
 

@@ -82,6 +82,24 @@ public class ReportController {
         }
     }
 
+    @GetMapping("/full")
+    @Operation(summary = "Generate Full CIM Report", description = "Generate a comprehensive AI-narrated PDF report of the entire CIM knowledge graph")
+    public ResponseEntity<byte[]> generateFullCIMReport() {
+        log.info("REST API: Generate Full CIM report");
+        try {
+            byte[] pdfBytes = reportService.generateFullCIMReport();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment",
+                "CIM_Full_Report_" + getTimestamp() + ".pdf");
+            headers.setContentLength(pdfBytes.length);
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Error generating Full CIM report", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     private String getTimestamp() {
         return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
     }

@@ -513,6 +513,21 @@ public class ExcelImportService {
         Map<String, Integer> columns = getColumnMapping(sheet);
         int count = 0;
 
+        // Detect if the p column has kWh/year unit (annual energy → convert to MW average)
+        boolean pIsKwhPerYear = false;
+        Integer pColIdx = columns.containsKey("p") ? columns.get("p") : (columns.containsKey("mw") ? columns.get("mw") : null);
+        if (pColIdx != null && pColIdx >= 0) {
+            Row headerRow = sheet.getRow(0);
+            String rawPHeader = headerRow != null ? getCellValue(headerRow, pColIdx) : null;
+            if (rawPHeader != null) {
+                String lh = rawPHeader.toLowerCase();
+                pIsKwhPerYear = lh.contains("kwh/a") || lh.contains("kwh/year") || lh.contains("kwha");
+                if (pIsKwhPerYear) {
+                    log.info("Load p column '{}' is in kWh/year – will convert to MW (÷8760000)", rawPHeader);
+                }
+            }
+        }
+
         for (int i = 1; i <= sheet.getLastRowNum(); i++) {
             Row row = sheet.getRow(i);
             if (row == null || isRowEmpty(row)) continue;
@@ -539,8 +554,12 @@ public class ExcelImportService {
 
             if (p != null && !p.isEmpty()) {
                 try {
-                    load.addLiteral(model.createProperty(cimNamespace + "EnergyConsumer.p"),
-                            Double.parseDouble(p));
+                    double pValue = Double.parseDouble(p);
+                    if (pIsKwhPerYear) {
+                        // kWh/year → average kW → MW: divide by 8760 h/year × 1000 kW/MW
+                        pValue = pValue / 8_760_000.0;
+                    }
+                    load.addLiteral(model.createProperty(cimNamespace + "EnergyConsumer.p"), pValue);
                 } catch (NumberFormatException e) {
                     log.warn("Invalid P value: {}", p);
                 }
@@ -700,6 +719,22 @@ public class ExcelImportService {
 
         // Column-header-based fallback detection
         Map<String, Integer> cols = getColumnMapping(sheet);
+
+        // PyPSA/pandapower transformer: has v0 AND v1 (HV and LV voltages) + bus0 + bus1
+        boolean hasPypsaTransformerCols = (cols.containsKey("v0") || cols.containsKey("v_nom"))
+                && cols.containsKey("v1") && cols.containsKey("bus0") && cols.containsKey("bus1");
+        if (hasPypsaTransformerCols) return "transformer";
+
+        // PyPSA/pandapower consumer: has demand_power or profile column
+        if (cols.containsKey("demand_power") || cols.containsKey("demandpower")
+                || cols.containsKey("profile") || cols.containsKey("london_data"))
+            return "load";
+
+        // PyPSA/pandapower nodes (buses): has id_, v_nom, type (no bus0/bus1 from-to)
+        if ((cols.containsKey("v_nom") || cols.containsKey("vnom")) && cols.containsKey("id_")
+                && !cols.containsKey("bus0") && !cols.containsKey("bus1"))
+            return "bus";
+
         if (cols.containsKey("hv_bus") || cols.containsKey("lv_bus") || cols.containsKey("rated_s")
                 || cols.containsKey("hvbus") || cols.containsKey("lvbus") || cols.containsKey("rateds"))
             return "transformer";
@@ -709,6 +744,9 @@ public class ExcelImportService {
         if (cols.containsKey("from") || cols.containsKey("to") || cols.containsKey("from_bus")
                 || cols.containsKey("to_bus") || cols.containsKey("de") || cols.containsKey("vers")
                 || cols.containsKey("von") || cols.containsKey("nach"))
+            return "line";
+        // PyPSA/pandapower lines: bus0 + bus1 + length (after aliasing bus0→from already done but raw check)
+        if (cols.containsKey("bus0") && cols.containsKey("bus1"))
             return "line";
         if (cols.containsKey("substation") || cols.containsKey("poste") || cols.containsKey("region"))
             return (cols.containsKey("voltage") || cols.containsKey("tension") || cols.containsKey("spannung"))
@@ -735,6 +773,8 @@ public class ExcelImportService {
         // ID aliases
         ALIASES.put("identifier", "id"); ALIASES.put("key", "id"); ALIASES.put("uuid", "id");
         ALIASES.put("code", "id"); ALIASES.put("nummer", "id"); ALIASES.put("numero", "id");
+        // PyPSA/pandapower: id_ (trailing underscore) → id
+        ALIASES.put("id_", "id");
         // Name aliases
         ALIASES.put("nom", "name"); ALIASES.put("bezeichnung", "name"); ALIASES.put("beschreibung", "name");
         ALIASES.put("label", "name"); ALIASES.put("title", "name"); ALIASES.put("bezeichner", "name");
@@ -746,12 +786,16 @@ public class ExcelImportService {
         ALIASES.put("nominal_voltage", "voltage"); ALIASES.put("nominalvoltage", "voltage");
         ALIASES.put("base_voltage", "voltage"); ALIASES.put("basevoltage", "voltage");
         ALIASES.put("vn_kv", "voltage"); ALIASES.put("vnom", "voltage");
+        // PyPSA/pandapower: v_nom → voltage
+        ALIASES.put("v_nom", "voltage"); ALIASES.put("vnom_kv", "voltage"); ALIASES.put("v0", "voltage");
         // Substation aliases
         ALIASES.put("poste", "substation"); ALIASES.put("umspannwerk", "substation");
         ALIASES.put("substationid", "substation"); ALIASES.put("station", "substation");
         // Bus aliases
         ALIASES.put("noeud", "bus"); ALIASES.put("node", "bus"); ALIASES.put("busbar", "bus");
         ALIASES.put("sammelschiene", "bus"); ALIASES.put("knotenpunkt", "bus");
+        // PyPSA/pandapower: bus0 → bus (primary bus for loads/consumers)
+        ALIASES.put("bus0", "bus");
         // From/To bus aliases
         ALIASES.put("from_bus", "from"); ALIASES.put("frombus", "from"); ALIASES.put("bus_from", "from");
         ALIASES.put("de", "from"); ALIASES.put("von", "from"); ALIASES.put("start", "from");
@@ -759,6 +803,8 @@ public class ExcelImportService {
         ALIASES.put("to_bus", "to"); ALIASES.put("tobus", "to"); ALIASES.put("bus_to", "to");
         ALIASES.put("vers", "to"); ALIASES.put("nach", "to"); ALIASES.put("end", "to");
         ALIASES.put("endbus", "to"); ALIASES.put("endnode", "to");
+        // PyPSA/pandapower: bus1 → to (second bus for lines)
+        ALIASES.put("bus1", "to");
         // Line parameters
         ALIASES.put("longueur", "length"); ALIASES.put("laenge", "length"); ALIASES.put("len", "length");
         ALIASES.put("resistance", "r"); ALIASES.put("reactance", "x");
@@ -769,6 +815,8 @@ public class ExcelImportService {
         ALIASES.put("bt", "lv_bus"); ALIASES.put("low_voltage_bus", "lv_bus"); ALIASES.put("us_bus", "lv_bus");
         ALIASES.put("rated_s", "rated_s"); ALIASES.put("rateds", "rated_s"); ALIASES.put("puissance", "rated_s");
         ALIASES.put("sn_mva", "rated_s"); ALIASES.put("snmva", "rated_s"); ALIASES.put("mva", "rated_s");
+        // PyPSA/pandapower: s_nom → rated_s
+        ALIASES.put("s_nom", "rated_s"); ALIASES.put("snom", "rated_s");
         // Generator power
         ALIASES.put("max_p", "max_p"); ALIASES.put("maxp", "max_p"); ALIASES.put("pmax", "max_p");
         ALIASES.put("p_max_mw", "max_p"); ALIASES.put("pmaxmw", "max_p"); ALIASES.put("max_mw", "max_p");
@@ -776,6 +824,8 @@ public class ExcelImportService {
         ALIASES.put("p_min_mw", "min_p"); ALIASES.put("pminmw", "min_p"); ALIASES.put("min_mw", "min_p");
         ALIASES.put("p_mw", "p"); ALIASES.put("pmw", "p"); ALIASES.put("active_power", "p");
         ALIASES.put("mw", "p"); ALIASES.put("activepuissance", "p");
+        // PyPSA/pandapower: demand_power → p (annual demand kWh → treat as p in kW)
+        ALIASES.put("demand_power", "p"); ALIASES.put("demandpower", "p");
         ALIASES.put("q_mvar", "q"); ALIASES.put("qmvar", "q"); ALIASES.put("reactive_power", "q");
         ALIASES.put("mvar", "q"); ALIASES.put("reactivepuissance", "q");
 
@@ -786,8 +836,12 @@ public class ExcelImportService {
                 String rawValue = getCellValue(headerRow, i);
                 if (rawValue != null && !rawValue.isEmpty()) {
                     String name = rawValue.toLowerCase().trim()
+                            .replaceAll("\\s*\\([^)]*\\)", "")  // strip unit annotations: (kV), (kWh/a), (Ohm/km), etc.
                             .replaceAll("\\s+", "_")
-                            .replaceAll("[^a-z0-9_]", "");
+                            .replaceAll("[^a-z0-9_]", "")
+                            .replaceAll("_+", "_")
+                            .replaceAll("^_|_$", "");
+                    if (name.isEmpty()) continue;
                     mapping.put(name, i);
                     // Also map without underscores for flexible header matching
                     String nameNoUnderscore = name.replace("_", "");

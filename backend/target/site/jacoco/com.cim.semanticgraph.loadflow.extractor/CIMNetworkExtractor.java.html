@@ -950,41 +950,65 @@ import org.springframework.stereotype.Component;
      */
     private void ensureSlackBus(NetworkModel network) {
 <span class="nc bnc" id="L952" title="All 4 branches missed.">        if (network.getSlackBus() == null &amp;&amp; !network.getBuses().isEmpty()) {</span>
-            // Find bus with highest generation or first PV bus
+            // 1. Prefer PV bus (generator bus) with highest generation
 <span class="nc" id="L954">            Bus slackCandidate = network.getBuses().stream()</span>
 <span class="nc" id="L955">                    .filter(Bus::isPV)</span>
 <span class="nc" id="L956">                    .max((b1, b2) -&gt; Double.compare(b1.getGenerationMw(), b2.getGenerationMw()))</span>
-<span class="nc" id="L957">                    .orElse(network.getBuses().get(0));</span>
+<span class="nc" id="L957">                    .orElse(null);</span>
 
-<span class="nc" id="L959">            slackCandidate.setType(Bus.BusType.SLACK);</span>
-<span class="nc" id="L960">            slackCandidate.setVoltageMagnitude(1.0);</span>
-<span class="nc" id="L961">            slackCandidate.setVoltageAngle(0.0);</span>
+            // 2. Fallback: pick the bus with the most branch connections (feeder/substation bus)
+            //    This works well for radial distribution networks where the root bus is the external grid connection
+<span class="nc bnc" id="L961" title="All 4 branches missed.">            if (slackCandidate == null &amp;&amp; !network.getBranches().isEmpty()) {</span>
+<span class="nc" id="L962">                java.util.Map&lt;String, Long&gt; connectionCount = new java.util.HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L963" title="All 2 branches missed.">                for (com.cim.semanticgraph.loadflow.model.Branch branch : network.getBranches()) {</span>
+<span class="nc" id="L964">                    connectionCount.merge(branch.getFromBusId(), 1L, Long::sum);</span>
+<span class="nc" id="L965">                    connectionCount.merge(branch.getToBusId(), 1L, Long::sum);</span>
+<span class="nc" id="L966">                }</span>
+<span class="nc" id="L967">                String mostConnectedId = connectionCount.entrySet().stream()</span>
+<span class="nc" id="L968">                        .max(java.util.Map.Entry.comparingByValue())</span>
+<span class="nc" id="L969">                        .map(java.util.Map.Entry::getKey)</span>
+<span class="nc" id="L970">                        .orElse(null);</span>
+<span class="nc bnc" id="L971" title="All 2 branches missed.">                if (mostConnectedId != null) {</span>
+<span class="nc" id="L972">                    slackCandidate = network.getBus(mostConnectedId);</span>
+<span class="nc" id="L973">                    log.info(&quot;Selected most-connected bus {} ({} connections) as slack bus&quot;,</span>
+<span class="nc" id="L974">                            mostConnectedId, connectionCount.get(mostConnectedId));</span>
+                }
+            }
 
-<span class="nc" id="L963">            log.info(&quot;Designated bus {} as slack bus&quot;, slackCandidate.getId());</span>
+            // 3. Last resort: first bus
+<span class="nc bnc" id="L979" title="All 2 branches missed.">            if (slackCandidate == null) {</span>
+<span class="nc" id="L980">                slackCandidate = network.getBuses().get(0);</span>
+            }
+
+<span class="nc" id="L983">            slackCandidate.setType(Bus.BusType.SLACK);</span>
+<span class="nc" id="L984">            slackCandidate.setVoltageMagnitude(1.0);</span>
+<span class="nc" id="L985">            slackCandidate.setVoltageAngle(0.0);</span>
+
+<span class="nc" id="L987">            log.info(&quot;Designated bus {} as slack bus&quot;, slackCandidate.getId());</span>
         }
-<span class="nc" id="L965">    }</span>
+<span class="nc" id="L989">    }</span>
 
     /**
      * Create default minimal network for testing
      */
     private void createDefaultBus(NetworkModel network) {
-<span class="nc" id="L971">        Bus defaultBus = Bus.builder()</span>
-<span class="nc" id="L972">                .id(&quot;BUS_DEFAULT&quot;)</span>
-<span class="nc" id="L973">                .name(&quot;Default Bus&quot;)</span>
-<span class="nc" id="L974">                .index(0)</span>
-<span class="nc" id="L975">                .type(Bus.BusType.SLACK)</span>
-<span class="nc" id="L976">                .baseVoltageKv(DEFAULT_BASE_VOLTAGE_KV)</span>
-<span class="nc" id="L977">                .voltageMagnitude(1.0)</span>
-<span class="nc" id="L978">                .voltageAngle(0.0)</span>
-<span class="nc" id="L979">                .voltageMin(0.95)</span>
-<span class="nc" id="L980">                .voltageMax(1.05)</span>
-<span class="nc" id="L981">                .generationMw(100.0)</span>
-<span class="nc" id="L982">                .loadMw(0.0)</span>
-<span class="nc" id="L983">                .inService(true)</span>
-<span class="nc" id="L984">                .build();</span>
+<span class="nc" id="L995">        Bus defaultBus = Bus.builder()</span>
+<span class="nc" id="L996">                .id(&quot;BUS_DEFAULT&quot;)</span>
+<span class="nc" id="L997">                .name(&quot;Default Bus&quot;)</span>
+<span class="nc" id="L998">                .index(0)</span>
+<span class="nc" id="L999">                .type(Bus.BusType.SLACK)</span>
+<span class="nc" id="L1000">                .baseVoltageKv(DEFAULT_BASE_VOLTAGE_KV)</span>
+<span class="nc" id="L1001">                .voltageMagnitude(1.0)</span>
+<span class="nc" id="L1002">                .voltageAngle(0.0)</span>
+<span class="nc" id="L1003">                .voltageMin(0.95)</span>
+<span class="nc" id="L1004">                .voltageMax(1.05)</span>
+<span class="nc" id="L1005">                .generationMw(100.0)</span>
+<span class="nc" id="L1006">                .loadMw(0.0)</span>
+<span class="nc" id="L1007">                .inService(true)</span>
+<span class="nc" id="L1008">                .build();</span>
 
-<span class="nc" id="L986">        network.addBus(defaultBus);</span>
-<span class="nc" id="L987">        log.info(&quot;Created default bus&quot;);</span>
-<span class="nc" id="L988">    }</span>
+<span class="nc" id="L1010">        network.addBus(defaultBus);</span>
+<span class="nc" id="L1011">        log.info(&quot;Created default bus&quot;);</span>
+<span class="nc" id="L1012">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

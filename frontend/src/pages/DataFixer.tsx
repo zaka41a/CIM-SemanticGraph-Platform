@@ -39,7 +39,7 @@ const ANALYSIS_STEPS = [
 
 const SEV_CONFIG = {
   error:   { label: 'ERROR',   text: 'text-red-400',    bg: 'bg-red-500/10',    border: 'border-red-500/20',    badge: 'bg-red-500/20 text-red-300 border-red-500/30' },
-  warning: { label: 'WARNING', text: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
+  warning: { label: 'WARNING', text: 'text-accent-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
   info:    { label: 'INFO',    text: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20',   badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
 };
 
@@ -212,9 +212,10 @@ SELECT ?bus ?name WHERE {
   ?bus cim:IdentifiedObject.name ?name .
   FILTER NOT EXISTS {
     ?terminal cim:Terminal.ConnectivityNode ?bus .
-    { ?gen a cim:GeneratingUnit . ?genTerm cim:Terminal.ConductingEquipment ?gen . }
-    UNION
-    { ?load a cim:EnergyConsumer . ?loadTerm cim:Terminal.ConductingEquipment ?load . }
+    {
+      ?terminal cim:Terminal.ConductingEquipment ?eq .
+      { ?eq a cim:GeneratingUnit . } UNION { ?eq a cim:EnergyConsumer . }
+    }
   }
 }`;
     const r = await api.executeSparqlQuery(q);
@@ -288,7 +289,7 @@ WHERE {
     ? Math.max(0, 100 - errorCount * 20 - warningCount * 10)
     : null;
 
-  const scoreColor = score === null ? '' : score >= 80 ? 'text-emerald-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400';
+  const scoreColor = score === null ? '' : score >= 80 ? 'text-emerald-400' : score >= 50 ? 'text-accent-500' : 'text-red-400';
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -298,11 +299,8 @@ WHERE {
         <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl" />
         <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl shadow-lg shadow-accent-500/20">
-              <Wrench size={28} className="text-white" />
-            </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">CIM Data Fixer</h1>
+              <h1 className="text-3xl font-bold text-accent-500">CIM Data Fixer</h1>
               <p className="text-neutral-400 text-sm mt-0.5">Network data quality analysis and automatic correction</p>
             </div>
           </div>
@@ -413,7 +411,7 @@ WHERE {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: 'Errors',         value: errorCount,              color: 'text-red-400',     border: 'border-red-500/30',     icon: XCircle },
-              { label: 'Warnings',       value: warningCount,            color: 'text-yellow-400',  border: 'border-yellow-500/30',  icon: AlertTriangle },
+              { label: 'Warnings',       value: warningCount,            color: 'text-accent-500',  border: 'border-yellow-500/30',  icon: AlertTriangle },
               { label: 'Fixes Available',value: pendingFixes.length,     color: 'text-accent-400',  border: 'border-accent-500/30',  icon: Wrench },
               { label: 'Applied',        value: fixedCount,              color: 'text-emerald-400', border: 'border-emerald-500/30', icon: CheckCircle },
             ].map(({ label, value, color, border, icon: Icon }) => (
@@ -434,7 +432,7 @@ WHERE {
               {/* Issues */}
               <div className="space-y-3">
                 <h2 className="text-base font-bold text-white flex items-center gap-2 px-1">
-                  <AlertTriangle size={16} className="text-yellow-400" />
+                  <AlertTriangle size={16} className="text-accent-500" />
                   Detected Issues <span className="text-neutral-500 font-normal">({issues.length})</span>
                 </h2>
                 {issues.length === 0 ? (

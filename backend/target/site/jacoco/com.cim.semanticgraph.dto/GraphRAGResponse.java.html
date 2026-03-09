@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-<span class="nc bnc" id="L12" title="All 94 branches missed.">@Data</span>
+<span class="nc bnc" id="L12" title="All 110 branches missed.">@Data</span>
 <span class="nc bnc" id="L13" title="All 6 branches missed.">@Builder</span>
 <span class="nc" id="L14">@NoArgsConstructor</span>
 <span class="nc" id="L15">@AllArgsConstructor</span>
@@ -35,5 +35,9 @@ public class GraphRAGResponse {
 <span class="nc" id="L35">    private Boolean inferenceUsed = false;</span>
 
 <span class="nc" id="L37">    private Object metadata;</span>
+
+    // RAGAS-lite quality metrics (computed post-generation)
+<span class="nc" id="L40">    private Double faithfulness;</span>
+<span class="nc" id="L41">    private Double answerRelevance;</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

@@ -97,7 +97,7 @@ const StatusDot = ({ status }: { status: ServiceCheck['status'] }) => (
 const StatusBadge = ({ status }: { status: ServiceCheck['status'] }) => (
   <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
     status === 'UP' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
-    status === 'DEGRADED' ? 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' :
+    status === 'DEGRADED' ? 'bg-yellow-500/15 text-accent-500 border-yellow-500/30' :
     status === 'LOADING' ? 'bg-neutral-500/15 text-neutral-400 border-neutral-500/30' :
     'bg-red-500/15 text-red-400 border-red-500/30'
   }`}>
@@ -116,7 +116,7 @@ const ServiceRow = ({ service }: { service: ServiceCheck }) => {
       }`}>
         <Icon size={18} className={
           service.status === 'UP' ? 'text-emerald-400' :
-          service.status === 'DEGRADED' ? 'text-yellow-400' :
+          service.status === 'DEGRADED' ? 'text-accent-500' :
           service.status === 'DOWN' ? 'text-red-400' : 'text-neutral-400'
         } />
       </div>
@@ -132,7 +132,7 @@ const ServiceRow = ({ service }: { service: ServiceCheck }) => {
         {service.ping !== undefined && (
           <div className="text-right">
             <p className="text-xs text-neutral-500">Response</p>
-            <p className={`text-xs font-mono font-bold ${service.ping < 100 ? 'text-emerald-400' : service.ping < 500 ? 'text-yellow-400' : 'text-red-400'}`}>
+            <p className={`text-xs font-mono font-bold ${service.ping < 100 ? 'text-emerald-400' : service.ping < 500 ? 'text-accent-500' : 'text-red-400'}`}>
               {service.ping}ms
             </p>
           </div>
@@ -394,11 +394,8 @@ const Settings = () => {
         <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-violet-500/5 rounded-full blur-3xl" />
         <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl shadow-lg shadow-accent-500/25">
-              <SettingsIcon size={28} className="text-white" />
-            </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Platform Settings</h1>
+              <h1 className="text-3xl font-bold text-accent-500">Platform Settings</h1>
               <p className="text-neutral-300 mt-0.5">
                 Infrastructure · AI services · Vector DB · Knowledge graph
               </p>
@@ -409,7 +406,7 @@ const Settings = () => {
             <div className={`flex items-center gap-2.5 px-4 py-2 rounded-xl border text-sm font-bold ${
               overallStatus === 'UP' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
               overallStatus === 'LOADING' ? 'bg-neutral-500/10 border-neutral-500/30 text-neutral-400' :
-              'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
+              'bg-yellow-500/10 border-yellow-500/30 text-accent-500'
             }`}>
               {overallStatus === 'UP' ? <CheckCircle2 size={16} /> :
                overallStatus === 'LOADING' ? <Loader2 size={16} className="animate-spin" /> :
