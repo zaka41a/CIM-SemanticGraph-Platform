@@ -162,7 +162,7 @@ This platform provides:
 │  │ LandingPage│  │ Dashboard  │  │ Graph View │  │GraphRAG Chat│   │
 │  │            │  │ 8 StatCards│  │ Cytoscape  │  │ SSE Stream  │   │
 │  └────────────┘  └────────────┘  └────────────┘  └─────────────┘   │
-│  ┌─────────────┐  ┌────────────┐  ┌─────────────┐  ┌─────────────  │
+│  ┌─────────────┐  ┌────────────┐  ┌─────────────┐  ┌─────────────┐ │
 │  │ Data Import │  │SPARQL Edit.│  │  LoadFlow   │  │  Settings   │ │
 │  │+MappingModal│  │            │  │+Topology Map│  │             │ │
 │  └─────────────┘  └────────────┘  └─────────────┘  └─────────────┘ │
@@ -182,10 +182,10 @@ This platform provides:
 │  │  SSE streaming      │  │   LLM fallback chain  │               │
 │  └──────────┬──────────┘  └───────────────────────┘               │
 │             │                                                     │
-│  ┌──────────┴──────────────────────────────────────────────────┐  │
-│  │  CIMIndexingService   QdrantService   EmbeddingService      │  │
-│  │  Auto-index on import  Vector upsert  OpenAI embeddings     │  │
-│  └──────────┬──────────────────────────────────────────────────┘  │
+│  ┌──────────┴────────────────────────────────────────────────┐    │
+│  │  CIMIndexingService   QdrantService   EmbeddingService    │    │
+│  │  Auto-index on import  Vector upsert  OpenAI embeddings   │    │
+│  └──────────┬────────────────────────────────────────────────┘    │
 │             │                                                     │
 │  ┌──────────┴────────────────────────────────────────────────┐    │
 │  │   Apache Jena Fuseki (Embedded TDB2, port 3030)           │    │
