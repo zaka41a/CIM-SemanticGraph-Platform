@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Bot, Activity, Sparkles, Database, Download, WifiOff, Wifi, Maximize2, Minimize2 } from 'lucide-react';
+import { Bot, Activity, Sparkles, Database, Download, WifiOff, Wifi, Maximize2, Minimize2, MessageSquare } from 'lucide-react';
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { WelcomeScreen } from '@/components/chat/WelcomeScreen';
-import { ChatInput } from '@/components/chat/ChatInput';
+import { ChatInput, ChatInputHandle } from '@/components/chat/ChatInput';
 import { useChatSession } from '@/hooks/useChatSession';
 import { useChatMessages } from '@/hooks/useChatMessages';
 import { apiService } from '@/services/api';
@@ -88,6 +88,7 @@ const GraphRAGChat = () => {
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const messagesAreaRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<ChatInputHandle>(null);
 
   const {
     sessionId,
@@ -124,6 +125,11 @@ const GraphRAGChat = () => {
   // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Ctrl+K → focus chat input
+      if (e.ctrlKey && e.key === 'k') {
+        e.preventDefault();
+        chatInputRef.current?.focus();
+      }
       // Ctrl+Shift+E → export
       if (e.ctrlKey && e.shiftKey && e.key === 'E' && messages.length > 0) {
         e.preventDefault();
@@ -194,10 +200,11 @@ const GraphRAGChat = () => {
         <header className="bg-primary-900/50 border-b border-primary-700/30 px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-accent-500">
+              <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+                <MessageSquare size={26} className="text-accent-400" />
                 GraphRAG Chat
               </h1>
-              <p className="text-sm text-neutral-400">Claude AI Agent with semantic search and load flow tools</p>
+              <p className="text-sm text-neutral-400 mt-1">Claude AI Agent with semantic search and load flow tools</p>
             </div>
             <div className="flex items-center gap-3">
               {/* Export button */}
@@ -282,6 +289,7 @@ const GraphRAGChat = () => {
         <div className="border-t border-primary-700/30 bg-primary-900/50 px-6 py-4 flex-shrink-0">
           <div className="max-w-4xl mx-auto">
             <ChatInput
+              ref={chatInputRef}
               input={input}
               isLoading={isLoading}
               onInputChange={setInput}
@@ -306,7 +314,7 @@ const GraphRAGChat = () => {
                   <span className="text-neutral-500">Claude claude-sonnet-4-6</span>
                 </span>
               </div>
-              <span className="text-neutral-600">Ctrl+Shift+E to export · Ctrl+Shift+F fullscreen</span>
+              <span className="text-neutral-600">Ctrl+K focus · Ctrl+Shift+E export · Ctrl+Shift+F fullscreen</span>
             </div>
           </div>
         </div>

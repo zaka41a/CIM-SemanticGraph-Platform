@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   Play, Copy, Download, Book, AlertCircle, Code2, Zap, Database,
   CheckCircle2, Clock, Hash, Table2, FileJson, FileSpreadsheet,
   Trash2, Loader2, Terminal, ArrowRight, Layers, Cable, BarChart3
 } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import Editor from '@monaco-editor/react';
 import { apiService } from '@/services/api';
 import { storageGet, storageSet, storageRemove } from '@/utils/storage';
@@ -216,25 +217,27 @@ ORDER BY DESC(?nominalVoltage)`,
     return parts[parts.length - 1] || value;
   };
 
+  const handleExecuteRef = useRef(handleExecute);
+  handleExecuteRef.current = handleExecute;
+
+  const handleEditorMount = useCallback((editor: any, monaco: any) => {
+    // Ctrl+Enter / Cmd+Enter → execute query
+    editor.addCommand(
+      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
+      () => handleExecuteRef.current()
+    );
+  }, []);
+
   const lineCount = query.split('\n').length;
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Page Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-800/50 via-primary-900/50 to-primary-950/50 p-8 border border-primary-700/30">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent-500/5 rounded-full blur-3xl"></div>
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-accent-500 mb-1">SPARQL Query Editor</h1>
-              <p className="text-neutral-300">
-                Execute powerful queries against your CIM Knowledge Graph
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={Code2}
+        iconColor="text-blue-400"
+        title="SPARQL Query Editor"
+        subtitle="Execute powerful queries against your CIM Knowledge Graph"
+      />
 
       {/* Main Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -448,6 +451,7 @@ ORDER BY DESC(?nominalVoltage)`,
                 defaultLanguage="sparql"
                 value={query}
                 onChange={(value) => setQuery(value || '')}
+                onMount={handleEditorMount}
                 theme="vs-dark"
                 options={{
                   minimap: { enabled: false },
@@ -478,6 +482,9 @@ ORDER BY DESC(?nominalVoltage)`,
                   SPARQL
                 </span>
               </div>
+              <span className="text-[10px] text-neutral-700 font-mono">
+                Ctrl+Enter to run
+              </span>
             </div>
           </div>
 

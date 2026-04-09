@@ -6,6 +6,7 @@ import {
   Copy, Check, Download, Search, Filter, MessageSquare,
   BarChart3, History, X, Layers, Wrench,
 } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { apiService } from '@/services/api';
 import { storageGet, storageSet } from '@/utils/storage';
 
@@ -376,51 +377,41 @@ const Validation = () => {
   return (
     <div className="space-y-6 animate-fade-in">
 
-      {/* ── Header ────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-800/50 via-primary-900/50 to-primary-950/50 p-8 border border-primary-700/30">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl" />
-        <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-accent-500">SHACL Validation</h1>
-              <p className="text-neutral-400 text-sm mt-0.5">
-                Validate your CIM Knowledge Graph against IEC 61970 SHACL constraints
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+      <PageHeader
+        icon={ShieldCheck}
+        iconColor="text-emerald-400"
+        title="SHACL Validation"
+        subtitle="Validate your CIM Knowledge Graph against IEC 61970 SHACL constraints"
+        actions={
+          <>
             {history.length > 0 && (
               <button
                 onClick={() => setShowHistory(h => !h)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm transition-all ${showHistory ? 'bg-accent-500/20 border-accent-500/40 text-accent-400' : 'bg-primary-800/60 border-primary-700/40 text-neutral-300 hover:text-white'}`}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm transition-all ${showHistory ? 'bg-accent-500/20 border-accent-500/40 text-accent-400' : 'bg-primary-800 border-primary-600/50 text-neutral-300 hover:text-white'}`}
               >
-                <History size={15} />
-                History ({history.length})
+                <History size={15} /> History ({history.length})
               </button>
             )}
             {result && (
-              <div className="flex gap-1">
-                <button onClick={handleExportCSV} className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-primary-800/60 hover:bg-primary-700/80 border border-primary-700/40 text-xs text-neutral-300 hover:text-white transition-all">
+              <>
+                <button onClick={handleExportCSV} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary-800 hover:bg-primary-700 border border-primary-600/50 text-xs text-neutral-300 hover:text-white transition-all">
                   <Download size={13} /> CSV
                 </button>
-                <button onClick={handleExportJSON} className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-primary-800/60 hover:bg-primary-700/80 border border-primary-700/40 text-xs text-neutral-300 hover:text-white transition-all">
+                <button onClick={handleExportJSON} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary-800 hover:bg-primary-700 border border-primary-600/50 text-xs text-neutral-300 hover:text-white transition-all">
                   <Download size={13} /> JSON
                 </button>
-              </div>
+              </>
             )}
             <button
               onClick={handleValidate}
               disabled={isValidating}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-xl font-semibold shadow-lg shadow-accent-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
             >
-              {isValidating
-                ? <><Loader2 className="animate-spin" size={18} /> Validating…</>
-                : <><RefreshCw size={18} /> Run Validation</>}
+              {isValidating ? <><Loader2 className="animate-spin" size={15} /> Validating…</> : <><RefreshCw size={15} /> Run Validation</>}
             </button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* ── DataFixer cross-reference notice ──────────────────────────────── */}
       {dataFixerIssues.length > 0 && (

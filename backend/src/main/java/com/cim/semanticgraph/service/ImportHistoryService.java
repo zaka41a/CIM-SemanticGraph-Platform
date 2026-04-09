@@ -84,6 +84,30 @@ public class ImportHistoryService {
     }
 
     /**
+     * Set the named graph URI for an import record (enables rollback).
+     */
+    public void setGraphUri(String id, String graphUri) {
+        ImportHistory record = historyStore.get(id);
+        if (record != null) {
+            record.setGraphUri(graphUri);
+            record.setRollbackAvailable(true);
+            log.info("Import {} linked to named graph <{}>", id, graphUri);
+        }
+    }
+
+    /**
+     * Mark rollback as done (graph dropped — no longer available).
+     */
+    public void markRolledBack(String id) {
+        ImportHistory record = historyStore.get(id);
+        if (record != null) {
+            record.setRollbackAvailable(false);
+            record.setStatus(ImportHistory.ImportStatus.ROLLED_BACK);
+            log.info("Import {} marked as rolled back", id);
+        }
+    }
+
+    /**
      * Delete import history record
      */
     public boolean deleteHistory(String id) {

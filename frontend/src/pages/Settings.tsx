@@ -24,6 +24,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { apiService } from '@/services/api';
+import PageHeader from '@/components/PageHeader';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -388,48 +389,39 @@ const Settings = () => {
   return (
     <div className="space-y-6 animate-fade-in">
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-800/50 via-primary-900/50 to-primary-950/50 p-8 border border-primary-700/30">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-violet-500/5 rounded-full blur-3xl" />
-        <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-accent-500">Platform Settings</h1>
-              <p className="text-neutral-300 mt-0.5">
-                Infrastructure · AI services · Vector DB · Knowledge graph
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Overall status badge */}
-            <div className={`flex items-center gap-2.5 px-4 py-2 rounded-xl border text-sm font-bold ${
+      <PageHeader
+        icon={SettingsIcon}
+        iconColor="text-neutral-400"
+        title="Platform Settings"
+        subtitle="Infrastructure · AI services · Vector DB · Knowledge graph"
+        actions={
+          <>
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-semibold ${
               overallStatus === 'UP' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
               overallStatus === 'LOADING' ? 'bg-neutral-500/10 border-neutral-500/30 text-neutral-400' :
-              'bg-yellow-500/10 border-yellow-500/30 text-accent-500'
+              'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
             }`}>
-              {overallStatus === 'UP' ? <CheckCircle2 size={16} /> :
-               overallStatus === 'LOADING' ? <Loader2 size={16} className="animate-spin" /> :
-               <AlertTriangle size={16} />}
+              {overallStatus === 'UP' ? <CheckCircle2 size={14} /> :
+               overallStatus === 'LOADING' ? <Loader2 size={14} className="animate-spin" /> :
+               <AlertTriangle size={14} />}
               {overallStatus === 'LOADING' ? 'Checking...' :
-               overallStatus === 'UP' ? `All ${services.length} services UP` :
-               `${healthyCount}/${services.length} services UP`}
+               overallStatus === 'UP' ? `All ${services.length} UP` :
+               `${healthyCount}/${services.length} UP`}
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-neutral-500">
+            <div className="flex items-center gap-1 text-xs text-neutral-500">
               <Clock size={12} />
               {lastRefresh.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
             </div>
             <button
               onClick={fetchAll}
               disabled={refreshing}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-400 hover:to-accent-500 text-white rounded-xl font-medium text-sm shadow-lg shadow-accent-500/20 transition-all duration-200 active:scale-[0.98] disabled:opacity-60"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
             >
-              <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-              Refresh
+              <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} /> Refresh
             </button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* ── Action message ───────────────────────────────────────────────────── */}
       {actionMsg && (

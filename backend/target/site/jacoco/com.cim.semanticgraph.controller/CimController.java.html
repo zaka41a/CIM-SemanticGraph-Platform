@@ -65,46 +65,50 @@ public class CimController {
 <span class="nc" id="L65">                        .body(Map.of(&quot;error&quot;, &quot;File too large. Maximum size: 100MB&quot;));</span>
             }
 
-<span class="nc" id="L68">            Map&lt;String, Object&gt; stats = cimTransformerService.importCimData(</span>
-<span class="nc" id="L69">                    file.getInputStream(), format);</span>
+            // Generate named graph URI for rollback versioning
+<span class="nc" id="L69">            String graphUri = &quot;urn:import:&quot; + historyRecord.getId();</span>
 
-<span class="nc" id="L71">            long endTime = System.currentTimeMillis();</span>
-<span class="nc" id="L72">            double duration = (endTime - startTime) / 1000.0;</span>
+<span class="nc" id="L71">            Map&lt;String, Object&gt; stats = cimTransformerService.importCimData(</span>
+<span class="nc" id="L72">                    file.getInputStream(), format, graphUri);</span>
 
-<span class="nc" id="L74">            long triplesCount = 0;</span>
-<span class="nc bnc" id="L75" title="All 2 branches missed.">            if (stats.containsKey(&quot;totalTriples&quot;)) {</span>
-<span class="nc" id="L76">                triplesCount = ((Number) stats.get(&quot;totalTriples&quot;)).longValue();</span>
+<span class="nc" id="L74">            long endTime = System.currentTimeMillis();</span>
+<span class="nc" id="L75">            double duration = (endTime - startTime) / 1000.0;</span>
+
+<span class="nc" id="L77">            long triplesCount = 0;</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">            if (stats.containsKey(&quot;totalTriples&quot;)) {</span>
+<span class="nc" id="L79">                triplesCount = ((Number) stats.get(&quot;totalTriples&quot;)).longValue();</span>
             }
 
-<span class="nc" id="L79">            importHistoryService.updateImportSuccess(historyRecord.getId(), triplesCount, duration);</span>
+<span class="nc" id="L82">            importHistoryService.updateImportSuccess(historyRecord.getId(), triplesCount, duration);</span>
+<span class="nc" id="L83">            importHistoryService.setGraphUri(historyRecord.getId(), graphUri);</span>
 
-<span class="nc" id="L81">            log.info(&quot;Import successful. Stats: {}&quot;, stats);</span>
+<span class="nc" id="L85">            log.info(&quot;Import successful. Stats: {}&quot;, stats);</span>
 
             // Trigger async vector indexing to Qdrant (non-blocking)
-<span class="nc" id="L84">            cimIndexingService.indexAllEntitiesAsync();</span>
-<span class="nc" id="L85">            log.info(&quot;Async CIM entity indexing to Qdrant triggered&quot;);</span>
+<span class="nc" id="L88">            cimIndexingService.indexAllEntitiesAsync();</span>
+<span class="nc" id="L89">            log.info(&quot;Async CIM entity indexing to Qdrant triggered&quot;);</span>
 
-<span class="nc" id="L87">            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L88">            response.put(&quot;status&quot;, &quot;success&quot;);</span>
-<span class="nc" id="L89">            response.put(&quot;message&quot;, &quot;CIM data imported successfully&quot;);</span>
-<span class="nc" id="L90">            response.put(&quot;filename&quot;, file.getOriginalFilename());</span>
-<span class="nc" id="L91">            response.put(&quot;statistics&quot;, stats);</span>
-<span class="nc" id="L92">            response.put(&quot;historyId&quot;, historyRecord.getId());</span>
-<span class="nc" id="L93">            response.put(&quot;indexing&quot;, &quot;Vector indexing started in background&quot;);</span>
+<span class="nc" id="L91">            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L92">            response.put(&quot;status&quot;, &quot;success&quot;);</span>
+<span class="nc" id="L93">            response.put(&quot;message&quot;, &quot;CIM data imported successfully&quot;);</span>
+<span class="nc" id="L94">            response.put(&quot;filename&quot;, file.getOriginalFilename());</span>
+<span class="nc" id="L95">            response.put(&quot;statistics&quot;, stats);</span>
+<span class="nc" id="L96">            response.put(&quot;historyId&quot;, historyRecord.getId());</span>
+<span class="nc" id="L97">            response.put(&quot;indexing&quot;, &quot;Vector indexing started in background&quot;);</span>
 
-<span class="nc" id="L95">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L99">            return ResponseEntity.ok(response);</span>
 
-<span class="nc" id="L97">        } catch (Exception e) {</span>
-<span class="nc" id="L98">            long endTime = System.currentTimeMillis();</span>
-<span class="nc" id="L99">            double duration = (endTime - startTime) / 1000.0;</span>
+<span class="nc" id="L101">        } catch (Exception e) {</span>
+<span class="nc" id="L102">            long endTime = System.currentTimeMillis();</span>
+<span class="nc" id="L103">            double duration = (endTime - startTime) / 1000.0;</span>
 
-<span class="nc" id="L101">            importHistoryService.updateImportFailure(historyRecord.getId(), e.getMessage());</span>
+<span class="nc" id="L105">            importHistoryService.updateImportFailure(historyRecord.getId(), e.getMessage());</span>
 
-<span class="nc" id="L103">            log.error(&quot;Error importing CIM data&quot;, e);</span>
-<span class="nc" id="L104">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
-<span class="nc" id="L105">                    .body(Map.of(</span>
+<span class="nc" id="L107">            log.error(&quot;Error importing CIM data&quot;, e);</span>
+<span class="nc" id="L108">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L109">                    .body(Map.of(</span>
                             &quot;status&quot;, &quot;error&quot;,
-<span class="nc" id="L107">                            &quot;message&quot;, &quot;Import failed: &quot; + e.getMessage()</span>
+<span class="nc" id="L111">                            &quot;message&quot;, &quot;Import failed: &quot; + e.getMessage()</span>
                     ));
         }
     }
@@ -114,36 +118,36 @@ public class CimController {
     public ResponseEntity&lt;?&gt; exportKnowledgeGraph(
             @RequestParam(value = &quot;format&quot;, required = false, defaultValue = &quot;RDF/XML&quot;) String format) {
 
-<span class="nc" id="L117">        log.info(&quot;Export request received. Format: {}&quot;, format);</span>
+<span class="nc" id="L121">        log.info(&quot;Export request received. Format: {}&quot;, format);</span>
 
         try {
-<span class="nc" id="L120">            String rdfData = jenaService.exportRdfData(format);</span>
+<span class="nc" id="L124">            String rdfData = jenaService.exportRdfData(format);</span>
 
-<span class="nc" id="L122">            return ResponseEntity.ok()</span>
-<span class="nc" id="L123">                    .contentType(MediaType.APPLICATION_XML)</span>
-<span class="nc" id="L124">                    .body(rdfData);</span>
+<span class="nc" id="L126">            return ResponseEntity.ok()</span>
+<span class="nc" id="L127">                    .contentType(MediaType.APPLICATION_XML)</span>
+<span class="nc" id="L128">                    .body(rdfData);</span>
 
-<span class="nc" id="L126">        } catch (Exception e) {</span>
-<span class="nc" id="L127">            log.error(&quot;Error exporting knowledge graph&quot;, e);</span>
-<span class="nc" id="L128">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
-<span class="nc" id="L129">                    .body(Map.of(&quot;error&quot;, &quot;Export failed: &quot; + e.getMessage()));</span>
+<span class="nc" id="L130">        } catch (Exception e) {</span>
+<span class="nc" id="L131">            log.error(&quot;Error exporting knowledge graph&quot;, e);</span>
+<span class="nc" id="L132">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L133">                    .body(Map.of(&quot;error&quot;, &quot;Export failed: &quot; + e.getMessage()));</span>
         }
     }
 
     @GetMapping(&quot;/statistics&quot;)
     @Operation(summary = &quot;Get graph statistics&quot;, description = &quot;Get statistics about the knowledge graph&quot;)
     public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getStatistics() {
-<span class="nc" id="L136">        log.info(&quot;Statistics request received&quot;);</span>
+<span class="nc" id="L140">        log.info(&quot;Statistics request received&quot;);</span>
 
         try {
-<span class="nc" id="L139">            Map&lt;String, Object&gt; stats = jenaService.getGraphStatistics();</span>
+<span class="nc" id="L143">            Map&lt;String, Object&gt; stats = jenaService.getGraphStatistics();</span>
 
-<span class="nc" id="L141">            return ResponseEntity.ok(stats);</span>
+<span class="nc" id="L145">            return ResponseEntity.ok(stats);</span>
 
-<span class="nc" id="L143">        } catch (Exception e) {</span>
-<span class="nc" id="L144">            log.error(&quot;Error getting statistics&quot;, e);</span>
-<span class="nc" id="L145">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
-<span class="nc" id="L146">                    .body(Map.of(&quot;error&quot;, &quot;Failed to get statistics: &quot; + e.getMessage()));</span>
+<span class="nc" id="L147">        } catch (Exception e) {</span>
+<span class="nc" id="L148">            log.error(&quot;Error getting statistics&quot;, e);</span>
+<span class="nc" id="L149">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L150">                    .body(Map.of(&quot;error&quot;, &quot;Failed to get statistics: &quot; + e.getMessage()));</span>
         }
     }
 
@@ -153,57 +157,57 @@ public class CimController {
             @RequestParam(&quot;file&quot;) MultipartFile file,
             @RequestParam(value = &quot;format&quot;, required = false, defaultValue = &quot;CIM/XML&quot;) String format) {
 
-<span class="nc" id="L156">        log.info(&quot;Validation request received. Filename: {}&quot;, file.getOriginalFilename());</span>
+<span class="nc" id="L160">        log.info(&quot;Validation request received. Filename: {}&quot;, file.getOriginalFilename());</span>
 
         try {
-<span class="nc" id="L159">            org.apache.jena.rdf.model.Model model = cimTransformerService.transformCimRdfToModel(</span>
-<span class="nc" id="L160">                    file.getInputStream(), format);</span>
+<span class="nc" id="L163">            org.apache.jena.rdf.model.Model model = cimTransformerService.transformCimRdfToModel(</span>
+<span class="nc" id="L164">                    file.getInputStream(), format);</span>
 
-<span class="nc" id="L162">            ValidationResult validation = cimTransformerService.validateCimSchema(model);</span>
+<span class="nc" id="L166">            ValidationResult validation = cimTransformerService.validateCimSchema(model);</span>
 
-<span class="nc" id="L164">            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L165">            response.put(&quot;valid&quot;, validation.isValid());</span>
-<span class="nc" id="L166">            response.put(&quot;errors&quot;, validation.getErrors());</span>
-<span class="nc" id="L167">            response.put(&quot;warnings&quot;, validation.getWarnings());</span>
-<span class="nc" id="L168">            response.put(&quot;summary&quot;, validation.getSummary());</span>
-<span class="nc" id="L169">            response.put(&quot;tripleCount&quot;, model.size());</span>
+<span class="nc" id="L168">            Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L169">            response.put(&quot;valid&quot;, validation.isValid());</span>
+<span class="nc" id="L170">            response.put(&quot;errors&quot;, validation.getErrors());</span>
+<span class="nc" id="L171">            response.put(&quot;warnings&quot;, validation.getWarnings());</span>
+<span class="nc" id="L172">            response.put(&quot;summary&quot;, validation.getSummary());</span>
+<span class="nc" id="L173">            response.put(&quot;tripleCount&quot;, model.size());</span>
 
-<span class="nc" id="L171">            return ResponseEntity.ok(response);</span>
+<span class="nc" id="L175">            return ResponseEntity.ok(response);</span>
 
-<span class="nc" id="L173">        } catch (Exception e) {</span>
-<span class="nc" id="L174">            log.error(&quot;Error validating CIM data&quot;, e);</span>
-<span class="nc" id="L175">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
-<span class="nc" id="L176">                    .body(Map.of(&quot;error&quot;, &quot;Validation failed: &quot; + e.getMessage()));</span>
+<span class="nc" id="L177">        } catch (Exception e) {</span>
+<span class="nc" id="L178">            log.error(&quot;Error validating CIM data&quot;, e);</span>
+<span class="nc" id="L179">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L180">                    .body(Map.of(&quot;error&quot;, &quot;Validation failed: &quot; + e.getMessage()));</span>
         }
     }
 
     @DeleteMapping(&quot;/clear&quot;)
     @Operation(summary = &quot;Clear knowledge graph&quot;, description = &quot;Remove all data from knowledge graph&quot;)
     public ResponseEntity&lt;Map&lt;String, String&gt;&gt; clearKnowledgeGraph() {
-<span class="nc" id="L183">        log.warn(&quot;Clear knowledge graph request received&quot;);</span>
+<span class="nc" id="L187">        log.warn(&quot;Clear knowledge graph request received&quot;);</span>
 
         try {
-<span class="nc" id="L186">            jenaService.clearKnowledgeGraph();</span>
-<span class="nc" id="L187">            qdrantService.clearCollection();</span>
+<span class="nc" id="L190">            jenaService.clearKnowledgeGraph();</span>
+<span class="nc" id="L191">            qdrantService.clearCollection();</span>
 
-<span class="nc" id="L189">            return ResponseEntity.ok(Map.of(</span>
+<span class="nc" id="L193">            return ResponseEntity.ok(Map.of(</span>
                     &quot;status&quot;, &quot;success&quot;,
                     &quot;message&quot;, &quot;Knowledge graph and vector index cleared successfully&quot;
             ));
 
-<span class="nc" id="L194">        } catch (Exception e) {</span>
-<span class="nc" id="L195">            log.error(&quot;Error clearing knowledge graph&quot;, e);</span>
-<span class="nc" id="L196">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
-<span class="nc" id="L197">                    .body(Map.of(&quot;error&quot;, &quot;Clear failed: &quot; + e.getMessage()));</span>
+<span class="nc" id="L198">        } catch (Exception e) {</span>
+<span class="nc" id="L199">            log.error(&quot;Error clearing knowledge graph&quot;, e);</span>
+<span class="nc" id="L200">            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L201">                    .body(Map.of(&quot;error&quot;, &quot;Clear failed: &quot; + e.getMessage()));</span>
         }
     }
 
     @GetMapping(&quot;/formats&quot;)
     @Operation(summary = &quot;Get supported formats&quot;, description = &quot;List supported CIM data formats&quot;)
     public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getSupportedFormats() {
-<span class="nc" id="L204">        Map&lt;String, Object&gt; formats = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L208">        Map&lt;String, Object&gt; formats = new HashMap&lt;&gt;();</span>
 
-<span class="nc" id="L206">        formats.put(&quot;import&quot;, new String[]{</span>
+<span class="nc" id="L210">        formats.put(&quot;import&quot;, new String[]{</span>
                 &quot;CIM/XML&quot;,
                 &quot;RDF/XML&quot;,
                 &quot;TURTLE&quot;,
@@ -211,7 +215,7 @@ public class CimController {
                 &quot;JSON-LD&quot;
         });
 
-<span class="nc" id="L214">        formats.put(&quot;export&quot;, new String[]{</span>
+<span class="nc" id="L218">        formats.put(&quot;export&quot;, new String[]{</span>
                 &quot;RDF/XML&quot;,
                 &quot;TURTLE&quot;,
                 &quot;N-TRIPLES&quot;,
@@ -219,27 +223,27 @@ public class CimController {
                 &quot;RDF/JSON&quot;
         });
 
-<span class="nc" id="L222">        return ResponseEntity.ok(formats);</span>
+<span class="nc" id="L226">        return ResponseEntity.ok(formats);</span>
     }
 
     @GetMapping(&quot;/indexing-status&quot;)
     @Operation(summary = &quot;Vector indexing status&quot;, description = &quot;Get Qdrant vector DB indexing status&quot;)
     public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; getIndexingStatus() {
-<span class="nc" id="L228">        Map&lt;String, Object&gt; status = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L232">        Map&lt;String, Object&gt; status = new HashMap&lt;&gt;();</span>
         try {
-<span class="nc" id="L230">            boolean qdrantAvailable = qdrantService.isAvailable();</span>
-<span class="nc bnc" id="L231" title="All 2 branches missed.">            long pointCount = qdrantAvailable ? qdrantService.countPoints() : 0;</span>
-<span class="nc" id="L232">            status.put(&quot;qdrantAvailable&quot;, qdrantAvailable);</span>
-<span class="nc" id="L233">            status.put(&quot;indexedEntities&quot;, pointCount);</span>
-<span class="nc" id="L234">            status.put(&quot;collectionName&quot;, &quot;cim_entities&quot;);</span>
-<span class="nc bnc" id="L235" title="All 2 branches missed.">            status.put(&quot;status&quot;, qdrantAvailable ? &quot;CONNECTED&quot; : &quot;DISCONNECTED&quot;);</span>
-<span class="nc" id="L236">            return ResponseEntity.ok(status);</span>
-<span class="nc" id="L237">        } catch (Exception e) {</span>
-<span class="nc" id="L238">            status.put(&quot;qdrantAvailable&quot;, false);</span>
-<span class="nc" id="L239">            status.put(&quot;indexedEntities&quot;, 0);</span>
-<span class="nc" id="L240">            status.put(&quot;status&quot;, &quot;ERROR&quot;);</span>
-<span class="nc" id="L241">            status.put(&quot;error&quot;, e.getMessage());</span>
-<span class="nc" id="L242">            return ResponseEntity.ok(status);</span>
+<span class="nc" id="L234">            boolean qdrantAvailable = qdrantService.isAvailable();</span>
+<span class="nc bnc" id="L235" title="All 2 branches missed.">            long pointCount = qdrantAvailable ? qdrantService.countPoints() : 0;</span>
+<span class="nc" id="L236">            status.put(&quot;qdrantAvailable&quot;, qdrantAvailable);</span>
+<span class="nc" id="L237">            status.put(&quot;indexedEntities&quot;, pointCount);</span>
+<span class="nc" id="L238">            status.put(&quot;collectionName&quot;, &quot;cim_entities&quot;);</span>
+<span class="nc bnc" id="L239" title="All 2 branches missed.">            status.put(&quot;status&quot;, qdrantAvailable ? &quot;CONNECTED&quot; : &quot;DISCONNECTED&quot;);</span>
+<span class="nc" id="L240">            return ResponseEntity.ok(status);</span>
+<span class="nc" id="L241">        } catch (Exception e) {</span>
+<span class="nc" id="L242">            status.put(&quot;qdrantAvailable&quot;, false);</span>
+<span class="nc" id="L243">            status.put(&quot;indexedEntities&quot;, 0);</span>
+<span class="nc" id="L244">            status.put(&quot;status&quot;, &quot;ERROR&quot;);</span>
+<span class="nc" id="L245">            status.put(&quot;error&quot;, e.getMessage());</span>
+<span class="nc" id="L246">            return ResponseEntity.ok(status);</span>
         }
     }
 
@@ -247,15 +251,15 @@ public class CimController {
     @Operation(summary = &quot;Re-index all entities&quot;, description = &quot;Trigger re-indexing of all CIM entities into Qdrant&quot;)
     public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; reindexEntities() {
         try {
-<span class="nc" id="L250">            cimIndexingService.indexAllEntitiesAsync();</span>
-<span class="nc" id="L251">            return ResponseEntity.ok(Map.of(</span>
+<span class="nc" id="L254">            cimIndexingService.indexAllEntitiesAsync();</span>
+<span class="nc" id="L255">            return ResponseEntity.ok(Map.of(</span>
                     &quot;status&quot;, &quot;started&quot;,
                     &quot;message&quot;, &quot;Re-indexing of CIM entities started in background&quot;
             ));
-<span class="nc" id="L255">        } catch (Exception e) {</span>
-<span class="nc" id="L256">            return ResponseEntity.status(500).body(Map.of(</span>
+<span class="nc" id="L259">        } catch (Exception e) {</span>
+<span class="nc" id="L260">            return ResponseEntity.status(500).body(Map.of(</span>
                     &quot;status&quot;, &quot;error&quot;,
-<span class="nc" id="L258">                    &quot;message&quot;, e.getMessage()</span>
+<span class="nc" id="L262">                    &quot;message&quot;, e.getMessage()</span>
             ));
         }
     }
@@ -263,23 +267,23 @@ public class CimController {
     @GetMapping(&quot;/health&quot;)
     @Operation(summary = &quot;Health check&quot;, description = &quot;Check if CIM service is operational&quot;)
     public ResponseEntity&lt;Map&lt;String, Object&gt;&gt; healthCheck() {
-<span class="nc" id="L266">        Map&lt;String, Object&gt; health = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L270">        Map&lt;String, Object&gt; health = new HashMap&lt;&gt;();</span>
 
         try {
-<span class="nc" id="L269">            long tripleCount = jenaService.getTripleCount();</span>
+<span class="nc" id="L273">            long tripleCount = jenaService.getTripleCount();</span>
 
-<span class="nc" id="L271">            health.put(&quot;status&quot;, &quot;UP&quot;);</span>
-<span class="nc" id="L272">            health.put(&quot;tripleCount&quot;, tripleCount);</span>
-<span class="nc" id="L273">            health.put(&quot;service&quot;, &quot;CIM Management&quot;);</span>
+<span class="nc" id="L275">            health.put(&quot;status&quot;, &quot;UP&quot;);</span>
+<span class="nc" id="L276">            health.put(&quot;tripleCount&quot;, tripleCount);</span>
+<span class="nc" id="L277">            health.put(&quot;service&quot;, &quot;CIM Management&quot;);</span>
 
-<span class="nc" id="L275">            return ResponseEntity.ok(health);</span>
+<span class="nc" id="L279">            return ResponseEntity.ok(health);</span>
 
-<span class="nc" id="L277">        } catch (Exception e) {</span>
-<span class="nc" id="L278">            health.put(&quot;status&quot;, &quot;DOWN&quot;);</span>
-<span class="nc" id="L279">            health.put(&quot;error&quot;, e.getMessage());</span>
+<span class="nc" id="L281">        } catch (Exception e) {</span>
+<span class="nc" id="L282">            health.put(&quot;status&quot;, &quot;DOWN&quot;);</span>
+<span class="nc" id="L283">            health.put(&quot;error&quot;, e.getMessage());</span>
 
-<span class="nc" id="L281">            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)</span>
-<span class="nc" id="L282">                    .body(health);</span>
+<span class="nc" id="L285">            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)</span>
+<span class="nc" id="L286">                    .body(health);</span>
         }
     }
 }

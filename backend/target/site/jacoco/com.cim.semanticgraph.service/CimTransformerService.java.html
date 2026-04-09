@@ -135,80 +135,96 @@ public class CimTransformerService {
     }
 
     public Map&lt;String, Object&gt; importCimData(InputStream inputStream, String format) throws Exception {
-<span class="nc" id="L138">        log.info(&quot;Importing CIM data. Format: {}&quot;, format);</span>
+<span class="nc" id="L138">        return importCimData(inputStream, format, null);</span>
+    }
 
-<span class="nc" id="L140">        String rdfFormat = mapFormatToJena(format);</span>
-<span class="nc" id="L141">        Model model = transformCimRdfToModel(inputStream, rdfFormat);</span>
+    public Map&lt;String, Object&gt; importCimData(InputStream inputStream, String format, String graphUri) throws Exception {
+<span class="nc" id="L142">        log.info(&quot;Importing CIM data. Format: {}, graphUri: {}&quot;, format, graphUri);</span>
 
-<span class="nc bnc" id="L143" title="All 4 branches missed.">        if (model == null || model.isEmpty()) {</span>
-<span class="nc" id="L144">            throw new RuntimeException(&quot;Failed to parse CIM data — model is empty. Check the file format and content.&quot;);</span>
+<span class="nc" id="L144">        String rdfFormat = mapFormatToJena(format);</span>
+<span class="nc" id="L145">        Model model = transformCimRdfToModel(inputStream, rdfFormat);</span>
+
+<span class="nc bnc" id="L147" title="All 4 branches missed.">        if (model == null || model.isEmpty()) {</span>
+<span class="nc" id="L148">            throw new RuntimeException(&quot;Failed to parse CIM data — model is empty. Check the file format and content.&quot;);</span>
         }
 
-<span class="nc" id="L147">        log.info(&quot;Parsed {} triples. Format: {}&quot;, model.size(), format);</span>
+<span class="nc" id="L151">        log.info(&quot;Parsed {} triples. Format: {}&quot;, model.size(), format);</span>
 
-<span class="nc bnc" id="L149" title="All 2 branches missed.">        if (validateOnImport) {</span>
-<span class="nc" id="L150">            ValidationResult validation = validateCimSchema(model);</span>
-<span class="nc bnc" id="L151" title="All 2 branches missed.">            if (!validation.isValid()) {</span>
-<span class="nc" id="L152">                log.warn(&quot;Validation warnings during import: {}&quot;, validation.getErrors());</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        if (validateOnImport) {</span>
+<span class="nc" id="L154">            ValidationResult validation = validateCimSchema(model);</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">            if (!validation.isValid()) {</span>
+<span class="nc" id="L156">                log.warn(&quot;Validation warnings during import: {}&quot;, validation.getErrors());</span>
             }
         }
 
-<span class="nc" id="L156">        long originalSize = model.size();</span>
-<span class="nc" id="L157">        Model enrichedModel = enrichWithInferences(model);</span>
-<span class="nc" id="L158">        long enrichedSize = enrichedModel.size();</span>
-<span class="nc" id="L159">        long inferredTriples = enrichedSize - originalSize;</span>
+<span class="nc" id="L160">        long originalSize = model.size();</span>
+<span class="nc" id="L161">        Model enrichedModel = enrichWithInferences(model);</span>
+<span class="nc" id="L162">        long enrichedSize = enrichedModel.size();</span>
+<span class="nc" id="L163">        long inferredTriples = enrichedSize - originalSize;</span>
 
-<span class="nc" id="L161">        jenaService.importRdfData(</span>
-<span class="nc" id="L162">            new java.io.ByteArrayInputStream(writeModelToString(enrichedModel).getBytes()),</span>
+        // Import into default graph (keeps all SPARQL queries working)
+<span class="nc" id="L166">        jenaService.importRdfData(</span>
+<span class="nc" id="L167">            new java.io.ByteArrayInputStream(writeModelToString(enrichedModel).getBytes()),</span>
             &quot;RDF/XML&quot;
         );
 
-<span class="nc" id="L166">        Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L167">        stats.put(&quot;originalTriples&quot;, originalSize);</span>
-<span class="nc" id="L168">        stats.put(&quot;inferredTriples&quot;, inferredTriples);</span>
-<span class="nc" id="L169">        stats.put(&quot;totalTriples&quot;, enrichedSize);</span>
-<span class="nc" id="L170">        stats.put(&quot;format&quot;, format);</span>
+        // Also load into named graph for rollback versioning
+<span class="nc bnc" id="L172" title="All 4 branches missed.">        if (graphUri != null &amp;&amp; !graphUri.isBlank()) {</span>
+            try {
+<span class="nc" id="L174">                jenaService.loadToNamedGraph(graphUri, enrichedModel);</span>
+<span class="nc" id="L175">                log.info(&quot;Import also stored in named graph &lt;{}&gt; for rollback&quot;, graphUri);</span>
+<span class="nc" id="L176">            } catch (Exception e) {</span>
+<span class="nc" id="L177">                log.warn(&quot;Named graph versioning failed (import still succeeded): {}&quot;, e.getMessage());</span>
+<span class="nc" id="L178">            }</span>
+        }
 
-<span class="nc" id="L172">        log.info(&quot;Import complete. original={}, inferred={}, total={}&quot;, originalSize, inferredTriples, enrichedSize);</span>
-<span class="nc" id="L173">        return stats;</span>
+<span class="nc" id="L181">        Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L182">        stats.put(&quot;originalTriples&quot;, originalSize);</span>
+<span class="nc" id="L183">        stats.put(&quot;inferredTriples&quot;, inferredTriples);</span>
+<span class="nc" id="L184">        stats.put(&quot;totalTriples&quot;, enrichedSize);</span>
+<span class="nc" id="L185">        stats.put(&quot;format&quot;, format);</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">        if (graphUri != null) stats.put(&quot;graphUri&quot;, graphUri);</span>
+
+<span class="nc" id="L188">        log.info(&quot;Import complete. original={}, inferred={}, total={}&quot;, originalSize, inferredTriples, enrichedSize);</span>
+<span class="nc" id="L189">        return stats;</span>
     }
 
     private boolean hasRequiredCIMClasses(Model model) {
-<span class="nc" id="L177">        String[] knownClasses = {</span>
+<span class="nc" id="L193">        String[] knownClasses = {</span>
             &quot;IdentifiedObject&quot;, &quot;Equipment&quot;, &quot;PowerSystemResource&quot;,
             &quot;Substation&quot;, &quot;GeneratingUnit&quot;, &quot;ACLineSegment&quot;, &quot;EnergyConsumer&quot;,
             &quot;VoltageLevel&quot;, &quot;Terminal&quot;, &quot;TransformerEnd&quot;, &quot;SynchronousMachine&quot;
         };
-<span class="nc bnc" id="L182" title="All 2 branches missed.">        for (String cls : knownClasses) {</span>
-<span class="nc bnc" id="L183" title="All 2 branches missed.">            if (model.contains(null, RDF.type, model.createResource(cimNamespace + cls))) {</span>
-<span class="nc" id="L184">                return true;</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">        for (String cls : knownClasses) {</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">            if (model.contains(null, RDF.type, model.createResource(cimNamespace + cls))) {</span>
+<span class="nc" id="L200">                return true;</span>
             }
         }
         // Fallback: any type from the CIM namespace
-<span class="nc" id="L188">        StmtIterator iter = model.listStatements(null, RDF.type, (RDFNode) null);</span>
-<span class="nc bnc" id="L189" title="All 2 branches missed.">        while (iter.hasNext()) {</span>
-<span class="nc" id="L190">            Resource type = iter.nextStatement().getObject().asResource();</span>
-<span class="nc bnc" id="L191" title="All 4 branches missed.">            if (type.getURI() != null &amp;&amp; type.getURI().startsWith(cimNamespace)) {</span>
-<span class="nc" id="L192">                return true;</span>
+<span class="nc" id="L204">        StmtIterator iter = model.listStatements(null, RDF.type, (RDFNode) null);</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">        while (iter.hasNext()) {</span>
+<span class="nc" id="L206">            Resource type = iter.nextStatement().getObject().asResource();</span>
+<span class="nc bnc" id="L207" title="All 4 branches missed.">            if (type.getURI() != null &amp;&amp; type.getURI().startsWith(cimNamespace)) {</span>
+<span class="nc" id="L208">                return true;</span>
             }
-<span class="nc" id="L194">        }</span>
-<span class="nc" id="L195">        return false;</span>
+<span class="nc" id="L210">        }</span>
+<span class="nc" id="L211">        return false;</span>
     }
 
     private String mapFormatToJena(String format) {
-<span class="nc bnc" id="L199" title="All 5 branches missed.">        return switch (format.toUpperCase()) {</span>
-<span class="nc" id="L200">            case &quot;CIM/XML&quot;, &quot;CIM/RDF&quot;, &quot;RDF/XML&quot;, &quot;APPLICATION/RDF+XML&quot;, &quot;APPLICATION/XML&quot; -&gt; &quot;RDF/XML&quot;;</span>
-<span class="nc" id="L201">            case &quot;TURTLE&quot;, &quot;TEXT/TURTLE&quot;, &quot;TTL&quot; -&gt; &quot;TURTLE&quot;;</span>
-<span class="nc" id="L202">            case &quot;N-TRIPLES&quot;, &quot;APPLICATION/N-TRIPLES&quot;, &quot;NTRIPLES&quot; -&gt; &quot;N-TRIPLES&quot;;</span>
-<span class="nc" id="L203">            case &quot;JSON-LD&quot;, &quot;APPLICATION/LD+JSON&quot;, &quot;JSONLD&quot; -&gt; &quot;JSON-LD&quot;;</span>
-<span class="nc" id="L204">            default -&gt; { log.warn(&quot;Unknown format '{}', defaulting to RDF/XML&quot;, format); yield &quot;RDF/XML&quot;; }</span>
+<span class="nc bnc" id="L215" title="All 5 branches missed.">        return switch (format.toUpperCase()) {</span>
+<span class="nc" id="L216">            case &quot;CIM/XML&quot;, &quot;CIM/RDF&quot;, &quot;RDF/XML&quot;, &quot;APPLICATION/RDF+XML&quot;, &quot;APPLICATION/XML&quot; -&gt; &quot;RDF/XML&quot;;</span>
+<span class="nc" id="L217">            case &quot;TURTLE&quot;, &quot;TEXT/TURTLE&quot;, &quot;TTL&quot; -&gt; &quot;TURTLE&quot;;</span>
+<span class="nc" id="L218">            case &quot;N-TRIPLES&quot;, &quot;APPLICATION/N-TRIPLES&quot;, &quot;NTRIPLES&quot; -&gt; &quot;N-TRIPLES&quot;;</span>
+<span class="nc" id="L219">            case &quot;JSON-LD&quot;, &quot;APPLICATION/LD+JSON&quot;, &quot;JSONLD&quot; -&gt; &quot;JSON-LD&quot;;</span>
+<span class="nc" id="L220">            default -&gt; { log.warn(&quot;Unknown format '{}', defaulting to RDF/XML&quot;, format); yield &quot;RDF/XML&quot;; }</span>
         };
     }
 
     private String writeModelToString(Model model) {
-<span class="nc" id="L209">        java.io.StringWriter writer = new java.io.StringWriter();</span>
-<span class="nc" id="L210">        model.write(writer, &quot;RDF/XML&quot;);</span>
-<span class="nc" id="L211">        return writer.toString();</span>
+<span class="nc" id="L225">        java.io.StringWriter writer = new java.io.StringWriter();</span>
+<span class="nc" id="L226">        model.write(writer, &quot;RDF/XML&quot;);</span>
+<span class="nc" id="L227">        return writer.toString();</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

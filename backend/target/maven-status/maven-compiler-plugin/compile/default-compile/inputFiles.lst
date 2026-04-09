@@ -1,4 +1,5 @@
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/controller/ExcelController.java
+/Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/controller/DataFixerController.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/repository/ChatHistoryRepository.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/controller/GraphRAGController.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/controller/CimController.java
@@ -13,6 +14,8 @@
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/dto/GraphRAGResponse.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/dto/LoadFlowResponse.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/config/WebConfig.java
+/Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/controller/AnalysisController.java
+/Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/service/DataFixerService.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/controller/SystemController.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/CimSemanticGraphApplication.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/controller/SparqlController.java
@@ -34,6 +37,7 @@
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/loadflow/extractor/CIMNetworkExtractor.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/service/ExcelImportService.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/controller/ReportController.java
+/Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/service/AnalysisService.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/service/QdrantService.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/controller/ShaclController.java
 /Users/zakaria/Documents/PraxisProjekt/CIM-SemanticGraph-Platform/backend/src/main/java/com/cim/semanticgraph/service/EmbeddingService.java

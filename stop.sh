@@ -22,33 +22,42 @@ warn()    { echo -e "${YELLOW}  ⚠${RESET} $*"; }
 
 echo -e "\n${BOLD}${RED}Stopping CIM SemanticGraph Platform...${RESET}\n"
 
-# ── Stop processes from PID file ──────────────────────────────────────────────
+# ── Helper: kill all processes on a port ──────────────────────────────────────
+kill_port() {
+  local port=$1
+  local name=$2
+  local pids
+  pids=$(lsof -ti ":$port" 2>/dev/null || true)
+  if [ -n "$pids" ]; then
+    echo "$pids" | xargs kill -9 2>/dev/null || true
+    success "Stopped $name (port $port)"
+  fi
+}
+
+# ── Stop processes from PID file (+ their children) ───────────────────────────
 if [ -f "$PID_FILE" ]; then
   while IFS='=' read -r name pid; do
     if kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" 2>/dev/null && success "Stopped $name (PID $pid)"
-    else
-      warn "$name (PID $pid) was not running"
+      # Kill the entire process group to catch forked children (e.g. Spring Boot JVM)
+      pkill -9 -P "$pid" 2>/dev/null || true
+      kill -9 "$pid" 2>/dev/null || true
+      success "Stopped $name (PID $pid)"
     fi
   done < "$PID_FILE"
   rm -f "$PID_FILE"
-else
-  warn "No PID file found — trying to find processes by port"
-
-  # Kill by port as fallback
-  for port in 8000 8080 5173; do
-    pid=$(lsof -ti ":$port" 2>/dev/null || true)
-    if [ -n "$pid" ]; then
-      kill "$pid" 2>/dev/null && success "Killed process on port $port (PID $pid)"
-    fi
-  done
 fi
+
+# ── Always kill by port — catches any surviving processes ─────────────────────
+kill_port 3000  "Frontend"
+kill_port 5173  "Frontend (Vite)"
+kill_port 8080  "Backend (Spring Boot)"
+kill_port 8000  "Powerflow"
 
 # ── Stop Docker services ───────────────────────────────────────────────────────
 if [ -f "$BACKEND_DIR/docker-compose.yml" ]; then
   log "Stopping Docker containers (Fuseki + Qdrant)..."
   cd "$BACKEND_DIR"
-  docker-compose down && success "Docker services stopped"
+  docker-compose down 2>/dev/null && success "Docker services stopped" || warn "Docker services already stopped"
 fi
 
 echo -e "\n${GREEN}${BOLD}All services stopped.${RESET}\n"

@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Send, Square } from 'lucide-react';
 
 interface ChatInputProps {
@@ -10,15 +10,23 @@ interface ChatInputProps {
   onRecallLast?: () => void;
 }
 
-export const ChatInput = ({
+export interface ChatInputHandle {
+  focus: () => void;
+}
+
+export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(({
   input,
   isLoading,
   onInputChange,
   onSend,
   onStop,
   onRecallLast,
-}: ChatInputProps) => {
+}, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => textareaRef.current?.focus(),
+  }));
 
   // Auto-resize textarea
   useEffect(() => {
@@ -80,4 +88,6 @@ export const ChatInput = ({
       )}
     </div>
   );
-};
+});
+
+ChatInput.displayName = 'ChatInput';

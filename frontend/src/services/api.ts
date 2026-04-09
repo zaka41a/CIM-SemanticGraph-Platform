@@ -396,6 +396,61 @@ class ApiService {
     const response = await this.client.get('/loadflow/health');
     return response.data;
   }
+
+  // Data Fixer APIs
+  async applyFixes(fixes: Array<{ id: string; description: string; category: string; sparqlQuery: string }>): Promise<{
+    applied: number;
+    failed: number;
+    blocked: number;
+    results: Array<{ id: string; description: string; category: string; status: string; error: string | null; appliedAt: string | null }>;
+  }> {
+    const response = await this.client.post('/fixer/apply', fixes);
+    return response.data;
+  }
+
+  // Import rollback
+  async rollbackImport(id: string): Promise<{ status: string; message: string; graphUri?: string }> {
+    const response = await this.client.post(`/history/${id}/rollback`);
+    return response.data;
+  }
+
+  // Network Analysis APIs
+  async getAnalysisSummary(): Promise<{
+    statistics: Record<string, number>;
+    health: {
+      status: string;
+      message: string;
+      totalTriples: number;
+      busCount: number;
+      branchCount: number;
+      connectedBranchCount: number;
+      generatorCount: number;
+      connectedGeneratorCount: number;
+      loadCount: number;
+      connectedLoadCount: number;
+      totalGenerationMw: number;
+      totalLoadMw: number;
+      errors: Array<{ code: string; message: string }>;
+      warnings: Array<{ code: string; message: string }>;
+    };
+    qualityChecks: Array<{ name: string; category: string; severity: string; count: number; description: string }>;
+    qualityScore: number;
+    topConnectedEntities: Array<{ uri: string; name: string; type: string; connections: number }>;
+    computedAt: number;
+  }> {
+    const response = await this.client.get('/analysis/summary');
+    return response.data;
+  }
+
+  async previewFixes(fixes: Array<{ id: string; description: string; category: string; sparqlQuery: string }>): Promise<{
+    applied: number;
+    failed: number;
+    blocked: number;
+    results: Array<{ id: string; description: string; category: string; status: string; error: string | null; appliedAt: string | null }>;
+  }> {
+    const response = await this.client.post('/fixer/preview', fixes);
+    return response.data;
+  }
 }
 
 export const apiService = new ApiService();

@@ -5,19 +5,23 @@ import {
   Calendar, CheckCircle2, XCircle, Clock,
   Trash2, Search, Filter, FileCheck, Lightbulb,
   Database, RefreshCw, Upload, ChevronUp, ChevronDown,
-  TrendingUp, AlertTriangle, ArrowRight,
+  TrendingUp, AlertTriangle, ArrowRight, RotateCcw,
+  History as HistoryIcon,
 } from 'lucide-react';
 import { apiService } from '@/services/api';
+import PageHeader from '@/components/PageHeader';
 
 interface ImportHistoryItem {
   id: string;
   fileName: string;
   fileSize: number;
   importDate: Date;
-  status: 'success' | 'failed' | 'processing';
+  status: 'success' | 'failed' | 'processing' | 'rolled_back';
   triplesCount?: number;
   duration?: number;
   errorMessage?: string;
+  rollbackAvailable?: boolean;
+  graphUri?: string;
 }
 
 type SortField = 'importDate' | 'fileName' | 'triplesCount' | 'fileSize' | 'duration';
@@ -93,7 +97,9 @@ const History = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'failed'>('all');
   const [sortField, setSortField] = useState<SortField>('importDate');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm]     = useState<string | null>(null);
+  const [rollbackConfirm, setRollbackConfirm] = useState<string | null>(null);
+  const [rollingBack, setRollingBack]         = useState<string | null>(null);
 
   const fetchHistory = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -109,6 +115,8 @@ const History = () => {
         triplesCount: item.triplesCount || 0,
         duration: item.duration || 0,
         errorMessage: item.errorMessage,
+        rollbackAvailable: item.rollbackAvailable || false,
+        graphUri: item.graphUri,
       }));
       setHistory(transformed);
       setError(null);
@@ -171,38 +179,44 @@ const History = () => {
     }
   };
 
+  const handleRollback = async (id: string) => {
+    setRollingBack(id);
+    setRollbackConfirm(null);
+    try {
+      await apiService.rollbackImport(id);
+      fetchHistory(true);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || err?.message || 'Rollback failed');
+    } finally {
+      setRollingBack(null);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-800/50 via-primary-900/50 to-primary-950/50 p-8 border border-primary-700/30">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl" />
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-accent-500 mb-1">Import History</h1>
-              <p className="text-neutral-300">Track and manage all CIM file imports to your Knowledge Graph</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
+      <PageHeader
+        icon={HistoryIcon}
+        iconColor="text-neutral-400"
+        title="Import History"
+        subtitle="Track and manage all CIM file imports to your Knowledge Graph"
+        actions={
+          <>
             <button
               onClick={() => fetchHistory(true)}
               disabled={refreshing}
-              className="flex items-center gap-2 px-4 py-2.5 bg-primary-800/60 hover:bg-primary-700/80 border border-primary-700/40 hover:border-primary-600 rounded-xl text-sm text-neutral-300 hover:text-white transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
             >
-              <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
-              Refresh
+              <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} /> Refresh
             </button>
             <button
               onClick={() => navigate('/import')}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 rounded-xl text-sm font-medium text-white shadow-lg shadow-accent-500/20 transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all"
             >
-              <Upload size={15} />
-              New Import
+              <Upload size={15} /> New Import
             </button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Latest Import Banner */}
       {latest && (
@@ -457,6 +471,12 @@ const History = () => {
                               Processing
                             </span>
                           )}
+                          {item.status === 'rolled_back' && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/15 text-orange-400 border border-orange-500/30 rounded-full text-xs font-semibold">
+                              <RotateCcw size={12} />
+                              Rolled Back
+                            </span>
+                          )}
                         </td>
 
                         {/* Triples + progress bar */}
@@ -492,18 +512,51 @@ const History = () => {
 
                         {/* Actions */}
                         <td className="px-5 py-4">
-                          <div className="flex items-center justify-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {/* Rollback button — only for success imports with rollback available */}
+                            {item.status === 'success' && item.rollbackAvailable && (
+                              rollbackConfirm === item.id ? (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleRollback(item.id)}
+                                    className="px-2 py-1 text-xs bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border border-orange-500/30 rounded-lg transition-all"
+                                  >
+                                    Confirm
+                                  </button>
+                                  <button
+                                    onClick={() => setRollbackConfirm(null)}
+                                    className="px-2 py-1 text-xs bg-primary-700/50 text-neutral-400 rounded-lg transition-all hover:text-white"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setRollbackConfirm(item.id)}
+                                  disabled={rollingBack === item.id}
+                                  className="p-2 hover:bg-orange-500/15 rounded-xl transition-all group/rb disabled:opacity-50"
+                                  title="Rollback — remove these triples from the graph"
+                                >
+                                  {rollingBack === item.id
+                                    ? <RotateCcw size={15} className="text-orange-400 animate-spin" />
+                                    : <RotateCcw size={15} className="text-neutral-600 group-hover/rb:text-orange-400 transition-colors" />
+                                  }
+                                </button>
+                              )
+                            )}
+
+                            {/* Delete button */}
                             {deleteConfirm === item.id ? (
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1">
                                 <button
                                   onClick={() => handleDelete(item.id)}
-                                  className="px-2.5 py-1 text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg transition-all"
+                                  className="px-2 py-1 text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-lg transition-all"
                                 >
                                   Confirm
                                 </button>
                                 <button
                                   onClick={() => setDeleteConfirm(null)}
-                                  className="px-2.5 py-1 text-xs bg-primary-700/50 text-neutral-400 rounded-lg transition-all hover:text-white"
+                                  className="px-2 py-1 text-xs bg-primary-700/50 text-neutral-400 rounded-lg transition-all hover:text-white"
                                 >
                                   Cancel
                                 </button>
@@ -512,7 +565,7 @@ const History = () => {
                               <button
                                 onClick={() => setDeleteConfirm(item.id)}
                                 className="p-2 hover:bg-red-500/15 rounded-xl transition-all group/del"
-                                title="Delete"
+                                title="Delete history record"
                               >
                                 <Trash2 size={15} className="text-neutral-600 group-hover/del:text-red-400 transition-colors" />
                               </button>

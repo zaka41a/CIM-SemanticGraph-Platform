@@ -84,42 +84,66 @@ import java.util.stream.Collectors;
     }
 
     /**
+     * Set the named graph URI for an import record (enables rollback).
+     */
+    public void setGraphUri(String id, String graphUri) {
+<span class="nc" id="L90">        ImportHistory record = historyStore.get(id);</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        if (record != null) {</span>
+<span class="nc" id="L92">            record.setGraphUri(graphUri);</span>
+<span class="nc" id="L93">            record.setRollbackAvailable(true);</span>
+<span class="nc" id="L94">            log.info(&quot;Import {} linked to named graph &lt;{}&gt;&quot;, id, graphUri);</span>
+        }
+<span class="nc" id="L96">    }</span>
+
+    /**
+     * Mark rollback as done (graph dropped — no longer available).
+     */
+    public void markRolledBack(String id) {
+<span class="nc" id="L102">        ImportHistory record = historyStore.get(id);</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        if (record != null) {</span>
+<span class="nc" id="L104">            record.setRollbackAvailable(false);</span>
+<span class="nc" id="L105">            record.setStatus(ImportHistory.ImportStatus.ROLLED_BACK);</span>
+<span class="nc" id="L106">            log.info(&quot;Import {} marked as rolled back&quot;, id);</span>
+        }
+<span class="nc" id="L108">    }</span>
+
+    /**
      * Delete import history record
      */
     public boolean deleteHistory(String id) {
-<span class="nc bnc" id="L90" title="All 2 branches missed.">        if (historyStore.containsKey(id)) {</span>
-<span class="nc" id="L91">            historyStore.remove(id);</span>
-<span class="nc" id="L92">            log.info(&quot;Deleted import history: {}&quot;, id);</span>
-<span class="nc" id="L93">            return true;</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">        if (historyStore.containsKey(id)) {</span>
+<span class="nc" id="L115">            historyStore.remove(id);</span>
+<span class="nc" id="L116">            log.info(&quot;Deleted import history: {}&quot;, id);</span>
+<span class="nc" id="L117">            return true;</span>
         }
-<span class="nc" id="L95">        return false;</span>
+<span class="nc" id="L119">        return false;</span>
     }
 
     /**
      * Get statistics about imports
      */
     public Map&lt;String, Object&gt; getImportStatistics() {
-<span class="nc" id="L102">        List&lt;ImportHistory&gt; allHistory = getAllHistory();</span>
+<span class="nc" id="L126">        List&lt;ImportHistory&gt; allHistory = getAllHistory();</span>
 
-<span class="nc" id="L104">        long totalImports = allHistory.size();</span>
-<span class="nc" id="L105">        long successfulImports = allHistory.stream()</span>
-<span class="nc bnc" id="L106" title="All 2 branches missed.">                .filter(h -&gt; h.getStatus() == ImportStatus.SUCCESS)</span>
-<span class="nc" id="L107">                .count();</span>
-<span class="nc" id="L108">        long failedImports = allHistory.stream()</span>
-<span class="nc bnc" id="L109" title="All 2 branches missed.">                .filter(h -&gt; h.getStatus() == ImportStatus.FAILED)</span>
-<span class="nc" id="L110">                .count();</span>
-<span class="nc" id="L111">        long totalTriples = allHistory.stream()</span>
-<span class="nc bnc" id="L112" title="All 2 branches missed.">                .filter(h -&gt; h.getTriplesCount() != null)</span>
-<span class="nc" id="L113">                .mapToLong(ImportHistory::getTriplesCount)</span>
-<span class="nc" id="L114">                .sum();</span>
+<span class="nc" id="L128">        long totalImports = allHistory.size();</span>
+<span class="nc" id="L129">        long successfulImports = allHistory.stream()</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">                .filter(h -&gt; h.getStatus() == ImportStatus.SUCCESS)</span>
+<span class="nc" id="L131">                .count();</span>
+<span class="nc" id="L132">        long failedImports = allHistory.stream()</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">                .filter(h -&gt; h.getStatus() == ImportStatus.FAILED)</span>
+<span class="nc" id="L134">                .count();</span>
+<span class="nc" id="L135">        long totalTriples = allHistory.stream()</span>
+<span class="nc bnc" id="L136" title="All 2 branches missed.">                .filter(h -&gt; h.getTriplesCount() != null)</span>
+<span class="nc" id="L137">                .mapToLong(ImportHistory::getTriplesCount)</span>
+<span class="nc" id="L138">                .sum();</span>
 
-<span class="nc" id="L116">        Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L117">        stats.put(&quot;total&quot;, totalImports);</span>
-<span class="nc" id="L118">        stats.put(&quot;success&quot;, successfulImports);</span>
-<span class="nc" id="L119">        stats.put(&quot;failed&quot;, failedImports);</span>
-<span class="nc" id="L120">        stats.put(&quot;totalTriples&quot;, totalTriples);</span>
+<span class="nc" id="L140">        Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L141">        stats.put(&quot;total&quot;, totalImports);</span>
+<span class="nc" id="L142">        stats.put(&quot;success&quot;, successfulImports);</span>
+<span class="nc" id="L143">        stats.put(&quot;failed&quot;, failedImports);</span>
+<span class="nc" id="L144">        stats.put(&quot;totalTriples&quot;, totalTriples);</span>
 
-<span class="nc" id="L122">        return stats;</span>
+<span class="nc" id="L146">        return stats;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

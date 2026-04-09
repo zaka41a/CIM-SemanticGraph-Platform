@@ -65,8 +65,11 @@ public class CimController {
                         .body(Map.of("error", "File too large. Maximum size: 100MB"));
             }
 
+            // Generate named graph URI for rollback versioning
+            String graphUri = "urn:import:" + historyRecord.getId();
+
             Map<String, Object> stats = cimTransformerService.importCimData(
-                    file.getInputStream(), format);
+                    file.getInputStream(), format, graphUri);
 
             long endTime = System.currentTimeMillis();
             double duration = (endTime - startTime) / 1000.0;
@@ -77,6 +80,7 @@ public class CimController {
             }
 
             importHistoryService.updateImportSuccess(historyRecord.getId(), triplesCount, duration);
+            importHistoryService.setGraphUri(historyRecord.getId(), graphUri);
 
             log.info("Import successful. Stats: {}", stats);
 

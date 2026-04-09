@@ -91,6 +91,60 @@ public class JenaService {
         }
     }
 
+    /**
+     * Load a model into a named graph (in addition to the default graph).
+     * Used for versioning: each import gets its own named graph for potential rollback.
+     */
+    public void loadToNamedGraph(String graphUri, Model model) {
+        log.info("Loading {} triples into named graph <{}>", model.size(), graphUri);
+        try {
+            rdfConnection.load(graphUri, model);
+            log.info("Named graph <{}> populated successfully", graphUri);
+        } catch (Exception e) {
+            log.error("Failed to load named graph <{}>: {}", graphUri, e.getMessage());
+            throw new RuntimeException("Named graph load failed: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Rollback an import: remove from the default graph all triples present in the given named graph,
+     * then drop the named graph itself.
+     */
+    public void rollbackNamedGraph(String graphUri) {
+        log.warn("Rolling back import — removing triples of named graph <{}>", graphUri);
+        try {
+            // Step 1: delete from default graph every triple that came from this named graph
+            String deleteQuery = String.format(
+                "DELETE { ?s ?p ?o } WHERE { GRAPH <%s> { ?s ?p ?o } }", graphUri);
+            rdfConnection.update(deleteQuery);
+            log.info("Triples from <{}> removed from default graph", graphUri);
+
+            // Step 2: drop the named graph itself
+            rdfConnection.update(String.format("DROP GRAPH <%s>", graphUri));
+            log.info("Named graph <{}> dropped", graphUri);
+        } catch (Exception e) {
+            log.error("Rollback of <{}> failed: {}", graphUri, e.getMessage());
+            throw new RuntimeException("Rollback failed: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * List all named graph URIs in the dataset (excluding the default graph).
+     */
+    public List<String> listNamedGraphs() {
+        try {
+            List<Map<String, String>> rows = executeSparqlSelect(
+                "SELECT DISTINCT ?g WHERE { GRAPH ?g { } }");
+            return rows.stream()
+                    .map(r -> r.get("g"))
+                    .filter(g -> g != null && !g.isBlank())
+                    .toList();
+        } catch (Exception e) {
+            log.warn("listNamedGraphs failed: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
     // ── Read ───────────────────────────────────────────────────────────────────
 
     public List<Map<String, String>> executeSparqlSelect(String sparqlQuery) {

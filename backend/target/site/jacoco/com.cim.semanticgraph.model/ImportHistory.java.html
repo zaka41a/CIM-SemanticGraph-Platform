@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-<span class="nc bnc" id="L10" title="All 72 branches missed.">@Data</span>
+<span class="nc bnc" id="L10" title="All 84 branches missed.">@Data</span>
 <span class="nc" id="L11">@Builder</span>
 <span class="nc" id="L12">@NoArgsConstructor</span>
 <span class="nc" id="L13">@AllArgsConstructor</span>
@@ -21,9 +21,13 @@ public class ImportHistory {
 <span class="nc" id="L21">    private Double duration;</span>
 <span class="nc" id="L22">    private String errorMessage;</span>
 <span class="nc" id="L23">    private String format;</span>
+    /** Named graph URI where this import's triples are stored for rollback (e.g. urn:import:{id}) */
+<span class="nc" id="L25">    private String graphUri;</span>
+    /** Whether rollback is available (graphUri exists in Fuseki) */
+<span class="nc" id="L27">    private boolean rollbackAvailable;</span>
 
-<span class="nc" id="L25">    public enum ImportStatus {</span>
-<span class="nc" id="L26">        SUCCESS, FAILED, PROCESSING</span>
+<span class="nc" id="L29">    public enum ImportStatus {</span>
+<span class="nc" id="L30">        SUCCESS, FAILED, PROCESSING, ROLLED_BACK</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

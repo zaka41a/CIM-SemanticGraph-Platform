@@ -9,6 +9,7 @@ const PAGE_META: Record<string, { label: string; section?: string; color: string
   '/diagnostics': { label: 'Diagnostics',        section: 'Data Management', color: 'text-accent-400' },
   '/statistics':  { label: 'Statistics',         section: 'Analysis',        color: 'text-accent-400' },
   '/load-flow':   { label: 'Load Flow',          section: 'Analysis',        color: 'text-accent-400' },
+  '/reports':     { label: 'Reports',            section: 'Analysis',        color: 'text-accent-400' },
   '/chat':        { label: 'GraphRAG Chat',      section: 'AI & Query',      color: 'text-accent-400' },
   '/sparql':      { label: 'SPARQL Editor',      section: 'AI & Query',      color: 'text-accent-400' },
   '/history':     { label: 'History',            section: 'AI & Query',      color: 'text-accent-400' },

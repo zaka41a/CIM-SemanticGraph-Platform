@@ -11,7 +11,8 @@ import {
   ShieldCheck,
   Activity,
   Wrench,
-  BarChart3
+  BarChart3,
+  FileText,
 } from 'lucide-react';
 import { apiService } from '@/services/api';
 
@@ -89,7 +90,7 @@ const Sidebar = () => {
 
   const sections = [
     {
-      label: 'Data Management',
+      label: 'Import & Quality',
       items: [
         { path: '/import',      icon: Database,    label: 'Data Import' },
         { path: '/validation',  icon: ShieldCheck, label: 'SHACL Validation' },
@@ -102,6 +103,7 @@ const Sidebar = () => {
       items: [
         { path: '/statistics', icon: BarChart3, label: 'Statistics' },
         { path: '/load-flow',  icon: Zap,       label: 'Load Flow' },
+        { path: '/reports',    icon: FileText,  label: 'Reports' },
       ]
     },
     {

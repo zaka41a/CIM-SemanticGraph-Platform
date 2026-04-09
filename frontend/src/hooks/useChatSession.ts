@@ -15,21 +15,26 @@ export const useChatSession = () => {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
 
   useEffect(() => {
-    loadSessions();
+    const stored = storageGet<ChatSession[]>(KEY_SESSIONS);
+    const loadedSessions: ChatSession[] = stored
+      ? stored.map(s => ({ ...s, timestamp: new Date(s.timestamp) }))
+      : [];
+    setSessions(loadedSessions);
+
     const storedSessionId = storageGet<string>(KEY_SESSION_ID);
-    if (storedSessionId) {
+    if (storedSessionId && loadedSessions.some(s => s.id === storedSessionId)) {
       setSessionId(storedSessionId);
     } else {
-      createNewSession();
+      // Create a new session with the correctly loaded sessions list
+      const newSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      storageSet(KEY_SESSION_ID, newSessionId);
+      setSessionId(newSessionId);
+      const newSession: ChatSession = { id: newSessionId, title: 'New Chat', timestamp: new Date() };
+      const updated = [newSession, ...loadedSessions];
+      storageSet(KEY_SESSIONS, updated);
+      setSessions(updated);
     }
   }, []);
-
-  const loadSessions = () => {
-    const stored = storageGet<ChatSession[]>(KEY_SESSIONS);
-    if (stored) {
-      setSessions(stored.map(s => ({ ...s, timestamp: new Date(s.timestamp) })));
-    }
-  };
 
   const saveSessions = (newSessions: ChatSession[]) => {
     storageSet(KEY_SESSIONS, newSessions);

@@ -30,6 +30,8 @@ public class SecurityConfig {
                         .requestMatchers("/system/**", "/history/**").permitAll()
                         .requestMatchers("/diagnostic/**", "/api/diagnostic/**").permitAll()
                         .requestMatchers("/reports/**").permitAll()
+                        .requestMatchers("/analysis/**").permitAll()
+                        .requestMatchers("/fixer/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(basic -> {});

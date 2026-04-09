@@ -91,160 +91,214 @@ public class JenaService {
 <span class="nc" id="L91">        }</span>
 <span class="nc" id="L92">    }</span>
 
+    /**
+     * Load a model into a named graph (in addition to the default graph).
+     * Used for versioning: each import gets its own named graph for potential rollback.
+     */
+    public void loadToNamedGraph(String graphUri, Model model) {
+<span class="nc" id="L99">        log.info(&quot;Loading {} triples into named graph &lt;{}&gt;&quot;, model.size(), graphUri);</span>
+        try {
+<span class="nc" id="L101">            rdfConnection.load(graphUri, model);</span>
+<span class="nc" id="L102">            log.info(&quot;Named graph &lt;{}&gt; populated successfully&quot;, graphUri);</span>
+<span class="nc" id="L103">        } catch (Exception e) {</span>
+<span class="nc" id="L104">            log.error(&quot;Failed to load named graph &lt;{}&gt;: {}&quot;, graphUri, e.getMessage());</span>
+<span class="nc" id="L105">            throw new RuntimeException(&quot;Named graph load failed: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L106">        }</span>
+<span class="nc" id="L107">    }</span>
+
+    /**
+     * Rollback an import: remove from the default graph all triples present in the given named graph,
+     * then drop the named graph itself.
+     */
+    public void rollbackNamedGraph(String graphUri) {
+<span class="nc" id="L114">        log.warn(&quot;Rolling back import — removing triples of named graph &lt;{}&gt;&quot;, graphUri);</span>
+        try {
+            // Step 1: delete from default graph every triple that came from this named graph
+<span class="nc" id="L117">            String deleteQuery = String.format(</span>
+                &quot;DELETE { ?s ?p ?o } WHERE { GRAPH &lt;%s&gt; { ?s ?p ?o } }&quot;, graphUri);
+<span class="nc" id="L119">            rdfConnection.update(deleteQuery);</span>
+<span class="nc" id="L120">            log.info(&quot;Triples from &lt;{}&gt; removed from default graph&quot;, graphUri);</span>
+
+            // Step 2: drop the named graph itself
+<span class="nc" id="L123">            rdfConnection.update(String.format(&quot;DROP GRAPH &lt;%s&gt;&quot;, graphUri));</span>
+<span class="nc" id="L124">            log.info(&quot;Named graph &lt;{}&gt; dropped&quot;, graphUri);</span>
+<span class="nc" id="L125">        } catch (Exception e) {</span>
+<span class="nc" id="L126">            log.error(&quot;Rollback of &lt;{}&gt; failed: {}&quot;, graphUri, e.getMessage());</span>
+<span class="nc" id="L127">            throw new RuntimeException(&quot;Rollback failed: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L128">        }</span>
+<span class="nc" id="L129">    }</span>
+
+    /**
+     * List all named graph URIs in the dataset (excluding the default graph).
+     */
+    public List&lt;String&gt; listNamedGraphs() {
+        try {
+<span class="nc" id="L136">            List&lt;Map&lt;String, String&gt;&gt; rows = executeSparqlSelect(</span>
+                &quot;SELECT DISTINCT ?g WHERE { GRAPH ?g { } }&quot;);
+<span class="nc" id="L138">            return rows.stream()</span>
+<span class="nc" id="L139">                    .map(r -&gt; r.get(&quot;g&quot;))</span>
+<span class="nc bnc" id="L140" title="All 4 branches missed.">                    .filter(g -&gt; g != null &amp;&amp; !g.isBlank())</span>
+<span class="nc" id="L141">                    .toList();</span>
+<span class="nc" id="L142">        } catch (Exception e) {</span>
+<span class="nc" id="L143">            log.warn(&quot;listNamedGraphs failed: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L144">            return List.of();</span>
+        }
+    }
+
     // ── Read ───────────────────────────────────────────────────────────────────
 
     public List&lt;Map&lt;String, String&gt;&gt; executeSparqlSelect(String sparqlQuery) {
-<span class="fc" id="L97">        log.debug(&quot;Executing SPARQL SELECT via Fuseki&quot;);</span>
-<span class="fc" id="L98">        List&lt;Map&lt;String, String&gt;&gt; results = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L151">        log.debug(&quot;Executing SPARQL SELECT via Fuseki&quot;);</span>
+<span class="fc" id="L152">        List&lt;Map&lt;String, String&gt;&gt; results = new ArrayList&lt;&gt;();</span>
 
-<span class="fc" id="L100">        try (QueryExecution qexec = rdfConnection.query(addPrefixes(sparqlQuery))) {</span>
-<span class="fc" id="L101">            ResultSet resultSet = qexec.execSelect();</span>
-<span class="fc" id="L102">            int count = 0;</span>
-<span class="pc bpc" id="L103" title="1 of 4 branches missed.">            while (resultSet.hasNext() &amp;&amp; count &lt; maxResults) {</span>
-<span class="fc" id="L104">                QuerySolution solution = resultSet.nextSolution();</span>
-<span class="fc" id="L105">                Map&lt;String, String&gt; row = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L106">                solution.varNames().forEachRemaining(v -&gt; {</span>
-<span class="pc bpc" id="L107" title="1 of 2 branches missed.">                    if (solution.get(v) != null) row.put(v, solution.get(v).toString());</span>
-<span class="fc" id="L108">                });</span>
-<span class="fc" id="L109">                results.add(row);</span>
-<span class="fc" id="L110">                count++;</span>
-<span class="fc" id="L111">            }</span>
-<span class="fc" id="L112">            log.debug(&quot;SELECT returned {} results&quot;, results.size());</span>
-<span class="nc" id="L113">        } catch (Exception e) {</span>
-<span class="nc" id="L114">            log.error(&quot;SPARQL SELECT failed&quot;, e);</span>
-<span class="nc" id="L115">            throw new RuntimeException(&quot;SPARQL SELECT failed: &quot; + e.getMessage(), e);</span>
-<span class="fc" id="L116">        }</span>
-<span class="fc" id="L117">        return results;</span>
+<span class="fc" id="L154">        try (QueryExecution qexec = rdfConnection.query(addPrefixes(sparqlQuery))) {</span>
+<span class="fc" id="L155">            ResultSet resultSet = qexec.execSelect();</span>
+<span class="fc" id="L156">            int count = 0;</span>
+<span class="pc bpc" id="L157" title="1 of 4 branches missed.">            while (resultSet.hasNext() &amp;&amp; count &lt; maxResults) {</span>
+<span class="fc" id="L158">                QuerySolution solution = resultSet.nextSolution();</span>
+<span class="fc" id="L159">                Map&lt;String, String&gt; row = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L160">                solution.varNames().forEachRemaining(v -&gt; {</span>
+<span class="pc bpc" id="L161" title="1 of 2 branches missed.">                    if (solution.get(v) != null) row.put(v, solution.get(v).toString());</span>
+<span class="fc" id="L162">                });</span>
+<span class="fc" id="L163">                results.add(row);</span>
+<span class="fc" id="L164">                count++;</span>
+<span class="fc" id="L165">            }</span>
+<span class="fc" id="L166">            log.debug(&quot;SELECT returned {} results&quot;, results.size());</span>
+<span class="nc" id="L167">        } catch (Exception e) {</span>
+<span class="nc" id="L168">            log.error(&quot;SPARQL SELECT failed&quot;, e);</span>
+<span class="nc" id="L169">            throw new RuntimeException(&quot;SPARQL SELECT failed: &quot; + e.getMessage(), e);</span>
+<span class="fc" id="L170">        }</span>
+<span class="fc" id="L171">        return results;</span>
     }
 
     public Model executeSparqlConstruct(String sparqlQuery) {
-<span class="nc" id="L121">        log.debug(&quot;Executing SPARQL CONSTRUCT via Fuseki&quot;);</span>
+<span class="nc" id="L175">        log.debug(&quot;Executing SPARQL CONSTRUCT via Fuseki&quot;);</span>
         try {
-<span class="nc" id="L123">            Model result = rdfConnection.queryConstruct(addPrefixes(sparqlQuery));</span>
-<span class="nc" id="L124">            log.debug(&quot;CONSTRUCT returned {} triples&quot;, result.size());</span>
-<span class="nc" id="L125">            return result;</span>
-<span class="nc" id="L126">        } catch (Exception e) {</span>
-<span class="nc" id="L127">            log.error(&quot;SPARQL CONSTRUCT failed&quot;, e);</span>
-<span class="nc" id="L128">            throw new RuntimeException(&quot;SPARQL CONSTRUCT failed: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L177">            Model result = rdfConnection.queryConstruct(addPrefixes(sparqlQuery));</span>
+<span class="nc" id="L178">            log.debug(&quot;CONSTRUCT returned {} triples&quot;, result.size());</span>
+<span class="nc" id="L179">            return result;</span>
+<span class="nc" id="L180">        } catch (Exception e) {</span>
+<span class="nc" id="L181">            log.error(&quot;SPARQL CONSTRUCT failed&quot;, e);</span>
+<span class="nc" id="L182">            throw new RuntimeException(&quot;SPARQL CONSTRUCT failed: &quot; + e.getMessage(), e);</span>
         }
     }
 
     public boolean executeSparqlAsk(String sparqlQuery) {
-<span class="nc" id="L133">        log.debug(&quot;Executing SPARQL ASK via Fuseki&quot;);</span>
+<span class="nc" id="L187">        log.debug(&quot;Executing SPARQL ASK via Fuseki&quot;);</span>
         try {
-<span class="nc" id="L135">            boolean result = rdfConnection.queryAsk(addPrefixes(sparqlQuery));</span>
-<span class="nc" id="L136">            log.debug(&quot;ASK result: {}&quot;, result);</span>
-<span class="nc" id="L137">            return result;</span>
-<span class="nc" id="L138">        } catch (Exception e) {</span>
-<span class="nc" id="L139">            log.error(&quot;SPARQL ASK failed&quot;, e);</span>
-<span class="nc" id="L140">            throw new RuntimeException(&quot;SPARQL ASK failed: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L189">            boolean result = rdfConnection.queryAsk(addPrefixes(sparqlQuery));</span>
+<span class="nc" id="L190">            log.debug(&quot;ASK result: {}&quot;, result);</span>
+<span class="nc" id="L191">            return result;</span>
+<span class="nc" id="L192">        } catch (Exception e) {</span>
+<span class="nc" id="L193">            log.error(&quot;SPARQL ASK failed&quot;, e);</span>
+<span class="nc" id="L194">            throw new RuntimeException(&quot;SPARQL ASK failed: &quot; + e.getMessage(), e);</span>
         }
     }
 
     public Model getModelCopy() {
-<span class="nc" id="L145">        log.debug(&quot;Fetching full model copy from Fuseki&quot;);</span>
+<span class="nc" id="L199">        log.debug(&quot;Fetching full model copy from Fuseki&quot;);</span>
         try {
-<span class="nc" id="L147">            return rdfConnection.queryConstruct(&quot;CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }&quot;);</span>
-<span class="nc" id="L148">        } catch (Exception e) {</span>
-<span class="nc" id="L149">            log.error(&quot;Failed to fetch model from Fuseki&quot;, e);</span>
-<span class="nc" id="L150">            throw new RuntimeException(&quot;Failed to fetch model from Fuseki: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L201">            return rdfConnection.queryConstruct(&quot;CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }&quot;);</span>
+<span class="nc" id="L202">        } catch (Exception e) {</span>
+<span class="nc" id="L203">            log.error(&quot;Failed to fetch model from Fuseki&quot;, e);</span>
+<span class="nc" id="L204">            throw new RuntimeException(&quot;Failed to fetch model from Fuseki: &quot; + e.getMessage(), e);</span>
         }
     }
 
     public String exportRdfData(String format) {
-<span class="nc" id="L155">        log.info(&quot;Exporting RDF data (format: {})&quot;, format);</span>
+<span class="nc" id="L209">        log.info(&quot;Exporting RDF data (format: {})&quot;, format);</span>
         try {
-<span class="nc" id="L157">            Model model = rdfConnection.fetch();</span>
-<span class="nc" id="L158">            ByteArrayOutputStream out = new ByteArrayOutputStream();</span>
-<span class="nc" id="L159">            model.write(out, format);</span>
-<span class="nc" id="L160">            String result = out.toString();</span>
-<span class="nc" id="L161">            log.info(&quot;RDF data exported: {} bytes&quot;, result.length());</span>
-<span class="nc" id="L162">            return result;</span>
-<span class="nc" id="L163">        } catch (Exception e) {</span>
-<span class="nc" id="L164">            log.error(&quot;RDF export failed&quot;, e);</span>
-<span class="nc" id="L165">            throw new RuntimeException(&quot;RDF export failed: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L211">            Model model = rdfConnection.fetch();</span>
+<span class="nc" id="L212">            ByteArrayOutputStream out = new ByteArrayOutputStream();</span>
+<span class="nc" id="L213">            model.write(out, format);</span>
+<span class="nc" id="L214">            String result = out.toString();</span>
+<span class="nc" id="L215">            log.info(&quot;RDF data exported: {} bytes&quot;, result.length());</span>
+<span class="nc" id="L216">            return result;</span>
+<span class="nc" id="L217">        } catch (Exception e) {</span>
+<span class="nc" id="L218">            log.error(&quot;RDF export failed&quot;, e);</span>
+<span class="nc" id="L219">            throw new RuntimeException(&quot;RDF export failed: &quot; + e.getMessage(), e);</span>
         }
     }
 
     public long getTripleCount() {
         try {
-<span class="fc" id="L171">            List&lt;Map&lt;String, String&gt;&gt; results = executeSparqlSelect(</span>
+<span class="fc" id="L225">            List&lt;Map&lt;String, String&gt;&gt; results = executeSparqlSelect(</span>
                     &quot;SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }&quot;);
-<span class="pc bpc" id="L173" title="2 of 4 branches missed.">            if (!results.isEmpty() &amp;&amp; results.get(0).containsKey(&quot;count&quot;)) {</span>
-<span class="fc" id="L174">                return parseCountValue(results.get(0).get(&quot;count&quot;));</span>
+<span class="pc bpc" id="L227" title="2 of 4 branches missed.">            if (!results.isEmpty() &amp;&amp; results.get(0).containsKey(&quot;count&quot;)) {</span>
+<span class="fc" id="L228">                return parseCountValue(results.get(0).get(&quot;count&quot;));</span>
             }
-<span class="nc" id="L176">        } catch (Exception e) {</span>
-<span class="nc" id="L177">            log.error(&quot;Error getting triple count from Fuseki&quot;, e);</span>
-<span class="nc" id="L178">        }</span>
-<span class="nc" id="L179">        return 0;</span>
+<span class="nc" id="L230">        } catch (Exception e) {</span>
+<span class="nc" id="L231">            log.error(&quot;Error getting triple count from Fuseki&quot;, e);</span>
+<span class="nc" id="L232">        }</span>
+<span class="nc" id="L233">        return 0;</span>
     }
 
     public List&lt;Map&lt;String, String&gt;&gt; getResourceTriples(String resourceUri) {
-<span class="nc" id="L183">        return executeSparqlSelect(&quot;&quot;&quot;</span>
+<span class="nc" id="L237">        return executeSparqlSelect(&quot;&quot;&quot;</span>
             SELECT ?p ?o
             WHERE { &lt;%s&gt; ?p ?o . }
-<span class="nc" id="L186">            &quot;&quot;&quot;.formatted(resourceUri));</span>
+<span class="nc" id="L240">            &quot;&quot;&quot;.formatted(resourceUri));</span>
     }
 
     public Map&lt;String, Object&gt; getGraphStatistics() {
-<span class="nc" id="L190">        log.info(&quot;Calculating knowledge graph statistics via Fuseki...&quot;);</span>
-<span class="nc" id="L191">        Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L244">        log.info(&quot;Calculating knowledge graph statistics via Fuseki...&quot;);</span>
+<span class="nc" id="L245">        Map&lt;String, Object&gt; stats = new HashMap&lt;&gt;();</span>
 
-<span class="nc" id="L193">        stats.put(&quot;totalTriples&quot;,      countFuseki(&quot;SELECT (COUNT(*) as ?count) WHERE { ?s ?p ?o }&quot;));</span>
-<span class="nc" id="L194">        stats.put(&quot;totalSubjects&quot;,     countFuseki(&quot;SELECT (COUNT(DISTINCT ?s) as ?count) WHERE { ?s ?p ?o }&quot;));</span>
-<span class="nc" id="L195">        stats.put(&quot;totalPredicates&quot;,   countFuseki(&quot;SELECT (COUNT(DISTINCT ?p) as ?count) WHERE { ?s ?p ?o }&quot;));</span>
-<span class="nc" id="L196">        stats.put(&quot;totalClasses&quot;,      countFuseki(&quot;SELECT (COUNT(DISTINCT ?class) as ?count) WHERE { ?s rdf:type ?class }&quot;));</span>
+<span class="nc" id="L247">        stats.put(&quot;totalTriples&quot;,      countFuseki(&quot;SELECT (COUNT(*) as ?count) WHERE { ?s ?p ?o }&quot;));</span>
+<span class="nc" id="L248">        stats.put(&quot;totalSubjects&quot;,     countFuseki(&quot;SELECT (COUNT(DISTINCT ?s) as ?count) WHERE { ?s ?p ?o }&quot;));</span>
+<span class="nc" id="L249">        stats.put(&quot;totalPredicates&quot;,   countFuseki(&quot;SELECT (COUNT(DISTINCT ?p) as ?count) WHERE { ?s ?p ?o }&quot;));</span>
+<span class="nc" id="L250">        stats.put(&quot;totalClasses&quot;,      countFuseki(&quot;SELECT (COUNT(DISTINCT ?class) as ?count) WHERE { ?s rdf:type ?class }&quot;));</span>
 
-<span class="nc" id="L198">        stats.put(&quot;substations&quot;,       countCimEntities(&quot;Substation&quot;));</span>
-<span class="nc" id="L199">        stats.put(&quot;generators&quot;,        countCimEntities(&quot;GeneratingUnit&quot;, &quot;SynchronousMachine&quot;));</span>
-<span class="nc" id="L200">        stats.put(&quot;transmissionLines&quot;, countCimEntities(&quot;ACLineSegment&quot;));</span>
-<span class="nc" id="L201">        stats.put(&quot;transformers&quot;,      countCimEntities(&quot;PowerTransformer&quot;));</span>
-<span class="nc" id="L202">        stats.put(&quot;breakers&quot;,          countCimEntities(&quot;Breaker&quot;));</span>
-<span class="nc" id="L203">        stats.put(&quot;disconnectors&quot;,     countCimEntities(&quot;Disconnector&quot;));</span>
-<span class="nc" id="L204">        stats.put(&quot;loads&quot;,             countCimEntities(&quot;EnergyConsumer&quot;));</span>
-<span class="nc" id="L205">        stats.put(&quot;connectivityNodes&quot;, countCimEntities(&quot;ConnectivityNode&quot;));</span>
-<span class="nc" id="L206">        stats.put(&quot;terminals&quot;,         countCimEntities(&quot;Terminal&quot;));</span>
-<span class="nc" id="L207">        stats.put(&quot;busbarSections&quot;,    countCimEntities(&quot;BusbarSection&quot;));</span>
-<span class="nc" id="L208">        stats.put(&quot;baseVoltages&quot;,      countCimEntities(&quot;BaseVoltage&quot;));</span>
-<span class="nc" id="L209">        stats.put(&quot;voltageLevels&quot;,     countCimEntities(&quot;VoltageLevel&quot;));</span>
+<span class="nc" id="L252">        stats.put(&quot;substations&quot;,       countCimEntities(&quot;Substation&quot;));</span>
+<span class="nc" id="L253">        stats.put(&quot;generators&quot;,        countCimEntities(&quot;GeneratingUnit&quot;, &quot;SynchronousMachine&quot;));</span>
+<span class="nc" id="L254">        stats.put(&quot;transmissionLines&quot;, countCimEntities(&quot;ACLineSegment&quot;));</span>
+<span class="nc" id="L255">        stats.put(&quot;transformers&quot;,      countCimEntities(&quot;PowerTransformer&quot;));</span>
+<span class="nc" id="L256">        stats.put(&quot;breakers&quot;,          countCimEntities(&quot;Breaker&quot;));</span>
+<span class="nc" id="L257">        stats.put(&quot;disconnectors&quot;,     countCimEntities(&quot;Disconnector&quot;));</span>
+<span class="nc" id="L258">        stats.put(&quot;loads&quot;,             countCimEntities(&quot;EnergyConsumer&quot;));</span>
+<span class="nc" id="L259">        stats.put(&quot;connectivityNodes&quot;, countCimEntities(&quot;ConnectivityNode&quot;));</span>
+<span class="nc" id="L260">        stats.put(&quot;terminals&quot;,         countCimEntities(&quot;Terminal&quot;));</span>
+<span class="nc" id="L261">        stats.put(&quot;busbarSections&quot;,    countCimEntities(&quot;BusbarSection&quot;));</span>
+<span class="nc" id="L262">        stats.put(&quot;baseVoltages&quot;,      countCimEntities(&quot;BaseVoltage&quot;));</span>
+<span class="nc" id="L263">        stats.put(&quot;voltageLevels&quot;,     countCimEntities(&quot;VoltageLevel&quot;));</span>
 
-<span class="nc" id="L211">        log.info(&quot;Statistics calculated: {}&quot;, stats);</span>
-<span class="nc" id="L212">        return stats;</span>
+<span class="nc" id="L265">        log.info(&quot;Statistics calculated: {}&quot;, stats);</span>
+<span class="nc" id="L266">        return stats;</span>
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private long countFuseki(String queryString) {
         try {
-<span class="nc" id="L219">            List&lt;Map&lt;String, String&gt;&gt; results = executeSparqlSelect(queryString);</span>
-<span class="nc bnc" id="L220" title="All 4 branches missed.">            if (!results.isEmpty() &amp;&amp; results.get(0).containsKey(&quot;count&quot;)) {</span>
-<span class="nc" id="L221">                return parseCountValue(results.get(0).get(&quot;count&quot;));</span>
+<span class="nc" id="L273">            List&lt;Map&lt;String, String&gt;&gt; results = executeSparqlSelect(queryString);</span>
+<span class="nc bnc" id="L274" title="All 4 branches missed.">            if (!results.isEmpty() &amp;&amp; results.get(0).containsKey(&quot;count&quot;)) {</span>
+<span class="nc" id="L275">                return parseCountValue(results.get(0).get(&quot;count&quot;));</span>
             }
-<span class="nc" id="L223">        } catch (Exception e) {</span>
-<span class="nc" id="L224">            log.error(&quot;Count query failed: {}&quot;, e.getMessage());</span>
-<span class="nc" id="L225">        }</span>
-<span class="nc" id="L226">        return 0;</span>
+<span class="nc" id="L277">        } catch (Exception e) {</span>
+<span class="nc" id="L278">            log.error(&quot;Count query failed: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L279">        }</span>
+<span class="nc" id="L280">        return 0;</span>
     }
 
     private long countCimEntities(String... entityTypes) {
-<span class="nc" id="L230">        StringBuilder q = new StringBuilder(&quot;SELECT (COUNT(DISTINCT ?entity) as ?count) WHERE { &quot;);</span>
-<span class="nc bnc" id="L231" title="All 2 branches missed.">        if (entityTypes.length == 1) {</span>
-<span class="nc" id="L232">            q.append(&quot;?entity rdf:type cim:&quot;).append(entityTypes[0]).append(&quot; . &quot;);</span>
+<span class="nc" id="L284">        StringBuilder q = new StringBuilder(&quot;SELECT (COUNT(DISTINCT ?entity) as ?count) WHERE { &quot;);</span>
+<span class="nc bnc" id="L285" title="All 2 branches missed.">        if (entityTypes.length == 1) {</span>
+<span class="nc" id="L286">            q.append(&quot;?entity rdf:type cim:&quot;).append(entityTypes[0]).append(&quot; . &quot;);</span>
         } else {
-<span class="nc" id="L234">            q.append(&quot;{ &quot;);</span>
-<span class="nc bnc" id="L235" title="All 2 branches missed.">            for (int i = 0; i &lt; entityTypes.length; i++) {</span>
-<span class="nc bnc" id="L236" title="All 2 branches missed.">                if (i &gt; 0) q.append(&quot; UNION &quot;);</span>
-<span class="nc" id="L237">                q.append(&quot;{ ?entity rdf:type cim:&quot;).append(entityTypes[i]).append(&quot; } &quot;);</span>
+<span class="nc" id="L288">            q.append(&quot;{ &quot;);</span>
+<span class="nc bnc" id="L289" title="All 2 branches missed.">            for (int i = 0; i &lt; entityTypes.length; i++) {</span>
+<span class="nc bnc" id="L290" title="All 2 branches missed.">                if (i &gt; 0) q.append(&quot; UNION &quot;);</span>
+<span class="nc" id="L291">                q.append(&quot;{ ?entity rdf:type cim:&quot;).append(entityTypes[i]).append(&quot; } &quot;);</span>
             }
-<span class="nc" id="L239">            q.append(&quot;} &quot;);</span>
+<span class="nc" id="L293">            q.append(&quot;} &quot;);</span>
         }
-<span class="nc" id="L241">        q.append(&quot;}&quot;);</span>
-<span class="nc" id="L242">        return countFuseki(q.toString());</span>
+<span class="nc" id="L295">        q.append(&quot;}&quot;);</span>
+<span class="nc" id="L296">        return countFuseki(q.toString());</span>
     }
 
     private String addPrefixes(String query) {
-<span class="fc bfc" id="L246" title="All 2 branches covered.">        if (query.contains(&quot;PREFIX&quot;)) return query;</span>
-<span class="fc" id="L247">        return &quot;PREFIX cim: &lt;&quot;  + cimNamespace  + &quot;&gt;\n&quot;</span>
+<span class="fc bfc" id="L300" title="All 2 branches covered.">        if (query.contains(&quot;PREFIX&quot;)) return query;</span>
+<span class="fc" id="L301">        return &quot;PREFIX cim: &lt;&quot;  + cimNamespace  + &quot;&gt;\n&quot;</span>
              + &quot;PREFIX rdf: &lt;&quot;  + rdfNamespace  + &quot;&gt;\n&quot;
              + &quot;PREFIX rdfs: &lt;&quot; + rdfsNamespace + &quot;&gt;\n&quot;
              + &quot;PREFIX owl: &lt;http://www.w3.org/2002/07/owl#&gt;\n\n&quot;
@@ -252,14 +306,14 @@ public class JenaService {
     }
 
     private long parseCountValue(String rawValue) {
-<span class="pc bpc" id="L255" title="1 of 2 branches missed.">        if (rawValue == null) return 0;</span>
-<span class="fc" id="L256">        String sanitized = rawValue.replaceAll(&quot;\\^\\^.*&quot;, &quot;&quot;).replace(&quot;\&quot;&quot;, &quot;&quot;).trim();</span>
-<span class="pc bpc" id="L257" title="1 of 2 branches missed.">        if (sanitized.isEmpty()) return 0;</span>
+<span class="pc bpc" id="L309" title="1 of 2 branches missed.">        if (rawValue == null) return 0;</span>
+<span class="fc" id="L310">        String sanitized = rawValue.replaceAll(&quot;\\^\\^.*&quot;, &quot;&quot;).replace(&quot;\&quot;&quot;, &quot;&quot;).trim();</span>
+<span class="pc bpc" id="L311" title="1 of 2 branches missed.">        if (sanitized.isEmpty()) return 0;</span>
         try {
-<span class="fc" id="L259">            return Long.parseLong(sanitized);</span>
-<span class="nc" id="L260">        } catch (NumberFormatException ex) {</span>
-<span class="nc" id="L261">            log.warn(&quot;Unable to parse count value '{}': {}&quot;, rawValue, ex.getMessage());</span>
-<span class="nc" id="L262">            return 0;</span>
+<span class="fc" id="L313">            return Long.parseLong(sanitized);</span>
+<span class="nc" id="L314">        } catch (NumberFormatException ex) {</span>
+<span class="nc" id="L315">            log.warn(&quot;Unable to parse count value '{}': {}&quot;, rawValue, ex.getMessage());</span>
+<span class="nc" id="L316">            return 0;</span>
         }
     }
 }

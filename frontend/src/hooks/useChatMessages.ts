@@ -42,33 +42,42 @@ export const useChatMessages = (sessionId: string) => {
     }
   }, [sessionId]);
 
+  const loadFromLocalStorage = (sid: string) => {
+    const stored = storageGet<ChatMessage[]>(`graphrag-chat-${sid}`);
+    if (stored && stored.length > 0) {
+      setMessages(stored.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) })));
+    } else {
+      setMessages([]);
+    }
+  };
+
   const loadChatHistory = async (sid: string) => {
     try {
       const history = await apiService.getChatHistory(sid);
-      const loadedMessages: ChatMessage[] = history.map((chat: any) => [
-        {
-          id: `${chat.id}-q`,
-          role: 'user' as const,
-          content: chat.question,
-          timestamp: new Date(chat.timestamp),
-        },
-        {
-          id: `${chat.id}-a`,
-          role: 'assistant' as const,
-          content: chat.answer,
-          timestamp: new Date(chat.timestamp),
-          sources: chat.sources,
-          confidence: chat.confidence,
-        },
-      ]).flat();
-      setMessages(loadedMessages);
-    } catch {
-      const stored = storageGet<ChatMessage[]>(`graphrag-chat-${sid}`);
-      if (stored) {
-        setMessages(stored.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) })));
+      if (history.length > 0) {
+        const loadedMessages: ChatMessage[] = history.map((chat: any) => [
+          {
+            id: `${chat.id}-q`,
+            role: 'user' as const,
+            content: chat.question,
+            timestamp: new Date(chat.timestamp),
+          },
+          {
+            id: `${chat.id}-a`,
+            role: 'assistant' as const,
+            content: chat.answer,
+            timestamp: new Date(chat.timestamp),
+            sources: chat.sources,
+            confidence: chat.confidence,
+          },
+        ]).flat();
+        setMessages(loadedMessages);
       } else {
-        setMessages([]);
+        // Backend has no record — restore from localStorage
+        loadFromLocalStorage(sid);
       }
+    } catch {
+      loadFromLocalStorage(sid);
     }
   };
 

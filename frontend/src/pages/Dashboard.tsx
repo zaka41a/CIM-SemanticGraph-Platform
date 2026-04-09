@@ -1,58 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Database, Zap, Network, TrendingUp, RefreshCw, Trash2, BarChart3, CheckCircle2, XCircle, X, AlertTriangle, FileText, Loader2, Search, Cpu, GitBranch, Layers, RotateCcw, ServerCrash, Home } from 'lucide-react';
+import { Activity, Database, Zap, Network, TrendingUp, RefreshCw, Trash2, AlertTriangle, FileText, Loader2, Search, Cpu, GitBranch, Layers, RotateCcw, Home, LayoutDashboard } from 'lucide-react';
+import { useToast } from '@/components/Toast';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { useStatistics } from '@/hooks/useStatistics';
 import { apiService } from '@/services/api';
 import GraphVisualization from '@/components/GraphVisualization';
-
-// Success Modal Component
-const SuccessModal = ({ isOpen, onClose, title, message }: {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  message: string;
-}) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
-      />
-
-      <div className="relative bg-gradient-to-br from-primary-800 via-primary-900 to-primary-950 rounded-2xl border border-primary-600/30 shadow-2xl shadow-primary-500/10 max-w-md w-full mx-4 animate-slide-up overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-accent-500/20 rounded-full blur-3xl" />
-
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-neutral-400 hover:text-white hover:bg-primary-700/50 rounded-lg transition-all duration-200"
-        >
-          <X size={20} />
-        </button>
-
-        <div className="relative p-8 text-center">
-          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-accent-500 to-accent-600 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-accent-500/30 animate-bounce-subtle">
-            <CheckCircle2 size={40} className="text-white" />
-          </div>
-
-          <h2 className="text-2xl font-bold text-white mb-3">{title}</h2>
-          <p className="text-neutral-300 mb-6 leading-relaxed">{message}</p>
-
-          <div className="w-16 h-1 bg-gradient-to-r from-accent-500 to-primary-500 rounded-full mx-auto mb-6" />
-
-          <button
-            onClick={onClose}
-            className="px-8 py-3 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-400 hover:to-accent-500 text-white font-semibold rounded-xl shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40 transition-all duration-300 transform hover:scale-105"
-          >
-            Got it!
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+import PageHeader from '@/components/PageHeader';
 
 // Confirmation Modal Component
 const ConfirmModal = ({ isOpen, onClose, onConfirm, loading }: {
@@ -136,56 +90,18 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, loading }: {
   );
 };
 
-// Error Modal Component
-const ErrorModal = ({ isOpen, onClose, message }: {
-  isOpen: boolean;
-  onClose: () => void;
-  message: string;
-}) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
-      />
-
-      <div className="relative bg-gradient-to-br from-primary-800 via-primary-900 to-primary-950 rounded-2xl border border-red-500/30 shadow-2xl max-w-md w-full mx-4 animate-slide-up overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-red-500/10 rounded-full blur-3xl" />
-
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-neutral-400 hover:text-white hover:bg-primary-700/50 rounded-lg transition-all duration-200"
-        >
-          <X size={20} />
-        </button>
-
-        <div className="relative p-8 text-center">
-          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-red-500/20 to-red-600/20 border-2 border-red-500/50 rounded-full flex items-center justify-center mb-6">
-            <XCircle size={40} className="text-red-400" />
-          </div>
-
-          <h2 className="text-2xl font-bold text-white mb-3">Error</h2>
-          <p className="text-neutral-300 mb-6">{message}</p>
-
-          <button
-            onClick={onClose}
-            className="px-8 py-3 bg-primary-700/50 hover:bg-primary-600/50 text-white font-medium rounded-xl border border-primary-600/50 transition-all duration-200"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 interface ServiceStatus {
   qdrantAvailable: boolean;
   indexedEntities: number;
   collectionName: string;
   status: string;
+}
+
+interface ExternalServicesHealth {
+  pandapower: 'UP' | 'DOWN' | 'LOADING';
+  pandapowerDetail: string;
+  llm: 'UP' | 'DOWN' | 'LOADING';
+  llmDetail: string;
 }
 
 const ServiceStatusCard = ({
@@ -225,15 +141,18 @@ const ServiceStatusCard = ({
 const Dashboard = () => {
   const navigate = useNavigate();
   const { stats, loading, error, refresh } = useStatistics(true, 10000);
+  const { success: toastSuccess, error: toastError, info: toastInfo } = useToast();
   const [clearing, setClearing] = useState(false);
   const [exportingPDF, setExportingPDF] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
   const [serviceStatus, setServiceStatus] = useState<ServiceStatus | null>(null);
   const [reindexing, setReindexing] = useState(false);
-  const [reindexMessage, setReindexMessage] = useState<string | null>(null);
+  const [externalHealth, setExternalHealth] = useState<ExternalServicesHealth>({
+    pandapower: 'LOADING',
+    pandapowerDetail: 'Checking...',
+    llm: 'LOADING',
+    llmDetail: 'Checking...',
+  });
 
   const fetchServiceStatus = useCallback(async () => {
     try {
@@ -244,21 +163,53 @@ const Dashboard = () => {
     }
   }, []);
 
+  const fetchExternalHealth = useCallback(async () => {
+    // Pandapower
+    try {
+      const pf = await apiService.getPowerflowHealth();
+      setExternalHealth(prev => ({
+        ...prev,
+        pandapower: pf.pandapowerAvailable ? 'UP' : 'DOWN',
+        pandapowerDetail: pf.pandapowerAvailable
+          ? 'Python power flow engine ready'
+          : 'Pandapower unavailable — DC solver only',
+      }));
+    } catch {
+      setExternalHealth(prev => ({ ...prev, pandapower: 'DOWN', pandapowerDetail: 'Service unreachable' }));
+    }
+
+    // LLM — proxy via system health
+    try {
+      const sys = await apiService.getSystemHealth();
+      const llmUp = sys?.status === 'healthy' || sys?.status === 'degraded';
+      setExternalHealth(prev => ({
+        ...prev,
+        llm: llmUp ? 'UP' : 'DOWN',
+        llmDetail: llmUp ? 'GraphRAG & Agent ready' : 'LLM service unavailable',
+      }));
+    } catch {
+      setExternalHealth(prev => ({ ...prev, llm: 'DOWN', llmDetail: 'Service unreachable' }));
+    }
+  }, []);
+
   useEffect(() => {
     fetchServiceStatus();
-    const interval = setInterval(fetchServiceStatus, 30000);
+    fetchExternalHealth();
+    const interval = setInterval(() => {
+      fetchServiceStatus();
+      fetchExternalHealth();
+    }, 30000);
     return () => clearInterval(interval);
-  }, [fetchServiceStatus]);
+  }, [fetchServiceStatus, fetchExternalHealth]);
 
   const handleReindex = async () => {
     setReindexing(true);
-    setReindexMessage(null);
     try {
       const result = await apiService.reindexEntities();
-      setReindexMessage(result.message);
-      setTimeout(() => { fetchServiceStatus(); setReindexMessage(null); }, 3000);
+      toastSuccess(result.message || 'Re-indexing started successfully');
+      setTimeout(fetchServiceStatus, 3000);
     } catch (e: any) {
-      setReindexMessage('Re-indexing failed: ' + (e.message || 'Unknown error'));
+      toastError('Re-indexing failed: ' + (e.message || 'Unknown error'));
     } finally {
       setReindexing(false);
     }
@@ -266,6 +217,7 @@ const Dashboard = () => {
 
   const handleExportStatisticsPDF = async () => {
     setExportingPDF(true);
+    toastInfo('Generating PDF report...');
     try {
       const blob = await apiService.generateFullCIMReport();
       const url = URL.createObjectURL(blob);
@@ -274,10 +226,10 @@ const Dashboard = () => {
       link.download = `CIM_Full_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
+      toastSuccess('PDF report downloaded successfully');
     } catch (err) {
       console.error('Export PDF error:', err);
-      setErrorMessage('Erreur lors de la g\u00e9n\u00e9ration du rapport PDF');
-      setShowErrorModal(true);
+      toastError('Erreur lors de la génération du rapport PDF');
     } finally {
       setExportingPDF(false);
     }
@@ -298,11 +250,10 @@ const Dashboard = () => {
       }));
 
       setShowConfirmModal(false);
-      setShowSuccessModal(true);
+      toastSuccess('Knowledge Graph cleared successfully');
     } catch (err: any) {
       setShowConfirmModal(false);
-      setErrorMessage(err.message || 'Unknown error occurred');
-      setShowErrorModal(true);
+      toastError(err.message || 'Unknown error occurred');
     } finally {
       setClearing(false);
     }
@@ -369,56 +320,44 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-800/50 via-primary-900/50 to-primary-950/50 p-8 border border-primary-700/30">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent-500/5 rounded-full blur-3xl"></div>
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-accent-500 mb-1">Dashboard</h1>
-                <p className="text-neutral-300">
-                  Real-time overview of your CIM Knowledge Graph
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => navigate('/')}
-                className="px-4 py-2 bg-primary-700/50 hover:bg-primary-600/50 text-neutral-300 hover:text-white rounded-xl flex items-center gap-2 text-sm font-medium border border-primary-600/50 hover:border-amber-500/30 transition-all duration-300"
-                title="Back to Home"
-              >
-                <Home size={16} />
-                Home
-              </button>
-              <button
-                onClick={handleExportStatisticsPDF}
-                disabled={exportingPDF || loading}
-                className="px-4 py-2 bg-primary-700/50 hover:bg-primary-600/50 text-neutral-300 hover:text-white rounded-xl flex items-center gap-2 text-sm font-medium border border-primary-600/50 hover:border-accent-500/30 transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {exportingPDF ? <Loader2 size={18} className="animate-spin" /> : <FileText size={18} />}
-                {exportingPDF ? 'Generating...' : 'Export PDF'}
-              </button>
-              <button
-                onClick={refresh}
-                disabled={loading}
-                className="px-4 py-2 bg-primary-700/50 hover:bg-primary-600/50 text-neutral-300 hover:text-white rounded-xl flex items-center gap-2 text-sm font-medium border border-primary-600/50 hover:border-accent-500/30 transition-all duration-300 active:scale-[0.98]"
-              >
-                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                Refresh
-              </button>
-              <button
-                onClick={handleClearGraph}
-                disabled={clearing || loading}
-                className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-xl flex items-center gap-2 text-sm font-medium border border-red-500/30 hover:border-red-500/50 transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Trash2 size={18} />
-                Clear Graph
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={LayoutDashboard}
+        iconColor="text-accent-400"
+        title="Dashboard"
+        subtitle="Real-time overview of your CIM Knowledge Graph"
+        actions={
+          <>
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all"
+            >
+              <Home size={15} /> Home
+            </button>
+            <button
+              onClick={handleExportStatisticsPDF}
+              disabled={exportingPDF || loading}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
+            >
+              {exportingPDF ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
+              {exportingPDF ? 'Generating...' : 'Export PDF'}
+            </button>
+            <button
+              onClick={refresh}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
+            >
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
+            </button>
+            <button
+              onClick={handleClearGraph}
+              disabled={clearing || loading}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-sm text-red-400 transition-all disabled:opacity-50"
+            >
+              <Trash2 size={15} /> Clear Graph
+            </button>
+          </>
+        }
+      />
 
       {error && (
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/30 p-5 animate-slide-up">
@@ -436,7 +375,7 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card) => (
-          <StatCard key={card.title} {...card} />
+          <StatCard key={card.title} {...card} loading={loading} />
         ))}
       </div>
 
@@ -483,23 +422,16 @@ const Dashboard = () => {
           <ServiceStatusCard
             label="Pandapower (Load Flow)"
             icon={Zap}
-            status="UP"
-            detail="Python power flow engine ready"
+            status={externalHealth.pandapower}
+            detail={externalHealth.pandapowerDetail}
           />
           <ServiceStatusCard
             label="Claude / Groq (LLM)"
             icon={Cpu}
-            status="UP"
-            detail="GraphRAG & Agent ready"
+            status={externalHealth.llm}
+            detail={externalHealth.llmDetail}
           />
         </div>
-        {reindexMessage && (
-          <div className="px-5 pb-4">
-            <div className="px-4 py-2 rounded-lg bg-accent-500/10 border border-accent-500/30 text-sm text-accent-300">
-              {reindexMessage}
-            </div>
-          </div>
-        )}
       </div>
 
       {stats && (
@@ -508,25 +440,12 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Modals */}
+      {/* Confirm modal (destructive action — kept as modal intentionally) */}
       <ConfirmModal
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         onConfirm={confirmClearGraph}
         loading={clearing}
-      />
-
-      <SuccessModal
-        isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-        title="Graph Cleared Successfully"
-        message="The Knowledge Graph has been cleared. All triples, relationships, and imported CIM data have been permanently removed."
-      />
-
-      <ErrorModal
-        isOpen={showErrorModal}
-        onClose={() => setShowErrorModal(false)}
-        message={errorMessage}
       />
     </div>
   );

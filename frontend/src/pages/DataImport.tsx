@@ -1,4 +1,5 @@
 import { Upload, FileText, Code, FileSpreadsheet, Table, Lightbulb, FileCode2, Share2, Code2, Leaf, Search } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { FileUploader } from '@/components/dataimport/FileUploader';
 import { FormatSelector } from '@/components/dataimport/FormatSelector';
 import { ImportResult } from '@/components/dataimport/ImportResult';
@@ -7,9 +8,9 @@ import { useDataImport } from '@/hooks/useDataImport';
 
 const formats = [
   { name: 'CIM/XML',  icon: FileCode2, color: 'from-blue-500 to-indigo-600' },
-  { name: 'CIM/RDF',  icon: Share2,    color: 'from-violet-500 to-purple-600' },
-  { name: 'RDF/XML',  icon: Code2,     color: 'from-orange-500 to-amber-600' },
-  { name: 'TURTLE',   icon: Leaf,      color: 'from-emerald-500 to-green-600' },
+  { name: 'CIM/RDF',  icon: Share2,    color: 'from-blue-500 to-indigo-600' },
+  { name: 'RDF/XML',  icon: Code2,     color: 'from-blue-500 to-indigo-600' },
+  { name: 'TURTLE',   icon: Leaf,      color: 'from-blue-500 to-indigo-600' },
 ];
 
 const excelSheets = [
@@ -42,26 +43,18 @@ const DataImport = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-800/50 via-primary-900/50 to-primary-950/50 p-8 border border-primary-700/30">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-accent-500/5 rounded-full blur-3xl"></div>
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-accent-500 mb-1">Data Import</h1>
-              <p className="text-neutral-300">
-                Import CIM data files into the Knowledge Graph with semantic reasoning
-              </p>
-            </div>
+      <PageHeader
+        icon={Upload}
+        iconColor="text-blue-400"
+        title="Data Import"
+        subtitle="Import CIM data files into the Knowledge Graph with semantic reasoning"
+        actions={file ? (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-accent-500/10 border border-accent-500/30 rounded-lg text-sm">
+            <FileText size={15} className="text-accent-400" />
+            <span className="text-accent-400 font-medium">{file.name}</span>
           </div>
-          {file && (
-            <div className="flex items-center gap-3 px-4 py-2 bg-accent-500/10 border border-accent-500/30 rounded-xl">
-              <FileText size={20} className="text-accent-400" />
-              <span className="text-accent-400 font-semibold">{file.name}</span>
-            </div>
-          )}
-        </div>
-      </div>
+        ) : undefined}
+      />
 
       <div className="card relative overflow-hidden">
         <div className="absolute top-0 left-0 w-64 h-64 bg-accent-500/5 rounded-full blur-3xl"></div>

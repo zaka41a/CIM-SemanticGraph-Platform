@@ -5,6 +5,7 @@ import {
   Database, Zap, Loader2, RefreshCw,
   Cable, Plug, CircleDot, Wrench, ArrowRight, BarChart3
 } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { apiService } from '@/services/api';
 
 interface DiagnosticResult {
@@ -133,42 +134,31 @@ const Diagnostics = () => {
   return (
     <div className="space-y-6 animate-fade-in">
 
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-800/50 via-primary-900/50 to-primary-950/50 p-8 border border-primary-700/30">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl" />
-        <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-accent-500">Network Diagnostics</h1>
-              <p className="text-neutral-400 text-sm mt-0.5">
-                {lastRun
-                  ? `Last run: ${lastRun.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}`
-                  : 'Comprehensive network health check'}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Fix CTA */}
+      <PageHeader
+        icon={Activity}
+        iconColor="text-purple-400"
+        title="Network Diagnostics"
+        subtitle={lastRun ? `Last run: ${lastRun.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}` : 'Comprehensive network health check'}
+        actions={
+          <>
             {hasIssues && (
               <button
                 onClick={() => navigate('/data-fixer')}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary-700/50 hover:bg-primary-700 border border-primary-600/50 hover:border-accent-500/50 text-sm text-neutral-300 hover:text-white transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-800 hover:bg-primary-700 border border-primary-600/50 text-sm text-neutral-300 transition-all"
               >
-                <Wrench size={16} className="text-accent-400" />
-                Fix Issues
-                <ArrowRight size={14} className="text-neutral-500" />
+                <Wrench size={15} className="text-accent-400" /> Fix Issues <ArrowRight size={13} className="text-neutral-500" />
               </button>
             )}
             <button
               onClick={runDiagnostics}
               disabled={loading}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-xl font-semibold shadow-lg shadow-accent-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
             >
-              {loading ? <><Loader2 className="animate-spin" size={18} /><span>Running...</span></> : <><RefreshCw size={18} /><span>Run Diagnostics</span></>}
+              {loading ? <><Loader2 className="animate-spin" size={15} /> Running...</> : <><RefreshCw size={15} /> Run Diagnostics</>}
             </button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Loading */}
       {loading && !diagnostics && (

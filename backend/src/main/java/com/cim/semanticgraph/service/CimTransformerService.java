@@ -135,7 +135,11 @@ public class CimTransformerService {
     }
 
     public Map<String, Object> importCimData(InputStream inputStream, String format) throws Exception {
-        log.info("Importing CIM data. Format: {}", format);
+        return importCimData(inputStream, format, null);
+    }
+
+    public Map<String, Object> importCimData(InputStream inputStream, String format, String graphUri) throws Exception {
+        log.info("Importing CIM data. Format: {}, graphUri: {}", format, graphUri);
 
         String rdfFormat = mapFormatToJena(format);
         Model model = transformCimRdfToModel(inputStream, rdfFormat);
@@ -158,16 +162,28 @@ public class CimTransformerService {
         long enrichedSize = enrichedModel.size();
         long inferredTriples = enrichedSize - originalSize;
 
+        // Import into default graph (keeps all SPARQL queries working)
         jenaService.importRdfData(
             new java.io.ByteArrayInputStream(writeModelToString(enrichedModel).getBytes()),
             "RDF/XML"
         );
+
+        // Also load into named graph for rollback versioning
+        if (graphUri != null && !graphUri.isBlank()) {
+            try {
+                jenaService.loadToNamedGraph(graphUri, enrichedModel);
+                log.info("Import also stored in named graph <{}> for rollback", graphUri);
+            } catch (Exception e) {
+                log.warn("Named graph versioning failed (import still succeeded): {}", e.getMessage());
+            }
+        }
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("originalTriples", originalSize);
         stats.put("inferredTriples", inferredTriples);
         stats.put("totalTriples", enrichedSize);
         stats.put("format", format);
+        if (graphUri != null) stats.put("graphUri", graphUri);
 
         log.info("Import complete. original={}, inferred={}, total={}", originalSize, inferredTriples, enrichedSize);
         return stats;

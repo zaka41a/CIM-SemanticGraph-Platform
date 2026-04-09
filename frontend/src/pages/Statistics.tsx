@@ -4,6 +4,7 @@ import {
   Zap, Cable, Factory, GitBranch, CircleDot, Activity,
   ToggleRight, Plug, Layers, Network, TrendingUp, Gauge
 } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import { useStatistics } from '@/hooks/useStatistics';
 import { apiService } from '@/services/api';
 
@@ -220,40 +221,31 @@ const Statistics = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-800/50 via-primary-900/50 to-primary-950/50 p-8 border border-primary-700/30">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl"></div>
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <div>
-                <h1 className="text-3xl font-bold text-accent-500 mb-2">Network Statistics</h1>
-                <p className="text-neutral-300">
-                  Real-time overview of your CIM Knowledge Graph
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handleExportPDF}
-                disabled={exportingPDF || loading}
-                className="px-4 py-2 bg-primary-700/50 hover:bg-primary-600/50 text-neutral-300 hover:text-white rounded-xl flex items-center gap-2 text-sm font-medium border border-primary-600/50 hover:border-accent-500/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {exportingPDF ? <Loader2 size={18} className="animate-spin" /> : <FileText size={18} />}
-                {exportingPDF ? 'Generating...' : 'Export PDF'}
-              </button>
-              <button
-                onClick={refresh}
-                disabled={loading}
-                className="px-4 py-2 bg-primary-700/50 hover:bg-primary-600/50 text-neutral-300 hover:text-white rounded-xl flex items-center gap-2 text-sm font-medium border border-primary-600/50 hover:border-accent-500/30 transition-all duration-300"
-              >
-                <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-                Refresh
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        icon={BarChart3}
+        iconColor="text-cyan-400"
+        title="Network Statistics"
+        subtitle="Real-time overview of your CIM Knowledge Graph"
+        actions={
+          <>
+            <button
+              onClick={handleExportPDF}
+              disabled={exportingPDF || loading}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
+            >
+              {exportingPDF ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
+              {exportingPDF ? 'Generating...' : 'Export PDF'}
+            </button>
+            <button
+              onClick={refresh}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
+            >
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
+            </button>
+          </>
+        }
+      />
 
       {/* Quick Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -21,8 +21,12 @@ public class ImportHistory {
     private Double duration;
     private String errorMessage;
     private String format;
+    /** Named graph URI where this import's triples are stored for rollback (e.g. urn:import:{id}) */
+    private String graphUri;
+    /** Whether rollback is available (graphUri exists in Fuseki) */
+    private boolean rollbackAvailable;
 
     public enum ImportStatus {
-        SUCCESS, FAILED, PROCESSING
+        SUCCESS, FAILED, PROCESSING, ROLLED_BACK
     }
 }

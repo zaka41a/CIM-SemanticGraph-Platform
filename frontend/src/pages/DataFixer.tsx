@@ -5,6 +5,7 @@ import {
   PlayCircle, XCircle, Activity, FileText, Loader2,
   Search, Cable, Gauge, Network, ArrowRight, RotateCcw,
 } from 'lucide-react';
+import PageHeader from '@/components/PageHeader';
 import api from '@/services/api';
 import { storageGet, storageSet, storageRemove } from '@/utils/storage';
 
@@ -256,20 +257,56 @@ WHERE {
     if (!fix) return;
     setFixes(prev => prev.map(f => f.id === fixId ? { ...f, status: 'applying' } : f));
     try {
-      await api.executeSparqlUpdate(fix.sparqlQuery);
-      setFixes(prev => prev.map(f => f.id === fixId ? { ...f, status: 'done' } : f));
-    } catch {
-      setFixes(prev => prev.map(f => f.id === fixId ? { ...f, status: 'error' } : f));
+      const resp = await api.applyFixes([{
+        id: fix.id,
+        description: fix.description,
+        category: fix.category,
+        sparqlQuery: fix.sparqlQuery,
+      }]);
+      const result = resp.results[0];
+      if (result?.status === 'applied') {
+        setFixes(prev => prev.map(f => f.id === fixId ? { ...f, status: 'done' } : f));
+      } else {
+        const errMsg = result?.error || (result?.status === 'blocked' ? 'Operation blocked by safety rules' : 'Fix failed');
+        setFixes(prev => prev.map(f => f.id === fixId ? { ...f, status: 'error', details: errMsg } : f));
+      }
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.error || err?.message || 'Fix failed';
+      setFixes(prev => prev.map(f => f.id === fixId ? { ...f, status: 'error', details: errMsg } : f));
     }
   };
 
   const applyAllFixes = async () => {
+    const pending = fixes.filter(f => f.status === 'pending');
+    if (pending.length === 0) return;
     setApplying(true);
-    for (const fix of fixes.filter(f => f.status === 'pending')) {
-      await applyFix(fix.id);
-      await new Promise(r => setTimeout(r, 500));
+
+    // Mark all as applying
+    setFixes(prev => prev.map(f => f.status === 'pending' ? { ...f, status: 'applying' } : f));
+
+    try {
+      const resp = await api.applyFixes(pending.map(f => ({
+        id: f.id,
+        description: f.description,
+        category: f.category,
+        sparqlQuery: f.sparqlQuery,
+      })));
+
+      setFixes(prev => prev.map(f => {
+        const result = resp.results.find(r => r.id === f.id);
+        if (!result) return f;
+        if (result.status === 'applied') return { ...f, status: 'done' };
+        const errMsg = result.error || (result.status === 'blocked' ? 'Blocked by safety rules' : 'Failed');
+        return { ...f, status: 'error', details: errMsg };
+      }));
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.error || err?.message || 'Batch apply failed';
+      setFixes(prev => prev.map(f =>
+        f.status === 'applying' ? { ...f, status: 'error', details: errMsg } : f
+      ));
+    } finally {
+      setApplying(false);
     }
-    setApplying(false);
   };
 
   const clearAnalysis = () => {
@@ -294,57 +331,48 @@ WHERE {
   return (
     <div className="space-y-6 animate-fade-in">
 
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-800/50 via-primary-900/50 to-primary-950/50 p-8 border border-primary-700/30">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl" />
-        <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-accent-500">CIM Data Fixer</h1>
-              <p className="text-neutral-400 text-sm mt-0.5">Network data quality analysis and automatic correction</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Score badge */}
+      <PageHeader
+        icon={Wrench}
+        iconColor="text-yellow-400"
+        title="CIM Data Fixer"
+        subtitle="Network data quality analysis and automatic correction"
+        actions={
+          <>
             {score !== null && (
-              <div className="text-center px-5 py-2 rounded-xl bg-primary-700/50 border border-primary-600/50">
-                <div className={`text-2xl font-black ${scoreColor}`}>{score}</div>
+              <div className="text-center px-4 py-1.5 rounded-lg bg-primary-800 border border-primary-600/50">
+                <div className={`text-xl font-black ${scoreColor}`}>{score}</div>
                 <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Quality Score</div>
               </div>
             )}
-
             {analysisComplete && (
               <button
                 onClick={clearAnalysis}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-700/50 hover:bg-red-500/10 border border-primary-600/50 hover:border-red-500/30 text-neutral-300 hover:text-red-300 text-sm transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-800 hover:bg-red-500/10 border border-primary-600/50 hover:border-red-500/30 text-neutral-300 hover:text-red-300 text-sm transition-all"
               >
                 <RotateCcw size={15} /> Reset
               </button>
             )}
-
             {pendingFixes.length > 0 && (
               <button
                 onClick={applyAllFixes}
                 disabled={applying}
-                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold text-sm shadow-lg shadow-emerald-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
               >
-                <PlayCircle size={16} className={applying ? 'animate-pulse' : ''} />
+                <PlayCircle size={15} className={applying ? 'animate-pulse' : ''} />
                 {applying ? 'Applying…' : `Apply All (${pendingFixes.length})`}
               </button>
             )}
-
             <button
               onClick={analyzeNetwork}
               disabled={analyzing}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 text-white rounded-xl font-semibold shadow-lg shadow-accent-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
             >
-              <Zap size={18} className={analyzing ? 'animate-spin' : ''} />
+              <Zap size={15} className={analyzing ? 'animate-spin' : ''} />
               {analyzing ? 'Analyzing…' : analysisComplete ? 'Re-analyze' : 'Analyze Network'}
             </button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Analysis progress */}
       {analyzing && (

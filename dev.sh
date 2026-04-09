@@ -8,7 +8,7 @@
 #    ./dev.sh --status  → show status of all services
 # =============================================================================
 
-set -euo pipefail
+set -uo pipefail
 
 # ── Colors ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -40,16 +40,6 @@ START_INFRA=true
 START_POWERFLOW=true
 START_BACKEND=true
 START_FRONTEND=true
-
-# Parse args
-for arg in "$@"; do
-  case $arg in
-    --infra)    START_POWERFLOW=false; START_BACKEND=false; START_FRONTEND=false ;;
-    --backend)  START_FRONTEND=false ;;
-    --status)   show_status; exit 0 ;;
-    --help|-h)  usage; exit 0 ;;
-  esac
-done
 
 # =============================================================================
 # Helpers
@@ -107,6 +97,37 @@ show_status() {
   check_port $PORT_FRONTEND  && success "Frontend    → http://localhost:$PORT_FRONTEND"  || warn "Frontend    → NOT running"
 }
 
+# Docker Compose wrapper — supports both v1 (docker-compose) and v2 (docker compose)
+docker_compose() {
+  if docker compose version &>/dev/null 2>&1; then
+    docker compose "$@"
+  elif command -v docker-compose &>/dev/null; then
+    docker-compose "$@"
+  else
+    error "Neither 'docker compose' nor 'docker-compose' found."
+    exit 1
+  fi
+}
+
+# Parse args — AFTER function definitions
+for arg in "$@"; do
+  case $arg in
+    --infra)    START_POWERFLOW=false; START_BACKEND=false; START_FRONTEND=false ;;
+    --backend)  START_FRONTEND=false ;;
+    --status)   show_status; exit 0 ;;
+    --help|-h)  usage; exit 0 ;;
+  esac
+done
+
+source_env() {
+  if [ -f "$ENV_FILE" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+  fi
+}
+
 # =============================================================================
 # Prerequisite checks
 # =============================================================================
@@ -116,14 +137,17 @@ check_prerequisites() {
 
   local missing=false
 
-  command -v docker &>/dev/null   && success "Docker"    || { error "Docker not found";    missing=true; }
-  command -v java   &>/dev/null   && success "Java"      || { error "Java not found";      missing=true; }
+  command -v docker  &>/dev/null  && success "Docker"    || { error "Docker not found";    missing=true; }
+  command -v java    &>/dev/null  && success "Java"      || { error "Java not found";      missing=true; }
   command -v python3 &>/dev/null  && success "Python 3"  || { error "Python 3 not found";  missing=true; }
-  command -v node   &>/dev/null   && success "Node.js"   || { error "Node.js not found";   missing=true; }
-  command -v npm    &>/dev/null   && success "npm"        || { error "npm not found";        missing=true; }
+  command -v node    &>/dev/null  && success "Node.js"   || { error "Node.js not found";   missing=true; }
+  command -v npm     &>/dev/null  && success "npm"       || { error "npm not found";       missing=true; }
 
   # Check Docker is running
-  docker info &>/dev/null || { error "Docker daemon not running — start Docker Desktop"; missing=true; }
+  if ! docker info &>/dev/null; then
+    error "Docker daemon not running — start Docker Desktop"
+    missing=true
+  fi
 
   # Check .env exists
   if [ -f "$ENV_FILE" ]; then
@@ -133,33 +157,31 @@ check_prerequisites() {
     missing=true
   fi
 
-  $missing && { echo -e "\n${RED}Fix the missing prerequisites and retry.${RESET}"; exit 1; }
-
-  # Check API keys
-  if [ -f "$ENV_FILE" ]; then
-    source_env
-
-    [ -n "${CLAUDE_API_KEY:-}" ] && [[ "$CLAUDE_API_KEY" != "your-"* ]] \
-      && success "Claude API key ✓" \
-      || warn   "Claude API key not set — AI Agent will be disabled"
-
-    [ -n "${OPENAI_API_KEY:-}" ] && [[ "$OPENAI_API_KEY" != "your-"* ]] \
-      && success "OpenAI API key ✓" \
-      || warn   "OpenAI API key not set — vector embeddings will use fallback"
-
-    [ -n "${GROQ_API_KEY:-}" ] && [[ "$GROQ_API_KEY" != "your-"* ]] \
-      && success "Groq API key ✓" \
-      || warn   "Groq API key not set — LLM fallback disabled"
+  if [ "$missing" = "true" ]; then
+    echo -e "\n${RED}Fix the missing prerequisites and retry.${RESET}"
+    exit 1
   fi
-}
 
-source_env() {
-  set -a
-  # shellcheck disable=SC1090
-  while IFS='=' read -r key value; do
-    [[ "$key" =~ ^[A-Z_][A-Z0-9_]*$ ]] && export "$key=$value"
-  done < <(grep -v '^#' "$ENV_FILE" | grep -v '^$' | grep '=')
-  set +a
+  # Check API keys (informational only)
+  source_env
+
+  if [ -n "${CLAUDE_API_KEY:-}" ] && [[ "${CLAUDE_API_KEY:-}" != "your-"* ]]; then
+    success "Claude API key ✓"
+  else
+    warn "Claude API key not set — AI Agent will be disabled"
+  fi
+
+  if [ -n "${OPENAI_API_KEY:-}" ] && [[ "${OPENAI_API_KEY:-}" != "your-"* ]]; then
+    success "OpenAI API key ✓"
+  else
+    warn "OpenAI API key not set — vector embeddings will use fallback"
+  fi
+
+  if [ -n "${GROQ_API_KEY:-}" ] && [[ "${GROQ_API_KEY:-}" != "your-"* ]]; then
+    success "Groq API key ✓"
+  else
+    warn "Groq API key not set — LLM fallback disabled"
+  fi
 }
 
 # =============================================================================
@@ -169,24 +191,24 @@ source_env() {
 start_infrastructure() {
   header "Infrastructure (Fuseki + Qdrant)"
 
-  cd "$BACKEND_DIR"
-
   # Check if already running
   if check_port $PORT_FUSEKI && check_port $PORT_QDRANT; then
     success "Fuseki and Qdrant already running"
     return 0
   fi
 
-  log "Starting Docker services..."
-  docker-compose up -d fuseki qdrant
+  log "Starting Docker services (Fuseki + Qdrant)..."
+  cd "$BACKEND_DIR"
+  docker_compose up -d fuseki qdrant
 
   wait_for_http "http://localhost:$PORT_FUSEKI/\$/ping" "Fuseki" 60 \
-    || { error "Fuseki failed to start. Check: docker-compose logs fuseki"; exit 1; }
+    || { error "Fuseki failed to start. Check: docker compose -f $BACKEND_DIR/docker-compose.yml logs fuseki"; exit 1; }
 
   wait_for_http "http://localhost:$PORT_QDRANT/healthz" "Qdrant" 30 \
-    || { error "Qdrant failed to start. Check: docker-compose logs qdrant"; exit 1; }
+    || { error "Qdrant failed to start. Check: docker compose -f $BACKEND_DIR/docker-compose.yml logs qdrant"; exit 1; }
 
   success "Infrastructure ready"
+  cd "$SCRIPT_DIR"
 }
 
 # =============================================================================
@@ -204,21 +226,34 @@ start_powerflow() {
   cd "$POWERFLOW_DIR"
   mkdir -p "$LOG_DIR"
 
+  # Use venv if present, else install globally with pip3
+  if [ -d "$POWERFLOW_DIR/.venv" ]; then
+    log "Using existing Python venv..."
+    PYTHON="$POWERFLOW_DIR/.venv/bin/python"
+    PIP="$POWERFLOW_DIR/.venv/bin/pip"
+  else
+    log "Creating Python venv..."
+    python3 -m venv "$POWERFLOW_DIR/.venv"
+    PYTHON="$POWERFLOW_DIR/.venv/bin/python"
+    PIP="$POWERFLOW_DIR/.venv/bin/pip"
+  fi
+
   log "Installing Python dependencies..."
-  pip install -r requirements.txt -q
+  "$PIP" install -r requirements.txt -q
 
   log "Starting uvicorn on port $PORT_POWERFLOW..."
-  nohup python3 -m uvicorn app.main:app \
+  nohup "$PYTHON" -m uvicorn app.main:app \
     --host 127.0.0.1 \
     --port $PORT_POWERFLOW \
     > "$LOG_DIR/powerflow.log" 2>&1 &
 
   save_pid "POWERFLOW" $!
 
-  wait_for_http "http://localhost:$PORT_POWERFLOW/health" "Powerflow" 30 \
+  wait_for_http "http://localhost:$PORT_POWERFLOW/health" "Powerflow" 60 \
     || { error "Powerflow failed. Check: tail -f $LOG_DIR/powerflow.log"; exit 1; }
 
   success "Powerflow ready  → logs: $LOG_DIR/powerflow.log"
+  cd "$SCRIPT_DIR"
 }
 
 # =============================================================================
@@ -236,6 +271,9 @@ start_backend() {
   cd "$BACKEND_DIR"
   mkdir -p "$LOG_DIR"
 
+  # Ensure mvnw is executable
+  [ -f "./mvnw" ] && chmod +x ./mvnw
+
   log "Loading environment variables from .env..."
   source_env
 
@@ -245,10 +283,11 @@ start_backend() {
 
   save_pid "BACKEND" $!
 
-  wait_for_http "http://localhost:$PORT_BACKEND/api/cim/health" "Backend" 120 \
+  wait_for_http "http://localhost:$PORT_BACKEND/actuator/health" "Backend" 120 \
     || { error "Backend failed. Check: tail -f $LOG_DIR/backend.log"; exit 1; }
 
   success "Backend ready    → logs: $LOG_DIR/backend.log"
+  cd "$SCRIPT_DIR"
 }
 
 # =============================================================================
@@ -259,7 +298,6 @@ start_frontend() {
   header "Frontend (React + Vite)"
 
   if check_port $PORT_FRONTEND; then
-    # Kill stale process holding the port so Vite gets the right port
     local stale_pid
     stale_pid=$(lsof -ti ":$PORT_FRONTEND" 2>/dev/null || true)
     if [ -n "$stale_pid" ]; then
@@ -288,6 +326,7 @@ start_frontend() {
     || { error "Frontend failed. Check: tail -f $LOG_DIR/frontend.log"; exit 1; }
 
   success "Frontend ready   → logs: $LOG_DIR/frontend.log"
+  cd "$SCRIPT_DIR"
 }
 
 # =============================================================================
@@ -329,9 +368,9 @@ echo -e "${BOLD}${BLUE}╚══════════════════
 
 check_prerequisites
 
-$START_INFRA     && start_infrastructure
-$START_POWERFLOW && start_powerflow
-$START_BACKEND   && start_backend
-$START_FRONTEND  && start_frontend
+if [ "$START_INFRA" = "true" ];     then start_infrastructure; fi
+if [ "$START_POWERFLOW" = "true" ]; then start_powerflow;      fi
+if [ "$START_BACKEND" = "true" ];   then start_backend;        fi
+if [ "$START_FRONTEND" = "true" ];  then start_frontend;       fi
 
 print_summary
