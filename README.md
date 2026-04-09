@@ -178,8 +178,8 @@ This platform provides:
 ## Architecture
 
 ```
-┌────────────────────────────────────────────────────────────────────┐
-│                  Frontend Layer (React + TypeScript)               │
+┌───────────────────────────────────────────────────────────────────┐
+│                  Frontend Layer (React + TypeScript)              │
 │  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌─────────────┐  │
 │  │ Dashboard  │  │GraphRAG    │  │ SPARQL     │  │  Load Flow  │  │
 │  │ 8 StatCards│  │ Chat + SSE │  │ Editor     │  │ Topology Map│  │
@@ -188,36 +188,36 @@ This platform provides:
 │  │ Data Import │  │ Data Fixer │  │ Reports   │  │ Diagnostics │  │
 │  │+MappingModal│  │ +SHACL Val │  │ PDF/CSV   │  │ +History    │  │
 │  └─────────────┘  └────────────┘  └───────────┘  └─────────────┘  │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  Toast System · Error Boundaries · Keyboard Shortcuts        │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-└───────────────────────────┬────────────────────────────────────────┘
+│  ┌──────────────────────────────────────────────────────────────┐ │
+│  │  Toast System · Error Boundaries · Keyboard Shortcuts        │ │
+│  └──────────────────────────────────────────────────────────────┘ │
+└───────────────────────────┬───────────────────────────────────────┘
                             │ REST / SSE
-┌───────────────────────────┴───────────────────────────────────────┐
-│                Backend Layer (Spring Boot 3.2)                    │
-│  ┌────────────────────────────────────────────────────────────┐   │
-│  │                    REST Controllers                        │   │
-│  │  CimController  ExcelController  GraphRAGController        │   │
-│  │  LoadFlowController  SparqlController  ShaclController     │   │
-│  │  DataFixerController  AnalysisController  ReportController │   │
-│  └──────────┬──────────────────────┬──────────────────────────┘   │
-│             │                      │                              │
+┌───────────────────────────┴──────────────────────────────────────┐
+│                Backend Layer (Spring Boot 3.2)                   │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │                    REST Controllers                        │  │
+│  │  CimController  ExcelController  GraphRAGController        │  │
+│  │  LoadFlowController  SparqlController  ShaclController     │  │
+│  │  DataFixerController  AnalysisController  ReportController │  │
+│  └──────────┬──────────────────────┬──────────────────────────┘  │
+│             │                      │                             │
 │  ┌──────────┴──────────┐  ┌────────┴──────────────┐              │
 │  │  ClaudeAgentService │  │   GraphRAGService     │              │
 │  │  5 native tools     │  │   Context building    │              │
 │  │  SSE streaming      │  │   LLM fallback chain  │              │
 │  └──────────┬──────────┘  └───────────────────────┘              │
-│             │                                                     │
-│  ┌──────────┴────────────────────────────────────────────────┐    │
-│  │  CIMIndexingService   QdrantService   EmbeddingService    │    │
-│  │  Auto-index on import  Vector upsert  OpenAI embeddings   │    │
-│  └──────────┬────────────────────────────────────────────────┘    │
-│             │                                                     │
-│  ┌──────────┴────────────────────────────────────────────────┐    │
-│  │   Apache Jena Fuseki (Embedded TDB2, port 3030)           │    │
-│  │   SPARQL 1.1 · OWL reasoning · CIM ontology               │    │
-│  └───────────────────────────────────────────────────────────┘    │
-└───────────────────────────────────────────────────────────────────┘
+│             │                                                    │
+│  ┌──────────┴────────────────────────────────────────────────┐   │
+│  │  CIMIndexingService   QdrantService   EmbeddingService    │   │
+│  │  Auto-index on import  Vector upsert  OpenAI embeddings   │   │
+│  └──────────┬────────────────────────────────────────────────┘   │
+│             │                                                    │
+│  ┌──────────┴────────────────────────────────────────────────┐   │
+│  │   Apache Jena Fuseki (Embedded TDB2, port 3030)           │   │
+│  │   SPARQL 1.1 · OWL reasoning · CIM ontology               │   │
+│  └───────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────┘
            │                          │
   ┌────────┴────────┐        ┌────────┴────────────┐
   │  Qdrant (6333)  │        │  Powerflow (8000)   │
@@ -750,7 +750,7 @@ CIM-SemanticGraph-Platform/
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License  see the [LICENSE](LICENSE) file for details.
 
 ---
 
