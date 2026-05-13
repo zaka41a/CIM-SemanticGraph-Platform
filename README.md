@@ -756,13 +756,13 @@ This project is licensed under the MIT License  see the [LICENSE](LICENSE) file 
 
 ## Acknowledgments
 
-- **IEC Technical Committee 57** — CIM standards (IEC 61970/61968)
-- **Apache Jena** — RDF/OWL framework and embedded Fuseki
-- **Anthropic** — Claude AI models and tool calling API
-- **Qdrant** — Open-source vector database
-- **pandapower** — Python power system analysis
-- **Groq** — Fast language model inference
-- **Ollama** — Local language model support
+- **IEC Technical Committee 57** : CIM standards (IEC 61970/61968)
+- **Apache Jena** : RDF/OWL framework and embedded Fuseki
+- **Anthropic** : Claude AI models and tool calling API
+- **Qdrant** : Open-source vector database
+- **pandapower** : Python power system analysis
+- **Groq** : Fast language model inference
+- **Ollama** : Local language model support
 
 ---
 
