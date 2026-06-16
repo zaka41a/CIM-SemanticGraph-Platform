@@ -656,8 +656,7 @@ CIM-SemanticGraph-Platform/
 │       ├── converter.py                    # Network format conversion
 │       └── semantic_bus_finder.py          # NLP bus name resolution
 │
-├── examples/
-│   └── NRW-Power-Network.xlsx              # Sample NRW network data
+├── examples/      # Sample NRW network data
 ├── docs/diagrams/
 └── README.md
 ```
