@@ -125,6 +125,13 @@ class ApiService {
     return response.data;
   }
 
+  async getLlmProviders(): Promise<
+    { id: string; label: string; model: string; available: boolean; isDefault: boolean }[]
+  > {
+    const res = await this.client.get('/graphrag/providers');
+    return res.data?.providers ?? [];
+  }
+
   streamGraphRAG(
     question: string,
     callbacks: {
@@ -134,9 +141,11 @@ class ApiService {
       onDone: (sources: string[], confidence: number, executionTimeMs: number) => void;
       onError: (message: string) => void;
     },
+    provider = '',
     maxRetries = 2,
   ): () => void {
-    const url = `${API_BASE_URL}/graphrag/stream?question=${encodeURIComponent(question)}`;
+    const url = `${API_BASE_URL}/graphrag/stream?question=${encodeURIComponent(question)}`
+      + (provider ? `&provider=${encodeURIComponent(provider)}` : '');
     let retries = 0;
     let textReceived = false;
     let stopped = false;
@@ -176,7 +185,7 @@ class ApiService {
         } else {
           callbacks.onError(
             textReceived
-              ? 'Connection lost — response may be incomplete'
+              ? 'Connection lost - response may be incomplete'
               : 'Could not connect to server. Is the backend running?',
           );
         }
@@ -370,7 +379,7 @@ class ApiService {
   async generateFullCIMReport(): Promise<Blob> {
     const response = await this.client.get('/reports/full', {
       responseType: 'blob',
-      timeout: 120000, // 2 min — AI generation takes time
+      timeout: 120000, // 2 min - AI generation takes time
     });
     return response.data;
   }

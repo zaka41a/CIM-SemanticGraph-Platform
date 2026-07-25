@@ -5,6 +5,7 @@ import com.cim.semanticgraph.model.ChatHistory;
 import com.cim.semanticgraph.service.ChatHistoryService;
 import com.cim.semanticgraph.service.ClaudeAgentService;
 import com.cim.semanticgraph.service.GraphRAGService;
+import com.cim.semanticgraph.service.GroqService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
@@ -33,9 +34,10 @@ public class GraphRAGController {
     private final GraphRAGService    graphRAGService;
     private final ChatHistoryService chatHistoryService;
     private final ClaudeAgentService claudeAgentService;
+    private final GroqService        groqService;
 
     /**
-     * Streaming SSE endpoint — uses Claude claude-sonnet-4-6 Agent with Tool Calling.
+     * Streaming SSE endpoint - uses Claude Fable 5 Agent with Tool Calling.
      * Falls back to standard GraphRAG if Claude is not configured.
      *
      * SSE event types:
@@ -49,9 +51,10 @@ public class GraphRAGController {
     @Operation(summary = "Stream answer (SSE)", description = "Stream Claude Agent response via Server-Sent Events")
     public Flux<ServerSentEvent<String>> streamQuery(
             @RequestParam String question,
-            @RequestParam(defaultValue = "") String sessionId) {
+            @RequestParam(defaultValue = "") String sessionId,
+            @RequestParam(defaultValue = "") String provider) {
 
-        log.info("SSE stream request: question='{}', session='{}'", question, sessionId);
+        log.info("SSE stream request: question='{}', session='{}', provider='{}'", question, sessionId, provider);
 
         if (question == null || question.isBlank()) {
             return Flux.just(ServerSentEvent.<String>builder()
@@ -65,7 +68,7 @@ public class GraphRAGController {
             // Fallback: run standard query and emit as single text event
             return Flux.<String>create(sink -> {
                 try {
-                    GraphRAGResponse resp = graphRAGService.processQuery(question, sid);
+                    GraphRAGResponse resp = graphRAGService.processQuery(question, sid, provider);
                     sink.next("{\"type\":\"text\",\"text\":" +
                               "\"" + escapeJson(resp.getAnswer()) + "\"}");
                     sink.next("{\"type\":\"done\",\"sources\":[],\"confidence\":"
@@ -82,12 +85,12 @@ public class GraphRAGController {
         // Stream via Claude, but if it emits an API-unavailable error, fall back to Groq/Ollama
         return claudeAgentService.processQueryStreaming(question, sid)
                 .flatMap(data -> {
-                    // Detect Claude credit-exhausted error and switch to fallback stream
-                    if (data.contains("\"type\":\"error\"") && data.contains("unavailable")) {
-                        log.warn("Claude unavailable in stream — switching to GraphRAG fallback");
+                    // Detect Claude credit-exhausted / quota / auth error and switch to fallback stream
+                    if (data.contains("\"type\":\"error\"") && streamIndicatesApiUnavailable(data)) {
+                        log.warn("Claude unavailable in stream - switching to GraphRAG fallback");
                         return Flux.<String>create(sink -> {
                             try {
-                                GraphRAGResponse resp = graphRAGService.processQuery(question, sid);
+                                GraphRAGResponse resp = graphRAGService.processQuery(question, sid, provider);
                                 sink.next("{\"type\":\"text\",\"text\":\"" + escapeJson(resp.getAnswer()) + "\"}");
                                 sink.next("{\"type\":\"done\",\"sources\":[],\"confidence\":"
                                         + resp.getConfidence() + ",\"execution_time_ms\":"
@@ -123,16 +126,18 @@ public class GraphRAGController {
                 sessionId = UUID.randomUUID().toString();
             }
 
+            String provider = request.getProvider();
             GraphRAGResponse response;
             if (claudeAgentService.isConfigured()) {
                 response = claudeAgentService.processQuery(request.getQuestion(), sessionId);
-                // Fallback to Groq/Ollama if Claude API is unavailable (credits exhausted, etc.)
+                // Fallback to a selectable LLM provider if Claude is unavailable (credits, quota, etc.)
                 if (isApiUnavailable(response.getAnswer())) {
-                    log.warn("Claude API unavailable, falling back to GraphRAGService (Groq/Ollama)");
-                    response = graphRAGService.processQuery(request.getQuestion(), sessionId);
+                    log.warn("Claude API unavailable, falling back to GraphRAGService (provider: {})",
+                            provider == null ? "default" : provider);
+                    response = graphRAGService.processQuery(request.getQuestion(), sessionId, provider);
                 }
             } else {
-                response = graphRAGService.processQuery(request.getQuestion(), sessionId);
+                response = graphRAGService.processQuery(request.getQuestion(), sessionId, provider);
             }
 
             return ResponseEntity.ok(response);
@@ -238,12 +243,19 @@ public class GraphRAGController {
         }
     }
 
+    @GetMapping("/providers")
+    @Operation(summary = "List LLM providers", description = "Selectable OpenAI-compatible LLM providers and their availability")
+    public ResponseEntity<?> getProviders() {
+        return ResponseEntity.ok(Map.of("providers", groqService.availableProviders()));
+    }
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     public static class QuestionRequest {
         private String question;
         private String sessionId;
+        private String provider;
     }
 
     @Data
@@ -256,10 +268,21 @@ public class GraphRAGController {
     /** Returns true if the answer indicates Claude API is unavailable (credits, quota, etc.) */
     private boolean isApiUnavailable(String answer) {
         if (answer == null) return true;
-        return answer.startsWith("❌ Agent error:") ||
+        return answer.startsWith("Agent error:") ||
                answer.contains("credit balance is too low") ||
                answer.contains("quota") ||
                answer.contains("API unavailable");
+    }
+
+    /** Returns true if a streaming SSE error payload indicates Claude is unavailable and a fallback should run. */
+    private boolean streamIndicatesApiUnavailable(String data) {
+        if (data == null) return false;
+        return data.contains("unavailable") ||
+               data.contains("credit balance is too low") ||
+               data.contains("quota") ||
+               data.contains("rate_limit") ||
+               data.contains("overloaded") ||
+               data.contains("Agent error");
     }
 
     private static String escapeJson(String s) {

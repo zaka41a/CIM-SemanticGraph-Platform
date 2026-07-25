@@ -66,7 +66,7 @@ function exportToMarkdown(messages: ReturnType<typeof useChatMessages>['messages
     if (m.role === 'user') {
       lines.push(`**You:** ${m.content}`, '');
     } else {
-      lines.push(`**Claude Agent:** ${m.content}`, '');
+      lines.push(`**Assistant:** ${m.content}`, '');
       if (m.sources?.length) {
         lines.push(`*Sources: ${m.sources.map(s => s.split('#').pop()).join(', ')}*`, '');
       }
@@ -90,6 +90,27 @@ const GraphRAGChat = () => {
   const messagesAreaRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputHandle>(null);
 
+  type LlmProvider = { id: string; label: string; model: string; available: boolean; isDefault: boolean };
+  const [providers, setProviders] = useState<LlmProvider[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<string>(() => localStorage.getItem('cim_llm_provider') || '');
+
+  useEffect(() => {
+    apiService.getLlmProviders()
+      .then((list) => {
+        setProviders(list);
+        setSelectedProvider(prev => {
+          if (prev && list.some(p => p.id === prev && p.available)) return prev;
+          const def = list.find(p => p.isDefault && p.available) ?? list.find(p => p.available);
+          return def?.id ?? prev;
+        });
+      })
+      .catch(() => setProviders([]));
+  }, []);
+
+  useEffect(() => {
+    if (selectedProvider) localStorage.setItem('cim_llm_provider', selectedProvider);
+  }, [selectedProvider]);
+
   const {
     sessionId,
     sessions,
@@ -108,7 +129,7 @@ const GraphRAGChat = () => {
     setFeedback,
     getLastUserQuestion,
     clearMessages,
-  } = useChatMessages(sessionId);
+  } = useChatMessages(sessionId, selectedProvider);
 
   // Real backend health polling
   useEffect(() => {
@@ -184,7 +205,7 @@ const GraphRAGChat = () => {
 
   return (
     <div className={containerClass}>
-      {/* Sidebar — hidden in fullscreen */}
+      {/* Sidebar - hidden in fullscreen */}
       {!fullscreen && (
         <ChatSidebar
           sessions={sessions}
@@ -204,9 +225,25 @@ const GraphRAGChat = () => {
                 <MessageSquare size={26} className="text-accent-400" />
                 GraphRAG Chat
               </h1>
-              <p className="text-sm text-neutral-400 mt-1">Claude AI Agent with semantic search and load flow tools</p>
+              <p className="text-sm text-neutral-400 mt-1">AI Agent with semantic search and load flow tools</p>
             </div>
             <div className="flex items-center gap-3">
+              {/* LLM provider selector */}
+              {providers.length > 0 && (
+                <select
+                  value={selectedProvider}
+                  onChange={(e) => setSelectedProvider(e.target.value)}
+                  title="Choose the LLM provider"
+                  className="px-3 py-1.5 bg-primary-800/60 border border-primary-700/40 hover:border-primary-600 rounded-lg text-xs text-neutral-300 focus:outline-none focus:border-accent-500/50 cursor-pointer"
+                >
+                  {providers.map((p) => (
+                    <option key={p.id} value={p.id} disabled={!p.available} className="bg-primary-900">
+                      {p.label}{p.available ? '' : ' (no key)'}
+                    </option>
+                  ))}
+                </select>
+              )}
+
               {/* Export button */}
               {messages.length > 0 && (
                 <button
@@ -310,8 +347,8 @@ const GraphRAGChat = () => {
                   <span className="text-emerald-400">Indexed</span>
                 </span>
                 <span className="flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-purple-400" />
-                  <span className="text-neutral-500">Claude claude-sonnet-4-6</span>
+                  <Sparkles className="w-3 h-3 text-accent-400" />
+                  <span className="text-neutral-500">GPT-5.5</span>
                 </span>
               </div>
               <span className="text-neutral-600">Ctrl+K focus · Ctrl+Shift+E export · Ctrl+Shift+F fullscreen</span>

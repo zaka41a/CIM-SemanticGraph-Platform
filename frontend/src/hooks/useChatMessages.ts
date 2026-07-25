@@ -20,7 +20,7 @@ function inferFollowUps(question: string, answer: string): string[] {
   return FOLLOWUP_MAP.default;
 }
 
-export const useChatMessages = (sessionId: string) => {
+export const useChatMessages = (sessionId: string, provider: string = '') => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -73,7 +73,7 @@ export const useChatMessages = (sessionId: string) => {
         ]).flat();
         setMessages(loadedMessages);
       } else {
-        // Backend has no record — restore from localStorage
+        // Backend has no record - restore from localStorage
         loadFromLocalStorage(sid);
       }
     } catch {
@@ -175,10 +175,10 @@ export const useChatMessages = (sessionId: string) => {
           return updated;
         });
       },
-    });
+    }, provider);
 
     stopRef.current = stop;
-  }, [isLoading, sessionId]);
+  }, [isLoading, sessionId, provider]);
 
   const setFeedback = useCallback((messageId: string, feedback: 'up' | 'down') => {
     setMessages(prev => prev.map(m =>

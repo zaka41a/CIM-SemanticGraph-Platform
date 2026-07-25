@@ -3,6 +3,7 @@ package com.cim.semanticgraph.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +20,15 @@ import java.util.Map;
 @RequestMapping("/system")
 @Tag(name = "System", description = "System metrics and health monitoring")
 public class SystemController {
+
+    @Value("${claude.api.key:}")
+    private String claudeApiKey;
+
+    @Value("${openai.api.key:}")
+    private String openaiApiKey;
+
+    @Value("${groq.api.key:}")
+    private String groqApiKey;
 
     @GetMapping("/metrics")
     @Operation(summary = "Get system metrics", description = "Get CPU, memory, and system metrics")
@@ -96,6 +106,13 @@ public class SystemController {
             health.put("uptime", ManagementFactory.getRuntimeMXBean().getUptime());
             health.put("memoryUsage", Math.round(memoryUsagePercent * 10.0) / 10.0);
 
+            // Report which API keys are configured (boolean only, never the value)
+            Map<String, Boolean> providers = new HashMap<>();
+            providers.put("claude", isConfigured(claudeApiKey));
+            providers.put("openai", isConfigured(openaiApiKey));
+            providers.put("groq", isConfigured(groqApiKey));
+            health.put("providers", providers);
+
             return ResponseEntity.ok(health);
         } catch (Exception e) {
             log.error("Error getting system health", e);
@@ -103,5 +120,9 @@ public class SystemController {
             health.put("error", e.getMessage());
             return ResponseEntity.ok(health);
         }
+    }
+
+    private static boolean isConfigured(String key) {
+        return key != null && !key.isBlank();
     }
 }

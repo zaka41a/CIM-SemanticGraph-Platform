@@ -57,7 +57,12 @@ public class GraphRAGService {
     private String cimNamespace;
 
     public GraphRAGResponse processQuery(String question, String sessionId) {
-        log.info("Processing GraphRAG query: {} for session: {}", question, sessionId);
+        return processQuery(question, sessionId, null);
+    }
+
+    public GraphRAGResponse processQuery(String question, String sessionId, String provider) {
+        log.info("Processing GraphRAG query: {} for session: {} (provider: {})",
+                question, sessionId, provider == null ? "default" : provider);
         long startTime = System.currentTimeMillis();
 
         try {
@@ -75,13 +80,13 @@ public class GraphRAGService {
             GraphRAGResponse response;
             if (relevantEntities.isEmpty() && sparqlContext.isEmpty()) {
                 log.warn("No relevant entities found for query");
-                response = buildFallbackResponse(question, startTime);
+                response = buildFallbackResponse(question, startTime, provider);
             } else {
                 log.debug("Step 3: Building LLM context");
                 String graphContext;
                 long subgraphSize = 0;
                 if (!sparqlContext.isEmpty() && relevantEntities.isEmpty()) {
-                    // SPARQL already has the answer — skip loading the full RDF model
+                    // SPARQL already has the answer - skip loading the full RDF model
                     graphContext = sparqlContext;
                     log.info("Using SPARQL-only context ({} chars)", graphContext.length());
                 } else {
@@ -99,9 +104,9 @@ public class GraphRAGService {
 
                 log.debug("Step 4: Querying LLM");
                 String answer;
-                if (groqService.isConfigured()) {
-                    log.info("Using Groq API for LLM query");
-                    answer = groqService.queryWithContext(question, graphContext);
+                if (groqService.isConfigured(provider)) {
+                    log.info("Using LLM provider '{}' for query", provider == null ? "default" : provider);
+                    answer = groqService.queryWithContext(question, graphContext, provider);
                 } else if (claudeAgentService.isConfigured()) {
                     log.info("Using Claude API for LLM query (Groq not configured)");
                     answer = claudeAgentService.queryWithContext(question, graphContext);
@@ -130,7 +135,7 @@ public class GraphRAGService {
                         .sources(relevantEntities)
                         .triplesRetrieved((int) subgraphSize)
                         .executionTimeMs(executionTime)
-                        .llmModel(llmModel)
+                        .llmModel(groqService.isConfigured(provider) ? groqService.modelFor(provider) : llmModel)
                         .inferenceUsed(true)
                         .confidence(calculateConfidence(relevantEntities.size(), subgraphSize))
                         .faithfulness(eval.faithfulness())
@@ -535,10 +540,12 @@ public class GraphRAGService {
         return (entityScore + tripleScore) / 2.0;
     }
 
-    private GraphRAGResponse buildFallbackResponse(String question, long startTime) {
+    private GraphRAGResponse buildFallbackResponse(String question, long startTime, String provider) {
         String fallbackAnswer;
-        if (groqService.isConfigured()) {
-            fallbackAnswer = groqService.simpleQuery(question);
+        String modelUsed = llmModel;
+        if (groqService.isConfigured(provider)) {
+            fallbackAnswer = groqService.simpleQuery(question, provider);
+            modelUsed = groqService.modelFor(provider);
         } else if (claudeAgentService.isConfigured()) {
             fallbackAnswer = claudeAgentService.queryWithContext(question, "No specific CIM graph context available.");
         } else {
@@ -552,7 +559,7 @@ public class GraphRAGService {
                 .sources(List.of())
                 .triplesRetrieved(0)
                 .executionTimeMs(System.currentTimeMillis() - startTime)
-                .llmModel(llmModel)
+                .llmModel(modelUsed)
                 .confidence(0.3)
                 .build();
     }
@@ -566,7 +573,7 @@ public class GraphRAGService {
         boolean wantsLines = q.contains("line") || q.contains("transmission") || q.contains("ligne");
         boolean wantsSubstations = q.contains("substation") || q.contains("poste") || q.contains("umspann");
         boolean wantsTransformers = q.contains("transform");
-        // wantsAll only when NO specific type is mentioned — prevents fetching all categories for e.g. "total generation"
+        // wantsAll only when NO specific type is mentioned - prevents fetching all categories for e.g. "total generation"
         boolean specificTypeDetected = wantsGenerators || wantsLoads || wantsLines || wantsSubstations || wantsTransformers;
         boolean wantsAll = !specificTypeDetected &&
                            (q.contains("all") || q.contains("total") || q.contains("every") ||
@@ -995,9 +1002,9 @@ public class GraphRAGService {
             }
 
             if (!lfResult.isConverged()) {
-                answer.append("⚠️ **Warning**: Load flow calculation did not converge.\n\n");
+                answer.append("**Warning**: Load flow calculation did not converge.\n\n");
             } else {
-                answer.append("✅ **Converged** in ").append(lfResult.getIterations())
+                answer.append("**Converged** in ").append(lfResult.getIterations())
                       .append(" iterations (").append(lfResult.getExecutionTimeMs()).append(" ms)\n\n");
             }
 
@@ -1024,7 +1031,7 @@ public class GraphRAGService {
 
                 if (targetBus.isPresent()) {
                     var bus = targetBus.get();
-                    answer.append("### 🎯 Target Bus Details: ").append(bus.getBusName() != null ? bus.getBusName() : bus.getBusId()).append("\n\n");
+                    answer.append("### Target Bus Details: ").append(bus.getBusName() != null ? bus.getBusName() : bus.getBusId()).append("\n\n");
                     answer.append("| Property | Value |\n");
                     answer.append("|----------|-------|\n");
                     answer.append("| **Bus ID** | ").append(bus.getBusId()).append(" |\n");
@@ -1037,9 +1044,9 @@ public class GraphRAGService {
                     answer.append("| **Reactive Power (Q)** | ").append(String.format("%.2f MVAr", bus.getReactivePowerMvar())).append(" |\n");
                     answer.append("| **Generation** | ").append(String.format("%.2f MW / %.2f MVAr", bus.getGenerationMw(), bus.getGenerationMvar())).append(" |\n");
                     answer.append("| **Load** | ").append(String.format("%.2f MW / %.2f MVAr", bus.getLoadMw(), bus.getLoadMvar())).append(" |\n");
-                    answer.append("| **Status** | ").append(bus.isWithinLimits() ? "✅ OK" : "⚠️ Violation").append(" |\n\n");
+                    answer.append("| **Status** | ").append(bus.isWithinLimits() ? "OK" : "Violation").append(" |\n\n");
                 } else {
-                    answer.append("### ⚠️ Bus Not Found\n\n");
+                    answer.append("### Bus Not Found\n\n");
                     answer.append("Bus '").append(targetBusId).append("' was not found in the network.\n\n");
                     answer.append("**Available buses in the network:**\n");
                     lfResult.getBusResults().stream()
@@ -1070,7 +1077,7 @@ public class GraphRAGService {
             }
 
             if (lfResult.getViolations() != null && !lfResult.getViolations().isEmpty()) {
-                answer.append("### ⚠️ Violations Detected\n");
+                answer.append("### Violations Detected\n");
                 for (var violation : lfResult.getViolations()) {
                     answer.append("- **").append(violation.getType()).append("** (")
                           .append(violation.getSeverity()).append("): ")
@@ -1078,7 +1085,7 @@ public class GraphRAGService {
                 }
                 answer.append("\n");
             } else {
-                answer.append("### ✅ No Violations\n");
+                answer.append("### No Violations\n");
                 answer.append("All voltages and branch loadings are within limits.\n\n");
             }
 
@@ -1115,7 +1122,7 @@ public class GraphRAGService {
         } catch (Exception e) {
             log.error("Error in load flow calculation", e);
             return GraphRAGResponse.builder()
-                    .answer("❌ Error calculating load flow: " + e.getMessage())
+                    .answer("Error calculating load flow: " + e.getMessage())
                     .question(question)
                     .graphContext("Load flow calculation failed")
                     .sources(List.of())

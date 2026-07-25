@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useChatMessages } from '@/hooks/useChatMessages';
 
-// Mock apiService — getChatHistory resolves with empty array (no race with sendMessage)
+// Mock apiService - getChatHistory resolves with empty array (no race with sendMessage)
 vi.mock('@/services/api', () => ({
   apiService: {
     getChatHistory: vi.fn().mockResolvedValue([]),

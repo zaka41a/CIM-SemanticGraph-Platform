@@ -61,6 +61,22 @@ interface IndexingStatus {
   status: string;
 }
 
+interface ProviderKeys {
+  claude: boolean;
+  openai: boolean;
+  groq: boolean;
+}
+
+interface SystemHealth {
+  status: string;
+  providers?: ProviderKeys;
+}
+
+interface PowerflowHealth {
+  status: string;
+  pandapowerAvailable?: boolean;
+}
+
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
 const SectionHeader = ({ icon: Icon, title, subtitle, badge }: {
@@ -217,7 +233,8 @@ const Settings = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [graphStats, setGraphStats] = useState<GraphStats | null>(null);
   const [indexingStatus, setIndexingStatus] = useState<IndexingStatus | null>(null);
-  const [loadflowHealth, setLoadflowHealth] = useState<any>(null);
+  const [loadflowHealth, setLoadflowHealth] = useState<PowerflowHealth | null>(null);
+  const [providers, setProviders] = useState<ProviderKeys | null>(null);
   const [services, setServices] = useState<ServiceCheck[]>([]);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
@@ -237,20 +254,24 @@ const Settings = () => {
     setRefreshing(true);
     try {
       const t0 = Date.now();
-      const [stats, qdrant, lf] = await Promise.allSettled([
+      const [stats, qdrant, lf, sys] = await Promise.allSettled([
         apiService.getStatistics(),
         apiService.getIndexingStatus(),
         apiService.getPowerflowHealth(),
+        apiService.getSystemHealth(),
       ]);
       const pingMs = Date.now() - t0;
 
-      const g = stats.status === 'fulfilled' ? stats.value as any : null;
+      const g = stats.status === 'fulfilled' ? stats.value as GraphStats : null;
       const q = qdrant.status === 'fulfilled' ? qdrant.value : null;
-      const l = lf.status === 'fulfilled' ? lf.value : null;
+      const l = lf.status === 'fulfilled' ? lf.value as PowerflowHealth : null;
+      const s = sys.status === 'fulfilled' ? sys.value as SystemHealth : null;
+      const keys = s?.providers ?? null;
 
       setGraphStats(g);
       setIndexingStatus(q);
       setLoadflowHealth(l);
+      setProviders(keys);
       setLastRefresh(new Date());
 
       setServices([
@@ -295,29 +316,33 @@ const Settings = () => {
           ping: l ? Math.round(pingMs * 0.5) : undefined,
         },
         {
-          name: 'Claude AI Agent',
-          label: 'claude',
+          name: 'GPT-5.5 (KI Connect NRW)',
+          label: 'llm',
           icon: Brain,
-          status: 'UP',
-          detail: 'claude-sonnet-4-6 · Tool calling · SSE streaming',
-          extra: 'Max 5 tool rounds · SPARQL + Load Flow + Graph tools',
+          status: keys === null ? 'LOADING' : keys.groq ? 'UP' : 'DOWN',
+          detail: keys?.groq
+            ? 'gpt-5.5 · OpenAI-compatible · GraphRAG answers'
+            : 'LLM API key not configured',
+          extra: 'chat.kiconnect.nrw · SSE streaming',
         },
         {
-          name: 'Groq (LLM Fallback)',
-          label: 'groq',
+          name: 'Claude Agent (optional)',
+          label: 'claude',
           icon: Sparkles,
-          status: 'UP',
-          detail: 'llama-3.3-70b-versatile · Fast inference',
-          extra: 'GraphRAG fallback when Claude not configured',
+          status: keys === null ? 'LOADING' : keys.claude ? 'UP' : 'DEGRADED',
+          detail: keys?.claude
+            ? 'Anthropic native tool-calling agent enabled'
+            : 'Not configured (optional Anthropic tool-calling agent)',
+          extra: 'Enable by setting CLAUDE_API_KEY',
         },
         {
           name: 'OpenAI Embeddings',
           label: 'openai',
           icon: FlaskConical,
-          status: (q?.indexedEntities ?? 0) > 0 ? 'UP' : 'DEGRADED',
-          detail: (q?.indexedEntities ?? 0) > 0
-            ? `text-embedding-3-small · 1536 dim · ${q?.indexedEntities} vectors`
-            : 'Embeddings not yet generated or API key missing',
+          status: keys === null ? 'LOADING' : keys.openai ? 'UP' : 'DEGRADED',
+          detail: keys?.openai
+            ? `text-embedding-3-small · 1536 dim${(q?.indexedEntities ?? 0) > 0 ? ` · ${q?.indexedEntities} vectors` : ''}`
+            : 'API key not configured · keyword SPARQL fallback active',
           extra: 'Used for semantic search · falls back to keyword SPARQL',
         },
       ]);
@@ -438,7 +463,7 @@ const Settings = () => {
       {/* ── Main grid ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-        {/* LEFT — Services + Configuration */}
+        {/* LEFT - Services + Configuration */}
         <div className="xl:col-span-2 space-y-6">
 
           {/* Infrastructure Services */}
@@ -478,17 +503,29 @@ const Settings = () => {
               </div>
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">AI & Vector</h3>
-                <ConfigEntry label="Claude Model" value="claude-sonnet-4-6" />
-                <ConfigEntry label="Groq Model" value="llama-3.3-70b-versatile" />
+                <ConfigEntry label="LLM Model" value="gpt-5.5" />
+                <ConfigEntry label="LLM Endpoint" value="chat.kiconnect.nrw" />
                 <ConfigEntry label="Embedding Model" value="text-embedding-3-small" />
                 <ConfigEntry label="Vector Dimensions" value="1536" />
                 <ConfigEntry label="Similarity Threshold" value="0.35" />
               </div>
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">API Keys Status</h3>
-                <ConfigEntry label="Claude API Key" value="Configured ✓" status="ok" />
-                <ConfigEntry label="OpenAI API Key" value="Configured ✓" status="ok" />
-                <ConfigEntry label="Groq API Key" value="Configured ✓" status="ok" />
+                <ConfigEntry
+                  label="LLM Key (KI Connect)"
+                  value={providers === null ? 'Checking…' : providers.groq ? 'Configured' : 'Not configured'}
+                  status={providers?.groq ? 'ok' : 'missing'}
+                />
+                <ConfigEntry
+                  label="OpenAI Key (embeddings)"
+                  value={providers === null ? 'Checking…' : providers.openai ? 'Configured' : 'Not configured'}
+                  status={providers?.openai ? 'ok' : 'missing'}
+                />
+                <ConfigEntry
+                  label="Claude Key (optional)"
+                  value={providers === null ? 'Checking…' : providers.claude ? 'Configured' : 'Not set'}
+                  status={providers?.claude ? 'ok' : 'missing'}
+                />
               </div>
               <div>
                 <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">GraphRAG</h3>
@@ -502,7 +539,7 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* RIGHT — Stats + Actions */}
+        {/* RIGHT - Stats + Actions */}
         <div className="space-y-6">
 
           {/* Knowledge Graph Stats */}
@@ -517,7 +554,7 @@ const Settings = () => {
               <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-accent-500/10 to-accent-600/5 border border-accent-500/20">
                 <p className="text-xs text-neutral-500 mb-1">Total RDF Triples</p>
                 <p className="text-4xl font-black text-white tracking-tight">
-                  {graphStats?.totalTriples?.toLocaleString() ?? '–'}
+                  {graphStats?.totalTriples?.toLocaleString() ?? '-'}
                 </p>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -554,7 +591,7 @@ const Settings = () => {
               <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-violet-500/10 to-violet-600/5 border border-violet-500/20">
                 <p className="text-xs text-neutral-500 mb-1">Indexed Entities</p>
                 <p className="text-4xl font-black text-white tracking-tight">
-                  {indexingStatus?.indexedEntities?.toLocaleString() ?? '–'}
+                  {indexingStatus?.indexedEntities?.toLocaleString() ?? '-'}
                 </p>
                 <p className="text-xs text-neutral-400 mt-1.5">
                   {indexingStatus?.collectionName ?? 'cim_entities'} · cosine distance
@@ -565,7 +602,7 @@ const Settings = () => {
               <StatItem label="Batch Size" value="100 pts/req" />
               <StatItem
                 label="Status"
-                value={indexingStatus?.status ?? '–'}
+                value={indexingStatus?.status ?? '-'}
                 color={indexingStatus?.qdrantAvailable ? 'text-emerald-400' : 'text-red-400'}
               />
             </div>

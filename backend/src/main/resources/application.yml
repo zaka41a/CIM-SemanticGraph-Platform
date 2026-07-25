@@ -104,14 +104,26 @@ graphrag:
 claude:
   api:
     key: ${CLAUDE_API_KEY:}
-    model: ${CLAUDE_MODEL:claude-sonnet-4-6}
+    model: ${CLAUDE_MODEL:claude-fable-5}
     max-tokens: 4096
   agent:
     max-tool-rounds: 5
 
+# Selectable OpenAI-compatible LLM providers. The GraphRAG chat can pick one per request.
+llm:
+  default-provider: ${LLM_DEFAULT_PROVIDER:gpt5}
+
+# KI Connect NRW (gpt-5.5) - primary provider
+kiconnect:
+  api:
+    base-url: ${KICONNECT_BASE_URL:https://chat.kiconnect.nrw/api/v1}
+    key: ${KICONNECT_API_KEY:}
+    model: ${KICONNECT_MODEL:gpt-5.5}
+
+# Groq (llama) - secondary provider, OpenAI-compatible
 groq:
   api:
-    base-url: https://api.groq.com/openai/v1
+    base-url: ${GROQ_BASE_URL:https://api.groq.com/openai/v1}
     key: ${GROQ_API_KEY:}
     model: ${GROQ_MODEL:llama-3.3-70b-versatile}
   request:
@@ -124,7 +136,7 @@ groq:
       You have access to a semantic knowledge graph containing information about electrical equipment,
       substations, transmission lines, generators, loads and their relationships.
 
-      STRICT RULES — follow exactly:
+      STRICT RULES - follow exactly:
       1. Answer ONLY from the graph context provided. Never invent, estimate or assume data not present.
       2. If the context does not contain enough data to answer accurately, respond with:
          "I don't have enough data in the knowledge graph to answer this question accurately."
@@ -132,7 +144,7 @@ groq:
       3. For numeric aggregations (total MW, count, sum), use only the values explicitly in the context.
          Do NOT extrapolate from a partial list.
       4. Always cite the exact equipment IDs and names from the context.
-      5. Never say "approximately", "likely", "probably" or "estimated" — be exact or say you don't know.
+      5. Never say "approximately", "likely", "probably" or "estimated" - be exact or say you don't know.
 
       Format responses in clean markdown.
 
@@ -222,7 +234,6 @@ springdoc:
 
 app:
   name: CIM-SemanticGraph-Platform
-  version: 1.0.0
   description: Platform for CIM Semantic Knowledge Graphs with GraphRAG and LLM Integration
   cors:
     allowed-origins:
