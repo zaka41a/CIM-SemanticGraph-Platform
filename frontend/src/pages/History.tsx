@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { apiService } from '@/services/api';
 import PageHeader from '@/components/PageHeader';
+import { useToast } from '@/components/Toast';
 
 interface ImportHistoryItem {
   id: string;
@@ -29,7 +30,7 @@ type SortDir = 'asc' | 'desc';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function formatFileSize(bytes: number): string {
-  if (!bytes) return '—';
+  if (!bytes) return '-';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -89,6 +90,7 @@ const StatCard = ({
 // ── Main Component ─────────────────────────────────────────────────────────────
 const History = () => {
   const navigate = useNavigate();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [history, setHistory] = useState<ImportHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -174,8 +176,9 @@ const History = () => {
       await apiService.deleteImportHistory(id);
       setDeleteConfirm(null);
       fetchHistory(true);
+      toastSuccess('History item deleted');
     } catch {
-      alert('Failed to delete history item');
+      toastError('Failed to delete the history item');
     }
   };
 
@@ -185,8 +188,9 @@ const History = () => {
     try {
       await apiService.rollbackImport(id);
       fetchHistory(true);
+      toastSuccess('Import rolled back');
     } catch (err: any) {
-      alert(err?.response?.data?.error || err?.message || 'Rollback failed');
+      toastError(err?.response?.data?.error || err?.message || 'Rollback failed');
     } finally {
       setRollingBack(null);
     }
@@ -494,7 +498,7 @@ const History = () => {
                               </div>
                             </div>
                           ) : (
-                            <span className="text-neutral-600 text-sm">—</span>
+                            <span className="text-neutral-600 text-sm">-</span>
                           )}
                         </td>
 
@@ -506,14 +510,14 @@ const History = () => {
                               {item.duration}s
                             </div>
                           ) : (
-                            <span className="text-neutral-600 text-sm">—</span>
+                            <span className="text-neutral-600 text-sm">-</span>
                           )}
                         </td>
 
                         {/* Actions */}
                         <td className="px-5 py-4">
                           <div className="flex items-center justify-center gap-1">
-                            {/* Rollback button — only for success imports with rollback available */}
+                            {/* Rollback button - only for success imports with rollback available */}
                             {item.status === 'success' && item.rollbackAvailable && (
                               rollbackConfirm === item.id ? (
                                 <div className="flex items-center gap-1">
@@ -535,7 +539,7 @@ const History = () => {
                                   onClick={() => setRollbackConfirm(item.id)}
                                   disabled={rollingBack === item.id}
                                   className="p-2 hover:bg-orange-500/15 rounded-xl transition-all group/rb disabled:opacity-50"
-                                  title="Rollback — remove these triples from the graph"
+                                  title="Rollback - remove these triples from the graph"
                                 >
                                   {rollingBack === item.id
                                     ? <RotateCcw size={15} className="text-orange-400 animate-spin" />

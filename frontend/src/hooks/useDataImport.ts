@@ -26,18 +26,13 @@ export const useDataImport = () => {
         response = await apiService.importCimData(file, format);
       }
       setResult(response);
-      
-      // Emit event to notify that a new file has been imported
-      // Wait a delay to let the backend update statistics
-      console.log('Import successful, dispatching refresh event in 1 second...');
+
+      // Notify the rest of the app after a short delay so the backend can update statistics
       setTimeout(() => {
-        console.log('Dispatching cim_data_imported event...');
-        const event = new CustomEvent('cim_data_imported', { 
-          detail: { importType, format, fileName: file.name } 
-        });
-        window.dispatchEvent(event);
-        console.log('Event dispatched:', event);
-      }, 1000); // 1 second delay to give the backend time to process
+        window.dispatchEvent(new CustomEvent('cim_data_imported', {
+          detail: { importType, format, fileName: file.name },
+        }));
+      }, 1000);
     } catch (err: any) {
       setError(err.message || 'Failed to import data');
     } finally {

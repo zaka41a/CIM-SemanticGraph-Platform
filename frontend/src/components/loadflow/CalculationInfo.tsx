@@ -75,7 +75,7 @@ export const CalculationInfo = ({
           <span className="text-sm font-semibold text-neutral-300">
             {timestamp
               ? new Date(timestamp.includes('Z') || timestamp.includes('+') ? timestamp : timestamp + 'Z').toLocaleTimeString()
-              : '—'}
+              : '-'}
           </span>
         </div>
       </div>

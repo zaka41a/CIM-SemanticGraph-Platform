@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, BarChart3, Activity, ArrowRight, ArrowUpDown, GitBranch, Map, Table2 } from 'lucide-react';
+import { useToast } from '@/components/Toast';
 import { LoadFlowHeader } from '@/components/loadflow/LoadFlowHeader';
 import { CalculationInfo } from '@/components/loadflow/CalculationInfo';
 import { LoadFlowStats } from '@/components/loadflow/LoadFlowStats';
@@ -8,23 +9,6 @@ import { ViolationsList } from '@/components/loadflow/ViolationsList';
 import { NetworkTopologyMap } from '@/components/loadflow/NetworkTopologyMap';
 import { useLoadFlow } from '@/hooks/useLoadFlow';
 import api from '@/services/api';
-
-interface BusResult {
-  busId: string;
-  busName: string;
-  busType: string;
-  voltageMagnitude: number;
-  voltageAngle: number;
-  voltageKv: number;
-  activePowerMw: number;
-  reactivePowerMvar: number;
-  generationMw: number;
-  generationMvar: number;
-  loadMw: number;
-  loadMvar: number;
-  withinLimits: boolean;
-  voltagePercentage: number;
-}
 
 interface BranchResult {
   branchId: string;
@@ -41,20 +25,6 @@ interface BranchResult {
   currentMagnitude: number;
   loadingPercentage: number;
   overloaded: boolean;
-}
-
-interface LoadFlowResponse {
-  converged: boolean;
-  iterations: number;
-  tolerance: number;
-  executionTimeMs: number;
-  timestamp: string;
-  calculationMethod: string;
-  busResults: BusResult[];
-  branchResults: BranchResult[];
-  statistics: any;
-  violations: any[];
-  targetBusId?: string;
 }
 
 // Inline BranchTable component
@@ -193,7 +163,7 @@ const BranchTable = ({ branches }: { branches: BranchResult[] }) => {
                       ? 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
                       : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                   }`}>
-                    {branch.overloaded ? 'OVERLOADED' : '✓ OK'}
+                    {branch.overloaded ? 'OVERLOADED' : 'OK'}
                   </span>
                 </td>
               </tr>
@@ -221,6 +191,7 @@ const LoadFlow = () => {
     isCalculating, results, error, calculateLoadFlow,
     selectedMethod, setSelectedMethod, availableMethods,
   } = useLoadFlow();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [exportingPDF, setExportingPDF] = useState(false);
 
   const handleExportPDF = async () => {
@@ -233,9 +204,9 @@ const LoadFlow = () => {
       link.download = `LoadFlow_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export PDF error:', err);
-      alert('Failed to generate PDF report');
+      toastSuccess('Load flow report downloaded');
+    } catch {
+      toastError('Failed to generate the PDF report');
     } finally {
       setExportingPDF(false);
     }

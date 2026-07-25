@@ -172,13 +172,13 @@ const Dashboard = () => {
         pandapower: pf.pandapowerAvailable ? 'UP' : 'DOWN',
         pandapowerDetail: pf.pandapowerAvailable
           ? 'Python power flow engine ready'
-          : 'Pandapower unavailable — DC solver only',
+          : 'Pandapower unavailable - DC solver only',
       }));
     } catch {
       setExternalHealth(prev => ({ ...prev, pandapower: 'DOWN', pandapowerDetail: 'Service unreachable' }));
     }
 
-    // LLM — proxy via system health
+    // LLM - proxy via system health
     try {
       const sys = await apiService.getSystemHealth();
       const llmUp = sys?.status === 'healthy' || sys?.status === 'degraded';
@@ -227,9 +227,8 @@ const Dashboard = () => {
       link.click();
       URL.revokeObjectURL(url);
       toastSuccess('PDF report downloaded successfully');
-    } catch (err) {
-      console.error('Export PDF error:', err);
-      toastError('Erreur lors de la génération du rapport PDF');
+    } catch {
+      toastError('Failed to generate the PDF report');
     } finally {
       setExportingPDF(false);
     }
@@ -259,64 +258,30 @@ const Dashboard = () => {
     }
   };
 
+  // Restrained, semantic palette: amber = headline, sky = structural elements,
+  // emerald = active/energised elements. No decorative rainbow.
+  const AMBER   = { gradient: 'from-accent-500 to-accent-600',  iconBg: 'bg-accent-500/20',  iconColor: 'text-accent-300' };
+  const SKY     = { gradient: 'from-sky-500 to-sky-600',        iconBg: 'bg-sky-500/20',      iconColor: 'text-sky-300' };
+  const EMERALD = { gradient: 'from-emerald-500 to-emerald-600', iconBg: 'bg-emerald-500/20', iconColor: 'text-emerald-300' };
+  const MUTED   = { gradient: 'from-neutral-500 to-neutral-600', iconBg: 'bg-neutral-500/20', iconColor: 'text-neutral-300' };
+
   const statCards = [
-    {
-      title: 'Total Triples',
-      value: stats?.totalTriples || 0,
-      icon: Database,
-      gradient: 'from-accent-500 to-accent-600',
-      iconBg: 'bg-accent-500/20',
-    },
-    {
-      title: 'Substations',
-      value: stats?.substations || 0,
-      icon: Network,
-      gradient: 'from-accent-500 to-accent-600',
-      iconBg: 'bg-accent-500/20',
-    },
-    {
-      title: 'Generators',
-      value: stats?.generators || 0,
-      icon: Zap,
-      gradient: 'from-emerald-500 to-emerald-600',
-      iconBg: 'bg-emerald-500/20',
-    },
-    {
-      title: 'Transmission Lines',
-      value: stats?.transmissionLines || 0,
-      icon: TrendingUp,
-      gradient: 'from-accent-500 to-accent-600',
-      iconBg: 'bg-accent-500/20',
-    },
-    {
-      title: 'Transformers',
-      value: stats?.transformers || 0,
-      icon: GitBranch,
-      gradient: 'from-violet-500 to-violet-600',
-      iconBg: 'bg-violet-500/20',
-    },
-    {
-      title: 'Loads',
-      value: stats?.loads || 0,
-      icon: Cpu,
-      gradient: 'from-cyan-500 to-cyan-600',
-      iconBg: 'bg-cyan-500/20',
-    },
-    {
-      title: 'Buses (Nodes)',
-      value: (stats as any)?.busbarSections || 0,
-      icon: Layers,
-      gradient: 'from-pink-500 to-pink-600',
-      iconBg: 'bg-pink-500/20',
-    },
+    { title: 'Total Triples',      value: stats?.totalTriples || 0,      icon: Database,   ...AMBER },
+    { title: 'Substations',        value: stats?.substations || 0,       icon: Network,    ...SKY },
+    { title: 'Generators',         value: stats?.generators || 0,        icon: Zap,        ...EMERALD },
+    { title: 'Transmission Lines', value: stats?.transmissionLines || 0, icon: TrendingUp, ...SKY },
+    { title: 'Transformers',       value: stats?.transformers || 0,      icon: GitBranch,  ...SKY },
+    { title: 'Loads',              value: stats?.loads || 0,             icon: Cpu,        ...EMERALD },
+    { title: 'Buses (Nodes)',      value: stats?.busbarSections || 0,    icon: Layers,     ...SKY },
     {
       title: 'Vector Indexed',
       value: serviceStatus?.indexedEntities || 0,
       icon: Search,
-      gradient: serviceStatus?.qdrantAvailable ? 'from-emerald-500 to-emerald-600' : 'from-neutral-500 to-neutral-600',
-      iconBg: serviceStatus?.qdrantAvailable ? 'bg-emerald-500/20' : 'bg-neutral-500/20',
+      ...(serviceStatus?.qdrantAvailable ? EMERALD : MUTED),
     },
   ];
+
+  const isEmpty = !loading && !error && !!stats && (stats.totalTriples || 0) === 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -369,6 +334,30 @@ const Dashboard = () => {
               <h4 className="font-semibold text-red-400 mb-1">Error Loading Dashboard</h4>
               <p className="text-sm text-red-300/90">{error}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isEmpty && (
+        <div className="relative overflow-hidden rounded-2xl border border-accent-500/20 bg-gradient-to-br from-primary-800/60 to-primary-900/60 p-6 animate-slide-up">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-accent-500/10 rounded-full blur-3xl" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="p-3 bg-accent-500/15 rounded-xl w-fit">
+              <Database size={26} className="text-accent-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-white">Your Knowledge Graph is empty</h3>
+              <p className="text-sm text-neutral-400 mt-1 max-w-xl">
+                Import a CIM dataset (CIM/XML, RDF or an Excel network model) to populate the graph.
+                Statistics, load-flow analysis and the GraphRAG assistant become available once data is loaded.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/import')}
+              className="flex items-center gap-2 px-5 py-2.5 bg-accent-500 hover:bg-accent-400 text-primary-950 font-semibold rounded-xl transition-all whitespace-nowrap"
+            >
+              <FileText size={16} /> Import Data
+            </button>
           </div>
         </div>
       )}
@@ -434,13 +423,13 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {stats && (
+      {stats && (stats.totalTriples || 0) > 0 && (
         <div className="card">
           <GraphVisualization />
         </div>
       )}
 
-      {/* Confirm modal (destructive action — kept as modal intentionally) */}
+      {/* Confirm modal (destructive action - kept as modal intentionally) */}
       <ConfirmModal
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}

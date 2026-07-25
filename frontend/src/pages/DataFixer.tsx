@@ -140,7 +140,7 @@ const DataFixer = () => {
           category: 'Bus Injections', severity: 'info',
           message: `${busInjectionResult.count} buses without generation or load`,
           count: busInjectionResult.count, affectedItems: busInjectionResult.items,
-          suggestedFix: 'These are likely transit buses — verify topology',
+          suggestedFix: 'These are likely transit buses - verify topology',
         });
       }
 
@@ -321,7 +321,7 @@ WHERE {
   const fixedCount   = fixes.filter(f => f.status === 'done').length;
   const pendingFixes = fixes.filter(f => f.status === 'pending');
 
-  // Data quality score (0–100)
+  // Data quality score (0-100)
   const score = analysisComplete
     ? Math.max(0, 100 - errorCount * 20 - warningCount * 10)
     : null;
@@ -536,7 +536,7 @@ WHERE {
                         )}
                         {fix.status === 'error' && (
                           <div className="flex items-center gap-2 text-xs text-red-400">
-                            <XCircle size={14} /> Failed — check backend logs
+                            <XCircle size={14} /> Failed - check backend logs
                           </div>
                         )}
                         {fix.status === 'applying' && (

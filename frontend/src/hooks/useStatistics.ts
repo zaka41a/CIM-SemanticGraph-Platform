@@ -31,25 +31,11 @@ export const useStatistics = (autoRefresh: boolean = true, interval: number = 10
     }
   }, [autoRefresh, interval, loadStatistics]);
 
-  // Listen for data import events to refresh immediately
+  // Refresh immediately when data is imported elsewhere in the app
   useEffect(() => {
-    const handleDataImport = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      console.log('📊 useStatistics: Data import event received, refreshing statistics...', customEvent.detail);
-      // Refresh immediately
-      loadStatistics().then(() => {
-        console.log('📊 useStatistics: Statistics refreshed successfully');
-      }).catch((err) => {
-        console.error('📊 useStatistics: Error refreshing statistics:', err);
-      });
-    };
-
-    console.log('📊 useStatistics: Registering event listener for', DATA_IMPORT_EVENT);
+    const handleDataImport = () => { loadStatistics(); };
     window.addEventListener(DATA_IMPORT_EVENT, handleDataImport);
-    return () => {
-      console.log('📊 useStatistics: Removing event listener');
-      window.removeEventListener(DATA_IMPORT_EVENT, handleDataImport);
-    };
+    return () => window.removeEventListener(DATA_IMPORT_EVENT, handleDataImport);
   }, [loadStatistics]);
 
   return {

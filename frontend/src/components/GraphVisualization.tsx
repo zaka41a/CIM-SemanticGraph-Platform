@@ -170,7 +170,7 @@ const NodeInfoPanel = ({ node, onClose, loadFlowMode }: {
             <div className="flex justify-between">
               <span className="text-neutral-500">Status</span>
               <span className={node.withinLimits ? 'text-emerald-400' : 'text-red-400'}>
-                {node.withinLimits ? '✓ Normal' : '⚠ Violation'}
+                {node.withinLimits ? 'Normal' : 'Violation'}
               </span>
             </div>
           </>

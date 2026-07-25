@@ -3,29 +3,29 @@ import { X, AlertTriangle, CheckCircle2, ArrowRight, Upload } from 'lucide-react
 
 // The canonical keys that the platform understands
 const CANONICAL_OPTIONS = [
-  { value: '', label: '— skip this column —' },
-  { value: 'id',         label: 'id — unique identifier' },
-  { value: 'name',       label: 'name — entity name' },
-  { value: 'region',     label: 'region — geographic region' },
-  { value: 'voltage',    label: 'voltage — nominal voltage (kV)' },
-  { value: 'substation', label: 'substation — parent substation' },
-  { value: 'bus',        label: 'bus — connected bus' },
-  { value: 'from',       label: 'from — from-bus (lines)' },
-  { value: 'to',         label: 'to — to-bus (lines)' },
-  { value: 'r',          label: 'r — resistance (Ω)' },
-  { value: 'x',          label: 'x — reactance (Ω)' },
-  { value: 'length',     label: 'length — line length (km)' },
-  { value: 'hv_bus',     label: 'hv_bus — high-voltage bus (transformers)' },
-  { value: 'lv_bus',     label: 'lv_bus — low-voltage bus (transformers)' },
-  { value: 'rated_s',    label: 'rated_s — rated apparent power (MVA)' },
-  { value: 'max_p',      label: 'max_p — max active power (MW)' },
-  { value: 'min_p',      label: 'min_p — min active power (MW)' },
-  { value: 'p',          label: 'p — active power (MW)' },
-  { value: 'q',          label: 'q — reactive power (MVAr)' },
+  { value: '', label: '- skip this column -' },
+  { value: 'id',         label: 'id - unique identifier' },
+  { value: 'name',       label: 'name - entity name' },
+  { value: 'region',     label: 'region - geographic region' },
+  { value: 'voltage',    label: 'voltage - nominal voltage (kV)' },
+  { value: 'substation', label: 'substation - parent substation' },
+  { value: 'bus',        label: 'bus - connected bus' },
+  { value: 'from',       label: 'from - from-bus (lines)' },
+  { value: 'to',         label: 'to - to-bus (lines)' },
+  { value: 'r',          label: 'r - resistance (Ω)' },
+  { value: 'x',          label: 'x - reactance (Ω)' },
+  { value: 'length',     label: 'length - line length (km)' },
+  { value: 'hv_bus',     label: 'hv_bus - high-voltage bus (transformers)' },
+  { value: 'lv_bus',     label: 'lv_bus - low-voltage bus (transformers)' },
+  { value: 'rated_s',    label: 'rated_s - rated apparent power (MVA)' },
+  { value: 'max_p',      label: 'max_p - max active power (MW)' },
+  { value: 'min_p',      label: 'min_p - min active power (MW)' },
+  { value: 'p',          label: 'p - active power (MW)' },
+  { value: 'q',          label: 'q - reactive power (MVAr)' },
 ];
 
 const SHEET_TYPE_OPTIONS = [
-  { value: '',            label: '— skip this sheet —' },
+  { value: '',            label: '- skip this sheet -' },
   { value: 'substation',  label: 'Substations' },
   { value: 'bus',         label: 'Buses / Nodes' },
   { value: 'line',        label: 'Transmission Lines' },
@@ -180,12 +180,12 @@ export const ExcelMappingModal = ({ analysis, onClose, onImport, isImporting }: 
                   </div>
                 )}
 
-                {/* Unknown columns — user must map */}
+                {/* Unknown columns - user must map */}
                 {sheet.unknownColumns.length > 0 && (
                   <div>
                     <p className="text-xs font-medium text-neutral-400 mb-2 flex items-center gap-1.5">
                       <AlertTriangle size={12} className="text-amber-400" />
-                      Unknown columns — please map:
+                      Unknown columns - please map:
                     </p>
                     <div className="space-y-2">
                       {sheet.unknownColumns.map(col => (
@@ -221,8 +221,8 @@ export const ExcelMappingModal = ({ analysis, onClose, onImport, isImporting }: 
         <div className="p-6 border-t border-primary-700/30 flex items-center justify-between gap-4">
           <p className="text-xs text-neutral-500">
             {hasUnresolved
-              ? '⚠️ Some sheets or columns are not fully mapped'
-              : '✅ Ready to import'}
+              ? 'Some sheets or columns are not fully mapped'
+              : 'Ready to import'}
           </p>
           <div className="flex gap-3">
             <button onClick={onClose} className="px-4 py-2 rounded-xl border border-primary-600 text-neutral-400 hover:text-white hover:border-primary-500 text-sm transition-colors">

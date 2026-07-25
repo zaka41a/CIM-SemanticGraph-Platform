@@ -44,7 +44,7 @@ export function storageSet<T>(key: string, data: T): void {
     const entry: StorageEntry<T> = { v: SCHEMA_VERSION, t: Date.now(), d: data };
     localStorage.setItem(key, JSON.stringify(entry));
   } catch {
-    // Storage quota exceeded or other write error — fail silently
+    // Storage quota exceeded or other write error - fail silently
   }
 }
 

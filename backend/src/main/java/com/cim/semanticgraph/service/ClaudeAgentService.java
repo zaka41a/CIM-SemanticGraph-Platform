@@ -21,7 +21,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * ClaudeAgentService — AI Agent powered by Claude claude-sonnet-4-6 with native Tool Calling.
+ * ClaudeAgentService - AI Agent powered by Claude Fable 5 with native Tool Calling.
  *
  * Architecture:
  *   Question → Claude (with 5 tools) → Tool loop (max N rounds) → Structured answer
@@ -55,7 +55,7 @@ public class ClaudeAgentService {
     @Value("${claude.api.key:}")
     private String claudeApiKey;
 
-    @Value("${claude.api.model:claude-sonnet-4-6}")
+    @Value("${claude.api.model:claude-fable-5}")
     private String claudeModel;
 
     @Value("${claude.api.max-tokens:4096}")
@@ -71,7 +71,7 @@ public class ClaudeAgentService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // ─────────────────────────────────────────────────────────────────────
-    // System prompt — expert power systems persona
+    // System prompt - expert power systems persona
     // ─────────────────────────────────────────────────────────────────────
     private static final String SYSTEM_PROMPT = """
             You are an expert power systems engineer and CIM (Common Information Model) analyst \
@@ -79,9 +79,9 @@ public class ClaudeAgentService {
             You have access to a live CIM Knowledge Graph containing electrical network data: \
             substations, transformers, transmission lines, generators, loads, and their topological connections.
 
-            IMPORTANT — DATA ACCESS RULES:
+            IMPORTANT - DATA ACCESS RULES:
             - The user message starts with [DATA CONTEXT: ...] giving you the triple count and available CIM types.
-            - If triple count > 0, data IS available — you MUST use sparql_query to retrieve it.
+            - If triple count > 0, data IS available - you MUST use sparql_query to retrieve it.
             - Base URI for data entities: http://cim-platform.com/network/
             - CIM namespace prefix: cim: = <http://iec.ch/TC57/CIM100#>
             - Common class queries:
@@ -92,7 +92,7 @@ public class ClaudeAgentService {
               * Loads:             SELECT ?s ?n WHERE { ?s a cim:EnergyConsumer . ?s cim:IdentifiedObject.name ?n }
               * Buses/Nodes:       SELECT ?s ?n WHERE { ?s a cim:BusbarSection . ?s cim:IdentifiedObject.name ?n }
 
-            STRATEGY — use tools in this order:
+            STRATEGY - use tools in this order:
             1. sparql_query      → ALWAYS start here using the class queries above (data IS available if context shows triples > 0)
             2. semantic_search   → find entities by meaning (only if Qdrant is indexed)
             3. get_entity_details → inspect a specific entity URI from SPARQL results
@@ -101,7 +101,7 @@ public class ClaudeAgentService {
 
             RULES:
             - Always use PREFIX cim: <http://iec.ch/TC57/CIM100#> and PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-            - Always base answers on data actually retrieved from tools — never guess
+            - Always base answers on data actually retrieved from tools - never guess
             - Format responses in clean markdown with tables where appropriate
             - If a SPARQL query returns no results, try a simpler query or different class name
             - Never say "I could not find" without first trying at least 2 different SPARQL queries
@@ -172,14 +172,14 @@ public class ClaudeAgentService {
             StringBuilder ctx = new StringBuilder();
             ctx.append("[DATA CONTEXT: Knowledge graph contains ").append(tripleCount).append(" RDF triples.");
             if (!types.isEmpty()) {
-                ctx.append(" CIM entity counts — ");
+                ctx.append(" CIM entity counts - ");
                 types.forEach(t -> {
                     String typeName = localName(t.get("type"));
                     String count    = t.get("count");
                     if (typeName != null && count != null) ctx.append(typeName).append(":").append(count).append(", ");
                 });
             }
-            ctx.append("Base URI: http://cim-platform.com/network/ — CIM namespace: ").append(cimNamespace).append("]\n\n");
+            ctx.append("Base URI: http://cim-platform.com/network/ - CIM namespace: ").append(cimNamespace).append("]\n\n");
             log.info("Data context built: {} triples, {} types", tripleCount, types.size());
             return ctx.toString();
         } catch (Exception e) {
@@ -198,10 +198,10 @@ public class ClaudeAgentService {
         // Pre-flight: check data exists in Fuseki
         String dataContext = buildDataContext();
         if (dataContext == null) {
-            log.warn("Knowledge graph is empty — returning no-data response");
+            log.warn("Knowledge graph is empty - returning no-data response");
             return GraphRAGResponse.builder()
                     .question(question)
-                    .answer("⚠️ The knowledge graph is empty. Please **import CIM data** first via the **Data Import** page, then try again.")
+                    .answer("The knowledge graph is empty. Please **import CIM data** first via the **Data Import** page, then try again.")
                     .sources(List.of())
                     .confidence(0.0)
                     .executionTimeMs(System.currentTimeMillis() - startTime)
@@ -225,7 +225,7 @@ public class ClaudeAgentService {
                             finalAnswer.set(t);
                         } else if ("error".equals(type) && map.get("message") instanceof String m) {
                             log.warn("Agent error event captured: {}", m);
-                            finalAnswer.set("❌ Agent error: " + m);
+                            finalAnswer.set("Agent error: " + m);
                         } else if ("done".equals(type)) {
                             if (map.get("sources") instanceof List<?> s) {
                                 s.forEach(u -> sources.add(String.valueOf(u)));
@@ -241,7 +241,7 @@ public class ClaudeAgentService {
         return GraphRAGResponse.builder()
                 .question(question)
                 .answer(finalAnswer.get().isBlank()
-                        ? "⚠️ The AI agent completed but produced no answer. Check backend logs for details. " +
+                        ? "The AI agent completed but produced no answer. Check backend logs for details. " +
                           "Tools used: " + (toolsUsed.isEmpty() ? "none" : String.join(", ", toolsUsed))
                         : finalAnswer.get())
                 .sources(sources)
@@ -340,7 +340,7 @@ public class ClaudeAgentService {
 
         // If all rounds exhausted without a text answer, force final synthesis
         if (finalAnswer.isEmpty() && !usedTools.isEmpty()) {
-            log.info("No text generated after {} tool rounds — forcing synthesis call", usedTools.size());
+            log.info("No text generated after {} tool rounds - forcing synthesis call", usedTools.size());
             messages.add(Map.of("role", "user", "content",
                     "Based on all the tool results above, please provide a clear and comprehensive answer to the original question. " +
                     "If data was found, summarize it. If not, explain what was tried."));
@@ -405,7 +405,7 @@ public class ClaudeAgentService {
         }
     }
 
-    /** Simple non-agentic Claude call with graph context — used as LLM fallback in GraphRAGService. */
+    /** Simple non-agentic Claude call with graph context - used as LLM fallback in GraphRAGService. */
     @SuppressWarnings("unchecked")
     public String queryWithContext(String question, String graphContext) {
         String userMsg = "Context from CIM Knowledge Graph:\n" + graphContext
@@ -421,7 +421,7 @@ public class ClaudeAgentService {
                 .findFirst().orElse("No text response from Claude.");
     }
 
-    /** Call Claude with no tools — forces a plain text response. */
+    /** Call Claude with no tools - forces a plain text response. */
     @SuppressWarnings("unchecked")
     private Map<String, Object> callClaudeNoTools(List<Map<String, Object>> messages) {
         try {
@@ -479,7 +479,7 @@ public class ClaudeAgentService {
         if (query.isBlank()) return "Error: 'query' parameter is required.";
 
         if (!qdrantService.isAvailable() || qdrantService.countPoints() == 0) {
-            return "Vector search not available — no entities indexed in Qdrant. " +
+            return "Vector search not available - no entities indexed in Qdrant. " +
                    "Try importing CIM data first, or use sparql_query instead.";
         }
 
@@ -582,7 +582,7 @@ public class ClaudeAgentService {
         }
 
         if (r.getViolations() != null && !r.getViolations().isEmpty()) {
-            sb.append(String.format("\n⚠ %d violation(s):\n", r.getViolations().size()));
+            sb.append(String.format("\n%d violation(s):\n", r.getViolations().size()));
             r.getViolations().forEach(v -> sb.append(String.format(
                     "  [%s] %s: actual=%.3f, limit=%.3f\n",
                     v.getSeverity(), v.getDescription(),

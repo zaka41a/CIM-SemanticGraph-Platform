@@ -39,7 +39,7 @@ export const BusTable = ({ buses, sortConfig, onSort }: BusTableProps) => {
     return 'bg-emerald-500';
   };
 
-  // Bar width: map pu value to a visual range (0.85–1.15 mapped to 0–100%)
+  // Bar width: map pu value to a visual range (0.85-1.15 mapped to 0-100%)
   const getVoltageBarWidth = (pu: number) => {
     const clamped = Math.max(0.85, Math.min(1.15, pu));
     return ((clamped - 0.85) / 0.3) * 100;
@@ -174,7 +174,7 @@ export const BusTable = ({ buses, sortConfig, onSort }: BusTableProps) => {
                           : 'bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse'
                       }`}
                     >
-                      {bus.withinLimits ? '✓ OK' : '✗ VIOLATION'}
+                      {bus.withinLimits ? 'OK' : 'VIOLATION'}
                     </span>
                   </td>
                 </tr>

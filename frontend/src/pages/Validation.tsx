@@ -209,7 +209,7 @@ const ViolationItem = ({
             {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} className="text-neutral-500 hover:text-white" />}
           </button>
           <button
-            onClick={e => { e.stopPropagation(); onAskClaude(`How do I fix this SHACL violation: [${violation.severity}] path: ${violation.path} — ${violation.message}${violation.focusNode ? ` (node: ${shortNode(violation.focusNode)})` : ''}`); }}
+            onClick={e => { e.stopPropagation(); onAskClaude(`How do I fix this SHACL violation: [${violation.severity}] path: ${violation.path} - ${violation.message}${violation.focusNode ? ` (node: ${shortNode(violation.focusNode)})` : ''}`); }}
             className="p-1.5 rounded-lg hover:bg-purple-500/20 transition-colors"
             title="Ask Claude"
           >

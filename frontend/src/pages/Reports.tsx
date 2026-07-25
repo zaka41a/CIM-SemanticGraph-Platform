@@ -156,7 +156,7 @@ const Reports = () => {
       icon: Network,
       color: 'accent',
       aiNarrated: true,
-      estimatedTime: '30–60 s',
+      estimatedTime: '30-60 s',
       filename: 'cim-full-report.pdf',
       generate: () => apiService.generateFullCIMReport(),
     },
@@ -168,7 +168,7 @@ const Reports = () => {
       icon: Zap,
       color: 'blue',
       aiNarrated: true,
-      estimatedTime: '15–30 s',
+      estimatedTime: '15-30 s',
       filename: 'loadflow-report.pdf',
       generate: () => apiService.generateLoadFlowReport(),
     },
@@ -180,7 +180,7 @@ const Reports = () => {
       icon: BarChart3,
       color: 'emerald',
       aiNarrated: false,
-      estimatedTime: '5–10 s',
+      estimatedTime: '5-10 s',
       filename: 'network-statistics-report.pdf',
       generate: () => apiService.generateNetworkStatisticsReport(),
     },
@@ -188,11 +188,11 @@ const Reports = () => {
       id: 'quality',
       title: 'Data Quality Report',
       description:
-        'Automated scan for missing impedances, unconnected equipment, power balance issues, and bus injection inconsistencies — with fix recommendations.',
+        'Automated scan for missing impedances, unconnected equipment, power balance issues, and bus injection inconsistencies - with fix recommendations.',
       icon: ShieldCheck,
       color: 'purple',
       aiNarrated: false,
-      estimatedTime: '10–20 s',
+      estimatedTime: '10-20 s',
       filename: 'data-quality-report.pdf',
       generate: () => apiService.generateDataQualityReport([]),
     },
@@ -269,7 +269,7 @@ const Reports = () => {
           <Sparkles size={14} className="text-accent-400" /> Tips
         </h3>
         <ul className="space-y-1.5 text-xs text-neutral-500 list-disc list-inside">
-          <li>The <span className="text-white">Full CIM Report</span> is the most comprehensive — it includes all other sections plus AI narrative.</li>
+          <li>The <span className="text-white">Full CIM Report</span> is the most comprehensive - it includes all other sections plus AI narrative.</li>
           <li>The <span className="text-white">Load Flow Report</span> runs a DC power flow automatically if no results are cached.</li>
           <li>The <span className="text-white">Data Quality Report</span> scans for the same issues as the Data Fixer page.</li>
           <li>PDFs download automatically to your browser's default download folder.</li>

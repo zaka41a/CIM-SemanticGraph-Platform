@@ -3,16 +3,16 @@ import Sidebar from './Sidebar';
 
 const PAGE_META: Record<string, { label: string; section?: string; color: string }> = {
   '/dashboard':   { label: 'Dashboard',        color: 'text-accent-400' },
-  '/import':      { label: 'Data Import',       section: 'Data Management', color: 'text-accent-400' },
-  '/validation':  { label: 'SHACL Validation',  section: 'Data Management', color: 'text-accent-400' },
-  '/data-fixer':  { label: 'Data Fixer',         section: 'Data Management', color: 'text-accent-400' },
-  '/diagnostics': { label: 'Diagnostics',        section: 'Data Management', color: 'text-accent-400' },
-  '/statistics':  { label: 'Statistics',         section: 'Analysis',        color: 'text-accent-400' },
-  '/load-flow':   { label: 'Load Flow',          section: 'Analysis',        color: 'text-accent-400' },
-  '/reports':     { label: 'Reports',            section: 'Analysis',        color: 'text-accent-400' },
-  '/chat':        { label: 'GraphRAG Chat',      section: 'AI & Query',      color: 'text-accent-400' },
-  '/sparql':      { label: 'SPARQL Editor',      section: 'AI & Query',      color: 'text-accent-400' },
-  '/history':     { label: 'History',            section: 'AI & Query',      color: 'text-accent-400' },
+  '/import':      { label: 'Data Import',       section: 'Import & Quality', color: 'text-accent-400' },
+  '/validation':  { label: 'SHACL Validation',  section: 'Import & Quality', color: 'text-accent-400' },
+  '/data-fixer':  { label: 'Data Fixer',         section: 'Import & Quality', color: 'text-accent-400' },
+  '/diagnostics': { label: 'Diagnostics',        section: 'Import & Quality', color: 'text-accent-400' },
+  '/statistics':  { label: 'Statistics',         section: 'Analysis',         color: 'text-accent-400' },
+  '/load-flow':   { label: 'Load Flow',          section: 'Analysis',         color: 'text-accent-400' },
+  '/reports':     { label: 'Reports',            section: 'Analysis',         color: 'text-accent-400' },
+  '/chat':        { label: 'GraphRAG Chat',      section: 'AI & Query',       color: 'text-accent-400' },
+  '/sparql':      { label: 'SPARQL Editor',      section: 'AI & Query',       color: 'text-accent-400' },
+  '/history':     { label: 'History',            section: 'AI & Query',       color: 'text-accent-400' },
   '/settings':    { label: 'Settings',           color: 'text-accent-400' },
 };
 

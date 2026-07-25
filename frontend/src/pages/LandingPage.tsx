@@ -11,11 +11,11 @@ const FEATURES = [
   {
     icon: Brain,
     title: 'GraphRAG AI Chat',
-    desc: 'Ask natural language questions. Claude AI reasons over the knowledge graph using 5 native tools — SPARQL, vector search, load flow, entity details, graph traversal.',
+    desc: 'Ask natural language questions. The AI agent reasons over the knowledge graph using 5 native tools - SPARQL, vector search, load flow, entity details, graph traversal.',
     accent: '#8b5cf6',
     glow: 'rgba(139,92,246,0.12)',
     route: '/chat',
-    tag: 'Claude claude-sonnet-4-6',
+    tag: 'GPT-5.5',
   },
   {
     icon: Zap,
@@ -83,7 +83,7 @@ const STEPS = [
     num: '03',
     icon: Brain,
     title: 'Get AI-powered answers',
-    desc: 'Claude AI reasons autonomously using tools: semantic search, SPARQL queries, power flow calculations and streams back precise answers.',
+    desc: 'The AI agent reasons autonomously using tools: semantic search, SPARQL queries, power flow calculations and streams back precise answers.',
     color: '#f59e0b',
   },
 ];
@@ -111,7 +111,7 @@ const DemoTerminal = () => (
       <div className="w-3 h-3 rounded-full bg-red-500/60" />
       <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
       <div className="w-3 h-3 rounded-full bg-green-500/60" />
-      <span className="ml-2 text-xs text-neutral-600 font-mono">Claude Agent — GraphRAG Chat</span>
+      <span className="ml-2 text-xs text-neutral-600 font-mono">Claude Agent - GraphRAG Chat</span>
     </div>
 
     {/* Chat content */}
@@ -149,11 +149,11 @@ const DemoTerminal = () => (
         <div className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>
           <span style={{ color: '#10b981', fontWeight: 'bold' }}>3 voltage violations</span> detected in the NRW network:
           <br />
-          <span style={{ color: '#f87171' }}>• Düsseldorf 220kV</span> — 0.87 pu (min 0.90)
+          <span style={{ color: '#f87171' }}>• Düsseldorf 220kV</span> - 0.87 pu (min 0.90)
           <br />
-          <span style={{ color: '#f87171' }}>• Köln 380kV</span> — 1.08 pu (max 1.05)
+          <span style={{ color: '#f87171' }}>• Köln 380kV</span> - 1.08 pu (max 1.05)
           <br />
-          <span style={{ color: '#fbbf24' }}>• Essen 110kV</span> — 0.91 pu (warning)
+          <span style={{ color: '#fbbf24' }}>• Essen 110kV</span> - 0.91 pu (warning)
           <br />
           <span style={{ color: 'rgba(255,255,255,0.4)' }}>Confidence: 94% · 3.2s</span>
         </div>
@@ -230,9 +230,6 @@ export default function LandingPage() {
             <span className="text-base font-black" style={{ color: '#f59e0b' }}>CIM</span>
             <span className="text-base font-bold text-white">Platform</span>
           </div>
-          <span className="hidden sm:block ml-2 text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>
-            v2.0
-          </span>
         </div>
 
         {/* Nav links */}
@@ -275,7 +272,7 @@ export default function LandingPage() {
             <p className="fade-up-2 text-base sm:text-lg text-neutral-400 mb-4 leading-relaxed lg:mx-0 mx-auto max-w-xl">
               Transform power system CIM data into an AI-queryable knowledge graph.
               Import CIM/RDF or Excel, run load flow, and interrogate your network
-              with <span style={{ color: '#8b5cf6' }}>Claude AI Agent</span> using natural language.
+              with <span style={{ color: '#8b5cf6' }}>AI Agent</span> using natural language.
             </p>
 
             {/* Mini feature pills */}
@@ -439,8 +436,6 @@ export default function LandingPage() {
           <div className="flex items-center gap-2">
             <img src="/logo.svg" alt="" className="h-5 w-5 object-contain opacity-50" />
             <span className="text-xs text-neutral-600">CIM Semantic Graph Platform</span>
-            <span className="text-neutral-800">·</span>
-            <span className="text-xs text-neutral-700">v2.0</span>
           </div>
         </div>
       </footer>

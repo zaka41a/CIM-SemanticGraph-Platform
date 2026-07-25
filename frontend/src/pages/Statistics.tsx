@@ -5,6 +5,7 @@ import {
   ToggleRight, Plug, Layers, Network, TrendingUp, Gauge
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import { useToast } from '@/components/Toast';
 import { useStatistics } from '@/hooks/useStatistics';
 import { apiService } from '@/services/api';
 
@@ -33,15 +34,13 @@ const AnimatedNumber = ({ value }: { value: number }) => {
   return <span>{displayed.toLocaleString()}</span>;
 };
 
-type IconColor = 'accent' | 'blue' | 'purple' | 'cyan' | 'emerald' | 'rose';
+// Restrained palette: amber = headline, blue = structural, emerald = active/energised.
+type IconColor = 'accent' | 'blue' | 'emerald';
 
 const iconColorMap: Record<IconColor, { bg: string; bgHover: string; text: string; glow: string }> = {
   accent:  { bg: 'bg-accent-500/20',  bgHover: 'group-hover:bg-accent-500/30',  text: 'text-accent-400',  glow: 'bg-accent-500/5' },
-  blue:    { bg: 'bg-blue-500/20',    bgHover: 'group-hover:bg-blue-500/30',    text: 'text-blue-400',    glow: 'bg-blue-500/5' },
-  purple:  { bg: 'bg-purple-500/20',  bgHover: 'group-hover:bg-purple-500/30',  text: 'text-purple-400',  glow: 'bg-purple-500/5' },
-  cyan:    { bg: 'bg-cyan-500/20',    bgHover: 'group-hover:bg-cyan-500/30',    text: 'text-cyan-400',    glow: 'bg-cyan-500/5' },
+  blue:    { bg: 'bg-sky-500/20',     bgHover: 'group-hover:bg-sky-500/30',     text: 'text-sky-400',     glow: 'bg-sky-500/5' },
   emerald: { bg: 'bg-emerald-500/20', bgHover: 'group-hover:bg-emerald-500/30', text: 'text-emerald-400', glow: 'bg-emerald-500/5' },
-  rose:    { bg: 'bg-rose-500/20',    bgHover: 'group-hover:bg-rose-500/30',    text: 'text-rose-400',    glow: 'bg-rose-500/5' },
 };
 
 const StatCard = ({
@@ -186,6 +185,7 @@ const ProgressRing = ({ value, max, label }: {
 
 const Statistics = () => {
   const { stats, loading, error, refresh } = useStatistics(true, 10000);
+  const { success: toastSuccess, error: toastError } = useToast();
   const [exportingPDF, setExportingPDF] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
@@ -205,8 +205,9 @@ const Statistics = () => {
       link.download = `CIM_Statistics_${new Date().toISOString().split('T')[0]}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export error:', err);
+      toastSuccess('Statistics report downloaded');
+    } catch {
+      toastError('Failed to generate the statistics report');
     } finally {
       setExportingPDF(false);
     }
@@ -223,7 +224,7 @@ const Statistics = () => {
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         icon={BarChart3}
-        iconColor="text-cyan-400"
+        iconColor="text-accent-400"
         title="Network Statistics"
         subtitle="Real-time overview of your CIM Knowledge Graph"
         actions={
@@ -260,10 +261,10 @@ const Statistics = () => {
             </div>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-primary-800/60 to-primary-900/60 rounded-xl p-5 border border-primary-700/30 hover:border-blue-500/30 transition-all duration-300">
+        <div className="bg-gradient-to-br from-primary-800/60 to-primary-900/60 rounded-xl p-5 border border-primary-700/30 hover:border-sky-500/30 transition-all duration-300">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-500/20 rounded-xl">
-              <CircleDot className="w-6 h-6 text-blue-400" />
+            <div className="p-3 bg-sky-500/20 rounded-xl">
+              <CircleDot className="w-6 h-6 text-sky-400" />
             </div>
             <div>
               <p className="text-3xl font-bold text-white">{stats?.totalSubjects?.toLocaleString() || 0}</p>
@@ -271,10 +272,10 @@ const Statistics = () => {
             </div>
           </div>
         </div>
-        <div className="bg-gradient-to-br from-primary-800/60 to-primary-900/60 rounded-xl p-5 border border-primary-700/30 hover:border-purple-500/30 transition-all duration-300">
+        <div className="bg-gradient-to-br from-primary-800/60 to-primary-900/60 rounded-xl p-5 border border-primary-700/30 hover:border-sky-500/30 transition-all duration-300">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-purple-500/20 rounded-xl">
-              <GitBranch className="w-6 h-6 text-purple-400" />
+            <div className="p-3 bg-sky-500/20 rounded-xl">
+              <GitBranch className="w-6 h-6 text-sky-400" />
             </div>
             <div>
               <p className="text-3xl font-bold text-white">{stats?.totalPredicates?.toLocaleString() || 0}</p>
@@ -319,14 +320,14 @@ const Statistics = () => {
           value={stats?.transmissionLines || 0}
           icon={Cable}
           subtitle="AC line segments"
-          color="cyan"
+          color="blue"
         />
         <StatCard
           title="Transformers"
           value={stats?.transformers || 0}
           icon={Gauge}
           subtitle="Power transformers"
-          color="purple"
+          color="blue"
         />
         <StatCard
           title="Generators"
@@ -347,8 +348,8 @@ const Statistics = () => {
         >
           <div>
             <StatRow label="Substations" value={stats?.substations || 0} icon={Factory} color="blue" />
-            <StatRow label="Transmission Lines" value={stats?.transmissionLines || 0} icon={Cable} color="cyan" />
-            <StatRow label="Power Transformers" value={stats?.transformers || 0} icon={Gauge} color="purple" />
+            <StatRow label="Transmission Lines" value={stats?.transmissionLines || 0} icon={Cable} color="blue" />
+            <StatRow label="Power Transformers" value={stats?.transformers || 0} icon={Gauge} color="blue" />
             <StatRow label="Generators" value={stats?.generators || 0} icon={Zap} color="emerald" />
             <StatRow label="Energy Consumers" value={stats?.loads || 0} icon={Plug} color="accent" />
           </div>
@@ -358,11 +359,11 @@ const Statistics = () => {
           title="Switching Equipment"
           subtitle="Protection & isolation"
           icon={ToggleRight}
-          color="purple"
+          color="blue"
         >
           <div>
-            <StatRow label="Circuit Breakers" value={stats?.breakers || 0} icon={ToggleRight} color="purple" />
-            <StatRow label="Disconnectors" value={stats?.disconnectors || 0} icon={ToggleRight} color="rose" />
+            <StatRow label="Circuit Breakers" value={stats?.breakers || 0} icon={ToggleRight} color="blue" />
+            <StatRow label="Disconnectors" value={stats?.disconnectors || 0} icon={ToggleRight} color="accent" />
             <StatRow label="Busbar Sections" value={stats?.busbarSections || 0} icon={TrendingUp} color="accent" />
           </div>
           <div className="mt-5 pt-4 border-t border-primary-700/30">
@@ -379,10 +380,10 @@ const Statistics = () => {
           title="Topology"
           subtitle="Network connectivity"
           icon={GitBranch}
-          color="cyan"
+          color="blue"
         >
           <div>
-            <StatRow label="Connectivity Nodes" value={stats?.connectivityNodes || 0} icon={CircleDot} color="cyan" />
+            <StatRow label="Connectivity Nodes" value={stats?.connectivityNodes || 0} icon={CircleDot} color="blue" />
             <StatRow label="Terminals" value={stats?.terminals || 0} icon={GitBranch} color="blue" />
             <StatRow label="Voltage Levels" value={stats?.voltageLevels || 0} icon={Layers} color="emerald" />
             <StatRow label="Base Voltages" value={stats?.baseVoltages || 0} icon={Activity} color="accent" />

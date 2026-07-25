@@ -31,14 +31,14 @@ interface Props {
 }
 
 function getBusColor(bus: BusResult): string {
-  if (!bus.withinLimits) return '#ef4444'; // red — violation
+  if (!bus.withinLimits) return '#ef4444'; // red - violation
   if (bus.voltagePercentage !== undefined) {
-    if (bus.voltagePercentage > 105 || bus.voltagePercentage < 95) return '#f59e0b'; // yellow — warning
+    if (bus.voltagePercentage > 105 || bus.voltagePercentage < 95) return '#f59e0b'; // yellow - warning
   }
-  if (bus.busType === 'SLACK') return '#8b5cf6'; // purple — slack bus
-  if (bus.generationMw > 0) return '#10b981'; // emerald — generator
-  if (bus.loadMw > 0) return '#3b82f6'; // blue — load
-  return '#6b7280'; // gray — neutral
+  if (bus.busType === 'SLACK') return '#8b5cf6'; // purple - slack bus
+  if (bus.generationMw > 0) return '#10b981'; // emerald - generator
+  if (bus.loadMw > 0) return '#3b82f6'; // blue - load
+  return '#6b7280'; // gray - neutral
 }
 
 function getBranchColor(branch: BranchResult): string {

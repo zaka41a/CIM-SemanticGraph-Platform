@@ -30,7 +30,7 @@ interface DiagnosticResult {
   warnings: Array<{ code: string; message: string }>;
 }
 
-// Compact ratio bar — shows X/total connected
+// Compact ratio bar - shows X/total connected
 const RatioBar = ({
   label, icon: Icon, connected, total, color,
 }: {
@@ -180,7 +180,7 @@ const Diagnostics = () => {
                 <div className="flex items-center gap-3 mb-0.5">
                   <span className={`w-2 h-2 rounded-full ${cfg.dot} animate-pulse`} />
                   <h2 className="text-lg font-bold text-white">
-                    {cfg.label} — {diagnostics.message}
+                    {cfg.label} - {diagnostics.message}
                   </h2>
                 </div>
                 <p className="text-xs text-neutral-500">
