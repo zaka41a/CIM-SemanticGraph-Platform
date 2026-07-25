@@ -16,3 +16,9 @@ examples/cim test/*.html
 backend/.env
 .env
 backend/.env
+
+# Runtime logs
+.logs/
+
+# Working notes (not part of the deliverable)
+ULTRA_PRO_PLAN.md
