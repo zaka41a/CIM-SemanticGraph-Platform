@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  CIM SemanticGraph Platform — Development Startup Script
+#  CIM SemanticGraph Platform - Development Startup Script
 #  Usage:
 #    ./dev.sh           → start all services
 #    ./dev.sh --infra   → infrastructure only (Fuseki + Qdrant)
@@ -46,9 +46,9 @@ START_FRONTEND=true
 # =============================================================================
 
 log()     { echo -e "${BOLD}${BLUE}[CIM]${RESET} $*"; }
-success() { echo -e "${GREEN}  ✓${RESET} $*"; }
-warn()    { echo -e "${YELLOW}  ⚠${RESET} $*"; }
-error()   { echo -e "${RED}  ✗${RESET} $*"; }
+success() { echo -e "${GREEN}  [ok]${RESET} $*"; }
+warn()    { echo -e "${YELLOW}  [!]${RESET} $*"; }
+error()   { echo -e "${RED}  [x]${RESET} $*"; }
 header()  { echo -e "\n${BOLD}${CYAN}━━━ $* ━━━${RESET}"; }
 
 usage() {
@@ -97,7 +97,7 @@ show_status() {
   check_port $PORT_FRONTEND  && success "Frontend    → http://localhost:$PORT_FRONTEND"  || warn "Frontend    → NOT running"
 }
 
-# Docker Compose wrapper — supports both v1 (docker-compose) and v2 (docker compose)
+# Docker Compose wrapper - supports both v1 (docker-compose) and v2 (docker compose)
 docker_compose() {
   if docker compose version &>/dev/null 2>&1; then
     docker compose "$@"
@@ -109,7 +109,7 @@ docker_compose() {
   fi
 }
 
-# Parse args — AFTER function definitions
+# Parse args - AFTER function definitions
 for arg in "$@"; do
   case $arg in
     --infra)    START_POWERFLOW=false; START_BACKEND=false; START_FRONTEND=false ;;
@@ -145,7 +145,7 @@ check_prerequisites() {
 
   # Check Docker is running
   if ! docker info &>/dev/null; then
-    error "Docker daemon not running — start Docker Desktop"
+    error "Docker daemon not running - start Docker Desktop"
     missing=true
   fi
 
@@ -166,26 +166,26 @@ check_prerequisites() {
   source_env
 
   if [ -n "${CLAUDE_API_KEY:-}" ] && [[ "${CLAUDE_API_KEY:-}" != "your-"* ]]; then
-    success "Claude API key ✓"
+    success "Claude API key"
   else
-    warn "Claude API key not set — AI Agent will be disabled"
+    warn "Claude API key not set - AI Agent will be disabled"
   fi
 
   if [ -n "${OPENAI_API_KEY:-}" ] && [[ "${OPENAI_API_KEY:-}" != "your-"* ]]; then
-    success "OpenAI API key ✓"
+    success "OpenAI API key"
   else
-    warn "OpenAI API key not set — vector embeddings will use fallback"
+    warn "OpenAI API key not set - vector embeddings will use fallback"
   fi
 
   if [ -n "${GROQ_API_KEY:-}" ] && [[ "${GROQ_API_KEY:-}" != "your-"* ]]; then
-    success "Groq API key ✓"
+    success "Groq API key"
   else
-    warn "Groq API key not set — LLM fallback disabled"
+    warn "Groq API key not set - LLM fallback disabled"
   fi
 }
 
 # =============================================================================
-# Step 1 — Infrastructure (Fuseki + Qdrant)
+# Step 1 - Infrastructure (Fuseki + Qdrant)
 # =============================================================================
 
 start_infrastructure() {
@@ -212,7 +212,7 @@ start_infrastructure() {
 }
 
 # =============================================================================
-# Step 2 — Powerflow Service (Python)
+# Step 2 - Powerflow Service (Python)
 # =============================================================================
 
 start_powerflow() {
@@ -257,7 +257,7 @@ start_powerflow() {
 }
 
 # =============================================================================
-# Step 3 — Spring Boot Backend
+# Step 3 - Spring Boot Backend
 # =============================================================================
 
 start_backend() {
@@ -283,7 +283,7 @@ start_backend() {
 
   save_pid "BACKEND" $!
 
-  wait_for_http "http://localhost:$PORT_BACKEND/actuator/health" "Backend" 120 \
+  wait_for_http "http://localhost:$PORT_BACKEND/api/actuator/health" "Backend" 120 \
     || { error "Backend failed. Check: tail -f $LOG_DIR/backend.log"; exit 1; }
 
   success "Backend ready    → logs: $LOG_DIR/backend.log"
@@ -291,7 +291,7 @@ start_backend() {
 }
 
 # =============================================================================
-# Step 4 — Frontend (React + Vite)
+# Step 4 - Frontend (React + Vite)
 # =============================================================================
 
 start_frontend() {
@@ -301,7 +301,7 @@ start_frontend() {
     local stale_pid
     stale_pid=$(lsof -ti ":$PORT_FRONTEND" 2>/dev/null || true)
     if [ -n "$stale_pid" ]; then
-      warn "Port $PORT_FRONTEND in use by PID $stale_pid — killing it..."
+      warn "Port $PORT_FRONTEND in use by PID $stale_pid - killing it..."
       kill "$stale_pid" 2>/dev/null || true
       sleep 1
     else
@@ -336,7 +336,7 @@ start_frontend() {
 print_summary() {
   echo ""
   echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════╗${RESET}"
-  echo -e "${BOLD}${GREEN}║   CIM SemanticGraph Platform — Running ✓     ║${RESET}"
+  echo -e "${BOLD}${GREEN}║      CIM SemanticGraph Platform running      ║${RESET}"
   echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════╝${RESET}"
   echo ""
   echo -e "  ${CYAN}Frontend    ${RESET}→  http://localhost:$PORT_FRONTEND"
@@ -363,7 +363,7 @@ rm -f "$PID_FILE"
 mkdir -p "$LOG_DIR"
 
 echo -e "\n${BOLD}${BLUE}╔══════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}${BLUE}║   CIM SemanticGraph Platform — Dev Setup     ║${RESET}"
+echo -e "${BOLD}${BLUE}║   CIM SemanticGraph Platform - Dev Setup     ║${RESET}"
 echo -e "${BOLD}${BLUE}╚══════════════════════════════════════════════╝${RESET}\n"
 
 check_prerequisites

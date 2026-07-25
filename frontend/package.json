@@ -1,6 +1,6 @@
 {
   "name": "cim-semanticgraph-frontend",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "Ultra-Professional Frontend for CIM-SemanticGraph-Platform",
   "type": "module",
   "scripts": {

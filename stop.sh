@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  CIM SemanticGraph Platform — Stop All Services
+#  CIM SemanticGraph Platform - Stop All Services
 # =============================================================================
 
 set -euo pipefail
@@ -17,8 +17,20 @@ BACKEND_DIR="$SCRIPT_DIR/backend"
 PID_FILE="$SCRIPT_DIR/.dev.pids"
 
 log()     { echo -e "${BOLD}${BLUE}[CIM]${RESET} $*"; }
-success() { echo -e "${GREEN}  ✓${RESET} $*"; }
-warn()    { echo -e "${YELLOW}  ⚠${RESET} $*"; }
+success() { echo -e "${GREEN}  [ok]${RESET} $*"; }
+warn()    { echo -e "${YELLOW}  [!]${RESET} $*"; }
+
+# Docker Compose wrapper - supports both v1 (docker-compose) and v2 (docker compose)
+docker_compose() {
+  if docker compose version &>/dev/null 2>&1; then
+    docker compose "$@"
+  elif command -v docker-compose &>/dev/null; then
+    docker-compose "$@"
+  else
+    warn "Neither 'docker compose' nor 'docker-compose' found."
+    return 1
+  fi
+}
 
 echo -e "\n${BOLD}${RED}Stopping CIM SemanticGraph Platform...${RESET}\n"
 
@@ -47,7 +59,7 @@ if [ -f "$PID_FILE" ]; then
   rm -f "$PID_FILE"
 fi
 
-# ── Always kill by port — catches any surviving processes ─────────────────────
+# ── Always kill by port - catches any surviving processes ─────────────────────
 kill_port 3000  "Frontend"
 kill_port 5173  "Frontend (Vite)"
 kill_port 8080  "Backend (Spring Boot)"
@@ -57,7 +69,7 @@ kill_port 8000  "Powerflow"
 if [ -f "$BACKEND_DIR/docker-compose.yml" ]; then
   log "Stopping Docker containers (Fuseki + Qdrant)..."
   cd "$BACKEND_DIR"
-  docker-compose down 2>/dev/null && success "Docker services stopped" || warn "Docker services already stopped"
+  docker_compose down 2>/dev/null && success "Docker services stopped" || warn "Docker services already stopped"
 fi
 
 echo -e "\n${GREEN}${BOLD}All services stopped.${RESET}\n"

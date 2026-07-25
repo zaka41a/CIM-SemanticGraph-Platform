@@ -4,7 +4,6 @@
 
 # CIM-SemanticGraph-Platform
 
-![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)
 ![Tests](https://img.shields.io/badge/tests-passing-green.svg)
 ![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue.svg)
 ![Java](https://img.shields.io/badge/Java-17%2B-orange.svg)
@@ -83,11 +82,11 @@ This platform provides:
 ### Claude AI Agent
 
 - **Autonomous Tool Calling** (up to 8 reasoning rounds)
-  - `semantic_search` — Qdrant vector similarity search
-  - `sparql_query` — direct SPARQL queries on Fuseki
-  - `load_flow` — real-time pandapower calculations
-  - `get_entity_details` — Jena triple store lookups
-  - `graph_traverse` — subgraph extraction & multi-hop traversal
+  - `semantic_search` - Qdrant vector similarity search
+  - `sparql_query` - direct SPARQL queries on Fuseki
+  - `load_flow` - real-time pandapower calculations
+  - `get_entity_details` - Jena triple store lookups
+  - `graph_traverse` - subgraph extraction & multi-hop traversal
 
 - **SSE Streaming**
   - Real-time token-by-token streaming via Server-Sent Events
@@ -138,10 +137,10 @@ This platform provides:
 
 ### Data Quality
 
-- **SHACL Validation** — shape-based validation with detailed violation reports
-- **Diagnostics** — automated anomaly detection and rule-based network validation
-- **Data Fixer** — one-click data quality repairs and anomaly remediation
-- **Import History** — full import log with rollback support
+- **SHACL Validation** - shape-based validation with detailed violation reports
+- **Diagnostics** - automated anomaly detection and rule-based network validation
+- **Data Fixer** - one-click data quality repairs and anomaly remediation
+- **Import History** - full import log with rollback support
 
 ### Reports
 
@@ -162,16 +161,16 @@ This platform provides:
 
 ### UX & Developer Experience
 
-- **Toast notification system** — success/error/warning/info toasts with auto-dismiss
-- **React Error Boundaries** — graceful crash handling per page with "Try again" button
+- **Toast notification system** - success/error/warning/info toasts with auto-dismiss
+- **React Error Boundaries** - graceful crash handling per page with "Try again" button
 - **Keyboard shortcuts**
-  - `Ctrl+Enter` — execute SPARQL query
-  - `Ctrl+K` — focus chat input from anywhere in the chat page
-  - `Ctrl+Shift+E` — export chat session to Markdown
-  - `Ctrl+Shift+F` — toggle fullscreen chat
-  - `↑` — recall last question in chat input
-  - `Esc` — stop AI generation
-- **Responsive dark UI** — Tailwind CSS, Framer Motion animations
+  - `Ctrl+Enter` - execute SPARQL query
+  - `Ctrl+K` - focus chat input from anywhere in the chat page
+  - `Ctrl+Shift+E` - export chat session to Markdown
+  - `Ctrl+Shift+F` - toggle fullscreen chat
+  - `↑` - recall last question in chat input
+  - `Esc` - stop AI generation
+- **Responsive dark UI** - Tailwind CSS, Framer Motion animations
 
 ---
 
@@ -271,7 +270,7 @@ This platform provides:
 
 | Technology | Purpose |
 |------------|---------|
-| **Claude claude-sonnet-4-6** | Primary AI agent with native tool calling |
+| **GPT-5.5 (KI Connect NRW)** | Primary LLM for GraphRAG answers (OpenAI-compatible endpoint) |
 | **Qdrant** | Vector database for semantic similarity search |
 | **OpenAI Embeddings** | text-embedding-3-small (1536-dim) for entity indexing |
 | **Groq API** | Fast LLM inference fallback |
@@ -374,7 +373,7 @@ qdrant:
 claude:
   api:
     key: ${CLAUDE_API_KEY:}
-    model: claude-sonnet-4-6
+    model: claude-fable-5
 
 graphrag:
   retrieval:
@@ -470,7 +469,7 @@ curl -X POST http://localhost:8080/api/cim/reindex
 
 ## Claude AI Agent
 
-The `ClaudeAgentService` implements an autonomous reasoning loop using Claude claude-sonnet-4-6 with native tool calling.
+The `ClaudeAgentService` implements an autonomous reasoning loop using Claude Fable 5 with native tool calling.
 
 ### How it works
 
@@ -656,7 +655,8 @@ CIM-SemanticGraph-Platform/
 │       ├── converter.py                    # Network format conversion
 │       └── semantic_bus_finder.py          # NLP bus name resolution
 │
-├── examples/      # Sample NRW network data
+├── examples/
+│   └── NRW-Power-Network.xlsx              # Sample NRW network data
 ├── docs/diagrams/
 └── README.md
 ```
@@ -755,13 +755,13 @@ This project is licensed under the MIT License  see the [LICENSE](LICENSE) file 
 
 ## Acknowledgments
 
-- **IEC Technical Committee 57** : CIM standards (IEC 61970/61968)
-- **Apache Jena** : RDF/OWL framework and embedded Fuseki
-- **Anthropic** : Claude AI models and tool calling API
-- **Qdrant** : Open-source vector database
-- **pandapower** : Python power system analysis
-- **Groq** : Fast language model inference
-- **Ollama** : Local language model support
+- **IEC Technical Committee 57** - CIM standards (IEC 61970/61968)
+- **Apache Jena** - RDF/OWL framework and embedded Fuseki
+- **Anthropic** - Claude AI models and tool calling API
+- **Qdrant** - Open-source vector database
+- **pandapower** - Python power system analysis
+- **Groq** - Fast language model inference
+- **Ollama** - Local language model support
 
 ---
 
