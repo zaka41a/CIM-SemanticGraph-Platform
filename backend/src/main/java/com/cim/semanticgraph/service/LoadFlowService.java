@@ -365,7 +365,7 @@ public class LoadFlowService {
                         .actualValue(vPu)
                         .limitValue(bus.getVoltageMin())
                         .violationPercentage(((bus.getVoltageMin() - vPu) / bus.getVoltageMin()) * 100.0)
-                        .description(String.format("Bus voltage %.3f pu is below minimum %.3f pu", vPu, bus.getVoltageMin()))
+                        .description(String.format(java.util.Locale.US, "Bus voltage %.3f pu is below minimum %.3f pu", vPu, bus.getVoltageMin()))
                         .build());
             } else if (vPu > bus.getVoltageMax()) {
                 violations.add(LoadFlowResponse.Violation.builder()
@@ -376,7 +376,7 @@ public class LoadFlowService {
                         .actualValue(vPu)
                         .limitValue(bus.getVoltageMax())
                         .violationPercentage(((vPu - bus.getVoltageMax()) / bus.getVoltageMax()) * 100.0)
-                        .description(String.format("Bus voltage %.3f pu exceeds maximum %.3f pu", vPu, bus.getVoltageMax()))
+                        .description(String.format(java.util.Locale.US, "Bus voltage %.3f pu exceeds maximum %.3f pu", vPu, bus.getVoltageMax()))
                         .build());
             }
         }
@@ -391,7 +391,7 @@ public class LoadFlowService {
                         .actualValue(branch.getLoadingPercentage())
                         .limitValue(100.0)
                         .violationPercentage(branch.getLoadingPercentage() - 100.0)
-                        .description(String.format("Branch loading %.1f%% exceeds rating", branch.getLoadingPercentage()))
+                        .description(String.format(java.util.Locale.US, "Branch loading %.1f%% exceeds rating", branch.getLoadingPercentage()))
                         .build());
             }
         }

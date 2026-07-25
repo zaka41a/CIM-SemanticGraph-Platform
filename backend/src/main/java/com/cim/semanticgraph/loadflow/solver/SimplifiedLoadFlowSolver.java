@@ -55,7 +55,7 @@ public class SimplifiedLoadFlowSolver {
         for (int i = 0; i < n; i++) {
             if (Math.abs(B[i][i]) < 1e-10) {
                 Bus bus = network.getBuses().get(i);
-                log.warn("⚠️ Bus {} (index {}) is ISOLATED - not connected to any branch!", bus.getId(), i);
+                log.warn("Bus {} (index {}) is ISOLATED - not connected to any branch!", bus.getId(), i);
                 isolatedCount++;
             }
         }

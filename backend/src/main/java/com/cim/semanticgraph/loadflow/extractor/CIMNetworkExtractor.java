@@ -38,7 +38,7 @@ public class CIMNetworkExtractor {
         log.info("═══════════════════════════════════════════════════════════");
         
         if (cimModel == null || cimModel.isEmpty()) {
-            log.error("❌ CIM model is null or empty!");
+            log.error("CIM model is null or empty!");
             throw new IllegalArgumentException("CIM model cannot be null or empty");
         }
         
@@ -54,12 +54,12 @@ public class CIMNetworkExtractor {
             // Extract buses (TopologicalNodes or ConnectivityNodes)
             log.info("Step 1/5: Extracting buses...");
             extractBuses(cimModel, network);
-            log.info("✅ Buses extracted: {}", network.getBusCount());
+            log.info("Buses extracted: {}", network.getBusCount());
 
             // Extract branches (ACLineSegments and PowerTransformers)
             log.info("Step 2/5: Extracting branches...");
             extractBranches(cimModel, network);
-            log.info("✅ Branches extracted: {}", network.getBranchCount());
+            log.info("Branches extracted: {}", network.getBranchCount());
 
             // Extract loads (EnergyConsumers)
             log.info("Step 3/5: Extracting loads...");
@@ -70,7 +70,7 @@ public class CIMNetworkExtractor {
             double totalLoadQ = network.getBuses().stream()
                     .mapToDouble(Bus::getLoadMvar)
                     .sum();
-            log.info("✅ Loads extracted. Total: P={} MW, Q={} MVAr", totalLoadP, totalLoadQ);
+            log.info("Loads extracted. Total: P={} MW, Q={} MVAr", totalLoadP, totalLoadQ);
 
             // Extract generators (GeneratingUnits, SynchronousMachines)
             log.info("Step 4/5: Extracting generators...");
@@ -81,12 +81,27 @@ public class CIMNetworkExtractor {
             double totalGenQ = network.getBuses().stream()
                     .mapToDouble(Bus::getGenerationMvar)
                     .sum();
-            log.info("✅ Generators extracted. Total: P={} MW, Q={} MVAr", totalGenP, totalGenQ);
+            log.info("Generators extracted. Total: P={} MW, Q={} MVAr", totalGenP, totalGenQ);
+
+            // Balance generation to load for a physically consistent snapshot.
+            // Generators carry their full nominal capacity; without dispatch data we scale
+            // generation proportionally to capacity so that total generation matches total load.
+            if (totalGenP > 0 && totalLoadP > 0) {
+                double scale = totalLoadP / totalGenP;
+                for (Bus bus : network.getBuses()) {
+                    if (bus.getGenerationMw() > 0) {
+                        bus.setGenerationMw(bus.getGenerationMw() * scale);
+                    }
+                }
+                totalGenP = network.getBuses().stream().mapToDouble(Bus::getGenerationMw).sum();
+                log.info("Generation scaled to balance load (factor {}). Total generation now: {} MW",
+                        String.format("%.3f", scale), String.format("%.1f", totalGenP));
+            }
 
             // Ensure at least one slack bus exists
             log.info("Step 5/5: Ensuring slack bus...");
             ensureSlackBus(network);
-            log.info("✅ Slack bus: {}", network.getSlackBus() != null ? network.getSlackBus().getId() : "NONE");
+            log.info("Slack bus: {}", network.getSlackBus() != null ? network.getSlackBus().getId() : "NONE");
 
             // Final validation
             log.info("═══════════════════════════════════════════════════════════");
@@ -103,17 +118,17 @@ public class CIMNetworkExtractor {
 
             // Validation warnings
             if (totalGenP == 0.0 && totalLoadP > 0.0) {
-                log.error("⚠️ WARNING: Network has load but NO generation! Load flow may not converge.");
+                log.error("WARNING: Network has load but NO generation! Load flow may not converge.");
             }
             if (totalLoadP == 0.0 && totalGenP > 0.0) {
-                log.warn("⚠️ WARNING: Network has generation but NO load!");
+                log.warn("WARNING: Network has generation but NO load!");
             }
             if (network.getBranchCount() == 0) {
-                log.warn("⚠️ WARNING: Network has NO branches! All buses are isolated.");
+                log.warn("WARNING: Network has NO branches! All buses are isolated.");
             }
 
         } catch (Exception e) {
-            log.error("❌ Error extracting CIM network: {}", e.getMessage(), e);
+            log.error("Error extracting CIM network: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to extract network from CIM model: " + e.getMessage(), e);
         }
 
@@ -314,6 +329,9 @@ public class CIMNetworkExtractor {
                     LineData ld = new LineData();
                     ld.id = k;
                     ld.name = soln.contains("name") ? soln.getLiteral("name").getString() : k;
+                    // CIM ACLineSegment.r/.x are in ohms; converted to per-unit below.
+                    // When absent, fall back to typical per-unit values (no conversion).
+                    ld.impedanceInOhms = soln.contains("r") || soln.contains("x");
                     ld.r = soln.contains("r") ? soln.getLiteral("r").getDouble() : 0.01;
                     ld.x = soln.contains("x") ? soln.getLiteral("x").getDouble() : 0.1;
                     ld.bch = soln.contains("bch") ? soln.getLiteral("bch").getDouble() : 0.0;
@@ -338,14 +356,14 @@ public class CIMNetworkExtractor {
                 }
             }
         } catch (Exception e) {
-            log.error("❌ Error querying AC lines: {}", e.getMessage(), e);
+            log.error("Error querying AC lines: {}", e.getMessage(), e);
         }
 
         // Now process collected line data
         for (LineData lineData : lineDataMap.values()) {
             if (lineData.fromNodeId == null || lineData.toNodeId == null) {
                 linesWithoutTerminals++;
-                log.warn("⚠️ Line {} has missing terminal connections (from: {}, to: {})", 
+                log.warn("Line {} has missing terminal connections (from: {}, to: {})", 
                         lineData.id, 
                         lineData.fromNodeId != null ? lineData.fromNodeId : "MISSING", 
                         lineData.toNodeId != null ? lineData.toNodeId : "MISSING");
@@ -366,15 +384,31 @@ public class CIMNetworkExtractor {
                 String finalFromBusId = fromBus.getId();
                 String finalToBusId = toBus.getId();
 
+                // Convert ohmic impedance to per-unit on the system base (Z_base = kV^2 / MVA).
+                // The load flow solver treats resistance/reactance as per-unit.
+                double rPu = lineData.r;
+                double xPu = lineData.x;
+                double bPu = lineData.bch;
+                if (lineData.impedanceInOhms) {
+                    double baseKv = fromBus.getBaseVoltageKv() > 0 ? fromBus.getBaseVoltageKv()
+                            : (toBus.getBaseVoltageKv() > 0 ? toBus.getBaseVoltageKv() : DEFAULT_BASE_VOLTAGE_KV);
+                    double zBase = (baseKv * baseKv) / network.getBaseMva();
+                    if (zBase > 0) {
+                        rPu = lineData.r / zBase;
+                        xPu = lineData.x / zBase;
+                        bPu = lineData.bch * zBase; // susceptance (siemens) scales inversely
+                    }
+                }
+
                 Branch branch = Branch.builder()
                         .id(lineData.id)
                         .name(lineData.name)
                         .type(Branch.BranchType.LINE)
                         .fromBusId(finalFromBusId)
                         .toBusId(finalToBusId)
-                        .resistance(lineData.r)
-                        .reactance(lineData.x)
-                        .susceptance(lineData.bch)
+                        .resistance(rPu)
+                        .reactance(xPu)
+                        .susceptance(bPu)
                         .turnsRatio(1.0)
                         .phaseShift(0.0)
                         .ratingMva(lineData.ratingMva)
@@ -384,11 +418,11 @@ public class CIMNetworkExtractor {
 
                 network.addBranch(branch);
                 lineCount++;
-                log.info("✅ Connected line {} (name: {}, R={}, X={}) from bus {} to bus {}", 
-                        lineData.id, lineData.name, lineData.r, lineData.x, finalFromBusId, finalToBusId);
+                log.info("Connected line {} (name: {}, R={} pu, X={} pu) from bus {} to bus {}",
+                        lineData.id, lineData.name, rPu, xPu, finalFromBusId, finalToBusId);
             } else {
                 linesWithoutBuses++;
-                log.warn("❌ Could not find buses for line {} (fromNode: {}, toNode: {}). Available buses: {}", 
+                log.warn("Could not find buses for line {} (fromNode: {}, toNode: {}). Available buses: {}", 
                         lineData.id, lineData.fromNodeId, lineData.toNodeId, 
                         network.getBuses().stream()
                                 .map(Bus::getId)
@@ -400,7 +434,7 @@ public class CIMNetworkExtractor {
                 lineCount, linesWithoutTerminals, linesWithoutBuses);
         
         if (lineCount == 0) {
-            log.error("⚠️ NO LINES WERE EXTRACTED! All buses are isolated.");
+            log.error("NO LINES WERE EXTRACTED! All buses are isolated.");
         }
     }
 
@@ -416,6 +450,7 @@ public class CIMNetworkExtractor {
         double ratingMva;
         String fromNodeId;
         String toNodeId;
+        boolean impedanceInOhms;
     }
 
     /**
@@ -557,12 +592,12 @@ public class CIMNetworkExtractor {
 
                     network.addBranch(branch);
                     xfmrCount++;
-                    log.info("✅ Connected transformer {} '{}' (R={}, X={}, ratio={}, ratedMVA={}) from {} ({} kV) to {} ({} kV)",
+                    log.info("Connected transformer {} '{}' (R={}, X={}, ratio={}, ratedMVA={}) from {} ({} kV) to {} ({} kV)",
                             xfmrId, xfmrName, r, x, branch.getTurnsRatio(), ratedMva,
                             fromBus.getId(), fromBus.getBaseVoltageKv(),
                             toBus.getId(), toBus.getBaseVoltageKv());
                 } else {
-                    log.warn("❌ Could not connect transformer {} '{}'. No matching buses found.", xfmrId, xfmrName);
+                    log.warn("Could not connect transformer {} '{}'. No matching buses found.", xfmrId, xfmrName);
                 }
             }
 
@@ -728,10 +763,10 @@ public class CIMNetworkExtractor {
                     totalLoadP += p;
                     totalLoadQ += q;
                     loadCount++;
-                    log.info("✅ Connected load {} (name: {}, P={} MW, Q={} MVAr) to bus {}",
+                    log.info("Connected load {} (name: {}, P={} MW, Q={} MVAr) to bus {}",
                             loadId, loadName, p, q, bus.getId());
                 } else {
-                    log.warn("❌ Could not find bus for load {} (node: {}). Available buses: {}",
+                    log.warn("Could not find bus for load {} (node: {}). Available buses: {}",
                             loadId, nodeId, network.getBuses().stream()
                                     .map(Bus::getId)
                                     .collect(java.util.stream.Collectors.joining(", ")));
@@ -739,14 +774,14 @@ public class CIMNetworkExtractor {
                 }
             }
         } catch (Exception e) {
-            log.error("❌ Error extracting loads: {}", e.getMessage(), e);
+            log.error("Error extracting loads: {}", e.getMessage(), e);
         }
 
         log.info("Load extraction complete: {} loads connected, {} without bus connection. Total: P={} MW, Q={} MVAr",
                 loadCount, loadsWithoutBus, totalLoadP, totalLoadQ);
 
         if (loadCount == 0) {
-            log.error("⚠️ NO LOADS WERE EXTRACTED! This will result in zero load values.");
+            log.error("NO LOADS WERE EXTRACTED! This will result in zero load values.");
             log.error("Available buses in network: {}", network.getBuses().stream()
                     .map(b -> b.getId() + " (type: " + b.getType() + ")")
                     .collect(java.util.stream.Collectors.joining(", ")));
@@ -769,7 +804,7 @@ public class CIMNetworkExtractor {
                 PREFIX cim: <%s>
                 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-                SELECT ?gen ?node ?p ?q ?minQ ?maxQ ?maxP ?name
+                SELECT ?gen ?node ?p ?q ?minQ ?maxQ ?nominalP ?maxP ?name
                 WHERE {
                     ?gen rdf:type cim:SynchronousMachine .
                     OPTIONAL { ?gen cim:IdentifiedObject.name ?name }
@@ -778,8 +813,9 @@ public class CIMNetworkExtractor {
                     OPTIONAL { ?gen cim:RotatingMachine.minQ ?minQ }
                     OPTIONAL { ?gen cim:RotatingMachine.maxQ ?maxQ }
                     OPTIONAL {
-                        ?gen cim:RotatingMachine.GeneratingUnit ?gu .
-                        ?gu cim:GeneratingUnit.maxOperatingP ?maxP
+                        ?gen (cim:RotatingMachine.GeneratingUnit|cim:SynchronousMachine.GeneratingUnit) ?gu .
+                        OPTIONAL { ?gu cim:GeneratingUnit.nominalP ?nominalP }
+                        OPTIONAL { ?gu cim:GeneratingUnit.maxOperatingP ?maxP }
                     }
                     OPTIONAL {
                         ?t cim:Terminal.ConductingEquipment ?gen .
@@ -820,7 +856,7 @@ public class CIMNetworkExtractor {
                 totalGenQ += counts[3];
             }
         } catch (Exception e) {
-            log.error("❌ Error extracting SynchronousMachines: {}", e.getMessage(), e);
+            log.error("Error extracting SynchronousMachines: {}", e.getMessage(), e);
         }
 
         // Process GeneratingUnits
@@ -862,10 +898,10 @@ public class CIMNetworkExtractor {
                     }
 
                     genCount++;
-                    log.info("✅ Connected GeneratingUnit {} (name: {}, P={} MW) to bus {}",
+                    log.info("Connected GeneratingUnit {} (name: {}, P={} MW) to bus {}",
                             genId, genName, p, bus.getId());
                 } else {
-                    log.warn("❌ Could not find bus for GeneratingUnit {} (node: {}). Available buses: {}",
+                    log.warn("Could not find bus for GeneratingUnit {} (node: {}). Available buses: {}",
                             genId, nodeId, network.getBuses().stream()
                                     .map(Bus::getId)
                                     .collect(java.util.stream.Collectors.joining(", ")));
@@ -873,14 +909,14 @@ public class CIMNetworkExtractor {
                 }
             }
         } catch (Exception e) {
-            log.error("❌ Error extracting GeneratingUnits: {}", e.getMessage(), e);
+            log.error("Error extracting GeneratingUnits: {}", e.getMessage(), e);
         }
 
         log.info("Generator extraction complete: {} generators connected, {} without bus connection. Total: P={} MW, Q={} MVAr",
                 genCount, gensWithoutBus, totalGenP, totalGenQ);
 
         if (genCount == 0) {
-            log.error("⚠️ NO GENERATORS WERE EXTRACTED! This will result in zero generation values.");
+            log.error("NO GENERATORS WERE EXTRACTED! This will result in zero generation values.");
             log.error("Available buses in network: {}", network.getBuses().stream()
                     .map(b -> b.getId() + " (type: " + b.getType() + ")")
                     .collect(java.util.stream.Collectors.joining(", ")));
@@ -912,6 +948,9 @@ public class CIMNetworkExtractor {
             if (soln.contains("p")) {
                 p = soln.getLiteral("p").getDouble();
                 log.debug("{} {} has explicit P value: {} MW", genType, genId, p);
+            } else if (soln.contains("nominalP")) {
+                p = soln.getLiteral("nominalP").getDouble();
+                log.debug("{} {} using GeneratingUnit nominalP: {} MW", genType, genId, p);
             } else if (soln.contains("maxP")) {
                 double maxP = soln.getLiteral("maxP").getDouble();
                 p = maxP * 0.8;
@@ -935,10 +974,10 @@ public class CIMNetworkExtractor {
             }
 
             genCount = 1;
-            log.info("✅ Connected {} {} (name: {}, P={} MW, Q={} MVAr) to bus {}",
+            log.info("Connected {} {} (name: {}, P={} MW, Q={} MVAr) to bus {}",
                     genType, genId, genName, p, q, bus.getId());
         } else {
-            log.warn("❌ Could not find bus for {} {} (node: {})", genType, genId, nodeId);
+            log.warn("Could not find bus for {} {} (node: {})", genType, genId, nodeId);
             gensWithoutBus = 1;
         }
 
