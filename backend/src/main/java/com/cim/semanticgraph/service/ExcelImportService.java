@@ -523,7 +523,7 @@ public class ExcelImportService {
                 String lh = rawPHeader.toLowerCase();
                 pIsKwhPerYear = lh.contains("kwh/a") || lh.contains("kwh/year") || lh.contains("kwha");
                 if (pIsKwhPerYear) {
-                    log.info("Load p column '{}' is in kWh/year – will convert to MW (÷8760000)", rawPHeader);
+                    log.info("Load p column '{}' is in kWh/year - will convert to MW (÷8760000)", rawPHeader);
                 }
             }
         }
@@ -918,7 +918,7 @@ public class ExcelImportService {
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // Excel Analysis — returns sheet structure without importing
+    // Excel Analysis - returns sheet structure without importing
     // ─────────────────────────────────────────────────────────────────────
 
     public ExcelAnalysis analyzeExcel(MultipartFile file) throws IOException {
@@ -1122,7 +1122,7 @@ public class ExcelImportService {
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // "With map" wrappers — importX methods that accept a pre-built colMap
+    // "With map" wrappers - importX methods that accept a pre-built colMap
     // ─────────────────────────────────────────────────────────────────────
 
     private int importSubstationsWithMap(Sheet sheet, Model model, Map<String, Integer> columns) {

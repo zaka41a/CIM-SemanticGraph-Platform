@@ -13,7 +13,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Embedding Service — generates real vector embeddings using OpenAI text-embedding-3-small.
+ * Embedding Service - generates real vector embeddings using OpenAI text-embedding-3-small.
  * Falls back to a deterministic hash-based embedding if the API key is not configured.
  */
 @Slf4j

@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
- * QdrantService — interacts with Qdrant vector database via REST API.
+ * QdrantService - interacts with Qdrant vector database via REST API.
  *
  * Provides:
  *  - Collection initialization
@@ -33,9 +33,9 @@ public class QdrantService {
     private int vectorSize;
 
     private WebClient webClient;
-    // Cached availability — checked once at startup, reset on upsert/clear errors
+    // Cached availability - checked once at startup, reset on upsert/clear errors
     private volatile boolean available = false;
-    // Cached point count — updated after upsert/clear, avoids HTTP call per query
+    // Cached point count - updated after upsert/clear, avoids HTTP call per query
     private volatile long cachedPointCount = 0;
 
     @PostConstruct
@@ -56,21 +56,21 @@ public class QdrantService {
     }
 
     /**
-     * Returns cached availability — no HTTP call.
+     * Returns cached availability - no HTTP call.
      */
     public boolean isAvailable() {
         return available;
     }
 
     /**
-     * Returns cached point count — no HTTP call.
+     * Returns cached point count - no HTTP call.
      */
     public long countPoints() {
         return cachedPointCount;
     }
 
     /**
-     * Actually checks Qdrant via HTTP — only called at startup.
+     * Actually checks Qdrant via HTTP - only called at startup.
      */
     private boolean checkAvailability() {
         try {
@@ -214,7 +214,7 @@ public class QdrantService {
     }
 
     /**
-     * Fetch point count from Qdrant via HTTP — used internally to refresh cache.
+     * Fetch point count from Qdrant via HTTP - used internally to refresh cache.
      */
     private long fetchPointCount() {
         try {
@@ -256,7 +256,7 @@ public class QdrantService {
 
     /**
      * Generate a deterministic UUID from a URI string.
-     * Same URI always produces the same UUID — safe for re-indexing.
+     * Same URI always produces the same UUID - safe for re-indexing.
      */
     public static String uriToId(String uri) {
         return UUID.nameUUIDFromBytes(uri.getBytes(StandardCharsets.UTF_8)).toString();

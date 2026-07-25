@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 /**
- * AnalysisService — unified network analysis aggregating statistics, health diagnostics,
+ * AnalysisService - unified network analysis aggregating statistics, health diagnostics,
  * data quality checks, and graph insights in a single call.
  *
  * Powers the /analysis/summary endpoint consumed by the NetworkAnalysis dashboard.
@@ -121,7 +121,7 @@ public class AnalysisService {
                 count > 0 ? "error" : "ok",
                 count,
                 count > 0
-                        ? count + " ACLineSegment(s) missing r/x values — load flow will fail"
+                        ? count + " ACLineSegment(s) missing r/x values - load flow will fail"
                         : "All lines have impedance values"
         );
     }
@@ -140,7 +140,7 @@ public class AnalysisService {
                 count > 0 ? "warning" : "ok",
                 count,
                 count > 0
-                        ? count + " line(s) missing normalRating — OPF violations may be incorrect"
+                        ? count + " line(s) missing normalRating - OPF violations may be incorrect"
                         : "All lines have thermal ratings"
         );
     }
@@ -161,7 +161,7 @@ public class AnalysisService {
                 count > 0 ? "warning" : "ok",
                 count,
                 count > 0
-                        ? count + " line(s) with fewer than 2 terminals — isolated segments"
+                        ? count + " line(s) with fewer than 2 terminals - isolated segments"
                         : "All lines are fully connected"
         );
     }

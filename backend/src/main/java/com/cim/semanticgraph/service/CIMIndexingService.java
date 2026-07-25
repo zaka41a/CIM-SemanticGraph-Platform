@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * CIMIndexingService — indexes all CIM entities from Fuseki into Qdrant.
+ * CIMIndexingService - indexes all CIM entities from Fuseki into Qdrant.
  *
  * Called automatically after each CIM import. Each entity is described as text,
  * embedded via OpenAI text-embedding-3-small, and stored in Qdrant for semantic search.
@@ -33,7 +33,7 @@ public class CIMIndexingService {
     private String cimNamespace;
 
     /**
-     * Async indexing — called after CIM import so it doesn't block the HTTP response.
+     * Async indexing - called after CIM import so it doesn't block the HTTP response.
      */
     @Async
     public CompletableFuture<IndexingResult> indexAllEntitiesAsync() {
@@ -44,7 +44,7 @@ public class CIMIndexingService {
     }
 
     /**
-     * Synchronous indexing — queries all CIM entities, builds embeddings, upserts to Qdrant.
+     * Synchronous indexing - queries all CIM entities, builds embeddings, upserts to Qdrant.
      */
     public IndexingResult indexAllEntities() {
         long startTime = System.currentTimeMillis();
@@ -55,8 +55,8 @@ public class CIMIndexingService {
         }
 
         if (!embeddingService.isConfigured()) {
-            log.warn("OpenAI not configured — skipping vector indexing. Keyword search (SPARQL fallback) will be used instead.");
-            return new IndexingResult(0, 0, "OpenAI API key not configured — using keyword search fallback", false);
+            log.warn("OpenAI not configured - skipping vector indexing. Keyword search (SPARQL fallback) will be used instead.");
+            return new IndexingResult(0, 0, "OpenAI API key not configured - using keyword search fallback", false);
         }
 
         try {

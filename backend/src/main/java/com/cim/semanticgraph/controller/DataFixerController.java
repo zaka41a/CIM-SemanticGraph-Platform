@@ -42,7 +42,7 @@ public class DataFixerController {
             return ResponseEntity.badRequest().body(Map.of("error", "Too many fixes in one request (max 50)"));
         }
 
-        log.info("POST /fixer/apply — {} fix(es) received", fixes.size());
+        log.info("POST /fixer/apply - {} fix(es) received", fixes.size());
 
         try {
             ApplyResponse response = dataFixerService.applyFixes(fixes);
@@ -69,7 +69,7 @@ public class DataFixerController {
             return ResponseEntity.badRequest().body(Map.of("error", "No fixes provided"));
         }
 
-        log.info("POST /fixer/preview — dry-run for {} fix(es)", fixes.size());
+        log.info("POST /fixer/preview - dry-run for {} fix(es)", fixes.size());
 
         try {
             ApplyResponse response = dataFixerService.previewFixes(fixes);

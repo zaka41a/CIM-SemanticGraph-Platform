@@ -111,7 +111,7 @@ public class JenaService {
      * then drop the named graph itself.
      */
     public void rollbackNamedGraph(String graphUri) {
-        log.warn("Rolling back import — removing triples of named graph <{}>", graphUri);
+        log.warn("Rolling back import - removing triples of named graph <{}>", graphUri);
         try {
             // Step 1: delete from default graph every triple that came from this named graph
             String deleteQuery = String.format(

@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * DataFixerService — validates and applies SPARQL UPDATE fixes to the CIM knowledge graph.
+ * DataFixerService - validates and applies SPARQL UPDATE fixes to the CIM knowledge graph.
  *
  * Adds a safety layer over raw SPARQL UPDATE:
  * - Blocks destructive operations (DROP, CLEAR, DELETE WHERE without filter)

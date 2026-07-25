@@ -33,7 +33,7 @@ public class ExcelController {
 
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Analyze Excel file",
-               description = "Returns sheet structure, detected types, and unrecognized columns — without importing")
+               description = "Returns sheet structure, detected types, and unrecognized columns - without importing")
     public ResponseEntity<?> analyzeExcel(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) return ResponseEntity.badRequest().body(Map.of("error", "File is empty"));
         try {

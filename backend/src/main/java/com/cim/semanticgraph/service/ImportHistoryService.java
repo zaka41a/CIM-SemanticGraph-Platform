@@ -96,7 +96,7 @@ public class ImportHistoryService {
     }
 
     /**
-     * Mark rollback as done (graph dropped — no longer available).
+     * Mark rollback as done (graph dropped - no longer available).
      */
     public void markRolledBack(String id) {
         ImportHistory record = historyStore.get(id);

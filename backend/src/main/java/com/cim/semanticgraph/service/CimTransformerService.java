@@ -145,7 +145,7 @@ public class CimTransformerService {
         Model model = transformCimRdfToModel(inputStream, rdfFormat);
 
         if (model == null || model.isEmpty()) {
-            throw new RuntimeException("Failed to parse CIM data — model is empty. Check the file format and content.");
+            throw new RuntimeException("Failed to parse CIM data - model is empty. Check the file format and content.");
         }
 
         log.info("Parsed {} triples. Format: {}", model.size(), format);

@@ -45,7 +45,7 @@ public class AnswerEvaluator {
      * @param question  original user question
      * @param context   retrieved graph context used to answer
      * @param answer    LLM-generated answer
-     * @return EvaluationResult with faithfulness and answer relevance scores [0.0 – 1.0]
+     * @return EvaluationResult with faithfulness and answer relevance scores [0.0 - 1.0]
      */
     public EvaluationResult evaluate(String question, String context, String answer) {
         if (answer == null || answer.isBlank()) {

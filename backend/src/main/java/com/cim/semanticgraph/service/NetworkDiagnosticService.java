@@ -92,7 +92,7 @@ public class NetworkDiagnosticService {
                 result.addWarning("INSUFFICIENT_BUSES",
                         String.format("Only %d bus found. Need at least 2 buses for a meaningful network.", count));
             } else {
-                log.info("✅ Found {} buses", count);
+                log.info("Found {} buses", count);
             }
         } catch (Exception e) {
             log.error("Error checking buses: {}", e.getMessage());
@@ -161,7 +161,7 @@ public class NetworkDiagnosticService {
                 result.addWarning("PARTIALLY_CONNECTED_BRANCHES",
                         String.format("%d out of %d lines are fully connected", connectedCount, count));
             } else {
-                log.info("✅ Found {} branches, all connected", count);
+                log.info("Found {} branches, all connected", count);
             }
         } catch (Exception e) {
             log.error("Error checking branches: {}", e.getMessage());
@@ -228,7 +228,7 @@ public class NetworkDiagnosticService {
                 result.addWarning("ZERO_GENERATION",
                         "All generators have P=0. Check if power values were imported correctly.");
             } else {
-                log.info("✅ Found {} generators, total {} MW", count, totalP);
+                log.info("Found {} generators, total {} MW", count, totalP);
             }
         } catch (Exception e) {
             log.error("Error checking generators: {}", e.getMessage());
@@ -295,7 +295,7 @@ public class NetworkDiagnosticService {
                 result.addWarning("ZERO_LOAD",
                         "All loads have P=0. Check if power values were imported correctly.");
             } else {
-                log.info("✅ Found {} loads, total {} MW", count, totalP);
+                log.info("Found {} loads, total {} MW", count, totalP);
             }
         } catch (Exception e) {
             log.error("Error checking loads: {}", e.getMessage());
