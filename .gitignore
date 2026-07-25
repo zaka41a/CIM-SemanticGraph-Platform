@@ -22,3 +22,6 @@ backend/.env
 
 # Working notes (not part of the deliverable)
 ULTRA_PRO_PLAN.md
+
+# Local Claude Code settings
+.claude/
