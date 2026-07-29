@@ -10,12 +10,6 @@ interface FormatSelectorProps {
   onFormatChange: (format: string) => void;
 }
 
-// Extract Tailwind color name from the gradient string (e.g. "from-emerald-500 to-green-600" → "emerald")
-const getBadge = (color: string) => {
-  const match = color.match(/from-(\w+)-/);
-  return match ? match[1] : 'accent';
-};
-
 export const FormatSelector = ({ formats, selectedFormat, onFormatChange }: FormatSelectorProps) => {
   return (
     <div>

@@ -128,7 +128,6 @@ const GraphRAGChat = () => {
     stopGeneration,
     setFeedback,
     getLastUserQuestion,
-    clearMessages,
   } = useChatMessages(sessionId, selectedProvider);
 
   // Real backend health polling

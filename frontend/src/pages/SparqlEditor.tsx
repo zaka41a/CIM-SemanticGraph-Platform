@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import {
-  Play, Copy, Download, Book, AlertCircle, Code2, Zap, Database,
+  Play, Copy, Book, AlertCircle, Code2, Zap, Database,
   CheckCircle2, Clock, Hash, Table2, FileJson, FileSpreadsheet,
   Trash2, Loader2, Terminal, ArrowRight, Layers, Cable, BarChart3
 } from 'lucide-react';

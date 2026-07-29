@@ -34,24 +34,16 @@ export const useChatMessages = (sessionId: string, provider: string = '') => {
     scrollToBottom();
   }, [messages]);
 
-  useEffect(() => {
-    if (sessionId) {
-      loadChatHistory(sessionId);
-    } else {
-      setMessages([]);
-    }
-  }, [sessionId]);
-
-  const loadFromLocalStorage = (sid: string) => {
+  const loadFromLocalStorage = useCallback((sid: string) => {
     const stored = storageGet<ChatMessage[]>(`graphrag-chat-${sid}`);
     if (stored && stored.length > 0) {
       setMessages(stored.map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) })));
     } else {
       setMessages([]);
     }
-  };
+  }, []);
 
-  const loadChatHistory = async (sid: string) => {
+  const loadChatHistory = useCallback(async (sid: string) => {
     try {
       const history = await apiService.getChatHistory(sid);
       if (history.length > 0) {
@@ -79,7 +71,15 @@ export const useChatMessages = (sessionId: string, provider: string = '') => {
     } catch {
       loadFromLocalStorage(sid);
     }
-  };
+  }, [loadFromLocalStorage]);
+
+  useEffect(() => {
+    if (sessionId) {
+      loadChatHistory(sessionId);
+    } else {
+      setMessages([]);
+    }
+  }, [sessionId, loadChatHistory]);
 
   const saveChatHistory = (sid: string, msgs: ChatMessage[]) => {
     storageSet(`graphrag-chat-${sid}`, msgs);

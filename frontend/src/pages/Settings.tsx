@@ -4,16 +4,12 @@ import {
   Server,
   Database,
   CheckCircle2,
-  XCircle,
   AlertTriangle,
   RefreshCw,
   Zap,
   Search,
   Brain,
-  RotateCcw,
-  Trash2,
   Download,
-  Terminal,
   ChevronRight,
   Eye,
   EyeOff,
@@ -25,6 +21,7 @@ import {
 } from 'lucide-react';
 import { apiService } from '@/services/api';
 import PageHeader from '@/components/PageHeader';
+import { useToast } from '@/components/Toast';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -233,22 +230,11 @@ const Settings = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [graphStats, setGraphStats] = useState<GraphStats | null>(null);
   const [indexingStatus, setIndexingStatus] = useState<IndexingStatus | null>(null);
-  const [loadflowHealth, setLoadflowHealth] = useState<PowerflowHealth | null>(null);
   const [providers, setProviders] = useState<ProviderKeys | null>(null);
   const [services, setServices] = useState<ServiceCheck[]>([]);
   const [lastRefresh, setLastRefresh] = useState(new Date());
-
-  // Action states
-  const [reindexing, setReindexing] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [clearing, setClearing] = useState(false);
-  const [actionMsg, setActionMsg] = useState<{ text: string; type: 'ok' | 'err' } | null>(null);
-  const [confirmClear, setConfirmClear] = useState(false);
-
-  const showMsg = (text: string, type: 'ok' | 'err' = 'ok') => {
-    setActionMsg({ text, type });
-    setTimeout(() => setActionMsg(null), 4000);
-  };
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const fetchAll = useCallback(async () => {
     setRefreshing(true);
@@ -270,7 +256,6 @@ const Settings = () => {
 
       setGraphStats(g);
       setIndexingStatus(q);
-      setLoadflowHealth(l);
       setProviders(keys);
       setLastRefresh(new Date());
 
@@ -360,19 +345,6 @@ const Settings = () => {
     return () => clearInterval(iv);
   }, [fetchAll]);
 
-  const handleReindex = async () => {
-    setReindexing(true);
-    try {
-      const r = await apiService.reindexEntities();
-      showMsg(r.message || 'Re-indexing started in background');
-      setTimeout(fetchAll, 5000);
-    } catch (e: any) {
-      showMsg(e.message || 'Re-indexing failed', 'err');
-    } finally {
-      setReindexing(false);
-    }
-  };
-
   const handleExport = async () => {
     setExporting(true);
     try {
@@ -383,26 +355,11 @@ const Settings = () => {
       a.download = `knowledge-graph-${new Date().toISOString().split('T')[0]}.rdf`;
       a.click();
       URL.revokeObjectURL(url);
-      showMsg('Knowledge graph exported as RDF/XML');
-    } catch (e: any) {
-      showMsg(e.message || 'Export failed', 'err');
+      toastSuccess('Knowledge graph exported as RDF/XML');
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : 'Export failed');
     } finally {
       setExporting(false);
-    }
-  };
-
-  const handleClear = async () => {
-    if (!confirmClear) { setConfirmClear(true); setTimeout(() => setConfirmClear(false), 5000); return; }
-    setClearing(true);
-    setConfirmClear(false);
-    try {
-      await apiService.clearGraph();
-      showMsg('Knowledge graph and vector index cleared');
-      fetchAll();
-    } catch (e: any) {
-      showMsg(e.message || 'Clear failed', 'err');
-    } finally {
-      setClearing(false);
     }
   };
 
@@ -448,17 +405,15 @@ const Settings = () => {
         }
       />
 
-      {/* ── Action message ───────────────────────────────────────────────────── */}
-      {actionMsg && (
-        <div className={`flex items-center gap-3 px-5 py-3.5 rounded-xl border text-sm font-medium animate-slide-up ${
-          actionMsg.type === 'ok'
-            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-            : 'bg-red-500/10 border-red-500/30 text-red-300'
-        }`}>
-          {actionMsg.type === 'ok' ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
-          {actionMsg.text}
-        </div>
-      )}
+      {/* ── Graph export ─────────────────────────────────────────────────────── */}
+      <ActionButton
+        icon={Download}
+        label="Export knowledge graph"
+        description="Download the full RDF/XML serialisation of the graph"
+        variant="accent"
+        onClick={handleExport}
+        loading={exporting}
+      />
 
       {/* ── Main grid ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

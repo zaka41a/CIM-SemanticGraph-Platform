@@ -1,4 +1,4 @@
-import { Bot, Sparkles, Activity, Zap, Database, MessageSquare, Filter } from 'lucide-react';
+import { Bot, Sparkles } from 'lucide-react';
 
 interface SuggestedQuestion {
   question: string;

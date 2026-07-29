@@ -1,4 +1,4 @@
-import { Database, Zap, TrendingUp, Activity, AlertTriangle, Info } from 'lucide-react';
+import { Database, Zap, TrendingUp, Activity, AlertTriangle } from 'lucide-react';
 
 interface SystemStatistics {
   totalBuses: number;

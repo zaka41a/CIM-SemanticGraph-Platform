@@ -28,6 +28,10 @@ public class CIMNetworkExtractor {
     private static final String CIM_PREFIX = "http://iec.ch/TC57/CIM100#";
     private static final double DEFAULT_BASE_MVA = 100.0;
     private static final double DEFAULT_BASE_VOLTAGE_KV = 110.0;
+    private static final double DEFAULT_TRANSFORMER_RATING_MVA = 150.0;
+    private static final double DEFAULT_TRANSFORMER_R_PU = 0.005;
+    private static final double DEFAULT_TRANSFORMER_X_PU = 0.05;
+    private static final double MAX_PLAUSIBLE_VK_PERCENT = 25.0;
 
     /**
      * Extract network model from CIM RDF graph
@@ -371,10 +375,8 @@ public class CIMNetworkExtractor {
             }
             
             // Remove _CN suffix if present
-            final String fromBusId = lineData.fromNodeId.endsWith("_CN") ? 
-                    lineData.fromNodeId.substring(0, lineData.fromNodeId.length() - 3) : lineData.fromNodeId;
-            final String toBusId = lineData.toNodeId.endsWith("_CN") ? 
-                    lineData.toNodeId.substring(0, lineData.toNodeId.length() - 3) : lineData.toNodeId;
+            final String fromBusId = stripConnectivityNodeSuffix(lineData.fromNodeId);
+            final String toBusId = stripConnectivityNodeSuffix(lineData.toNodeId);
 
             // Try to find buses with flexible matching
             Bus fromBus = findBusFlexible(network, fromBusId, lineData.fromNodeId);
@@ -491,24 +493,96 @@ public class CIMNetworkExtractor {
     }
 
     /**
-     * Extract power transformers
+     * Extract power transformers.
+     *
+     * CIM keeps the short circuit impedance on PowerTransformerEnd, in ohms referred to that
+     * end's own ratedU. PowerTransformer.r/.x is used as a fallback when no end carries one.
+     * Both are converted to per-unit on the system base, which is what the solver expects.
      */
     private void extractPowerTransformers(Model cimModel, NetworkModel network) {
-        // Query transformer with terminal connections AND rated power
+        java.util.Map<String, TransformerData> transformers = new java.util.LinkedHashMap<>();
+        collectTransformerHeaders(cimModel, transformers);
+        collectTransformerEnds(cimModel, transformers);
+
+        int xfmrCount = 0;
+
+        for (TransformerData data : transformers.values()) {
+            Bus fromBus = null;
+            Bus toBus = null;
+
+            // Try direct terminal connectivity first
+            if (data.fromNodeId != null && data.toNodeId != null) {
+                fromBus = findBusFlexible(network, stripConnectivityNodeSuffix(data.fromNodeId), data.fromNodeId);
+                toBus = findBusFlexible(network, stripConnectivityNodeSuffix(data.toNodeId), data.toNodeId);
+            }
+
+            // Fallback: infer connections from transformer name
+            // e.g. "Brauweiler 380/220 Transformer" gives the Brauweiler 380kV and 220kV buses
+            if (fromBus == null || toBus == null) {
+                Bus[] inferred = inferTransformerBuses(data.name, network);
+                if (inferred != null) {
+                    fromBus = inferred[0];
+                    toBus = inferred[1];
+                    log.info("Inferred transformer {} connections from name: {} -> {}",
+                            data.name, fromBus.getId(), toBus.getId());
+                }
+            }
+
+            if (fromBus == null || toBus == null) {
+                log.warn("Could not connect transformer {} '{}'. No matching buses found.", data.id, data.name);
+                continue;
+            }
+
+            // Ensure HV bus is 'from' and LV bus is 'to'
+            if (fromBus.getBaseVoltageKv() < toBus.getBaseVoltageKv()) {
+                Bus temp = fromBus;
+                fromBus = toBus;
+                toBus = temp;
+            }
+
+            TransformerImpedance impedance = computeTransformerImpedance(data, fromBus, toBus, network.getBaseMva());
+
+            Branch branch = Branch.builder()
+                    .id(data.id)
+                    .name(data.name)
+                    .type(Branch.BranchType.TRANSFORMER)
+                    .fromBusId(fromBus.getId())
+                    .toBusId(toBus.getId())
+                    .resistance(impedance.rPu)
+                    .reactance(impedance.xPu)
+                    .susceptance(0.0)
+                    .turnsRatio(fromBus.getBaseVoltageKv() / toBus.getBaseVoltageKv())
+                    .phaseShift(0.0)
+                    .ratingMva(impedance.ratingMva)
+                    .inService(true)
+                    .overloaded(false)
+                    .build();
+
+            network.addBranch(branch);
+            xfmrCount++;
+            log.info("Connected transformer {} '{}' (R={} pu, X={} pu, ratio={}, ratedMVA={}) from {} ({} kV) to {} ({} kV)",
+                    data.id, data.name, impedance.rPu, impedance.xPu, branch.getTurnsRatio(), impedance.ratingMva,
+                    fromBus.getId(), fromBus.getBaseVoltageKv(),
+                    toBus.getId(), toBus.getBaseVoltageKv());
+        }
+
+        log.info("Extracted {} power transformers", xfmrCount);
+    }
+
+    /**
+     * Collect transformer identity, legacy impedance and terminal connectivity
+     */
+    private void collectTransformerHeaders(Model cimModel, java.util.Map<String, TransformerData> transformers) {
         String query = """
                 PREFIX cim: <%s>
                 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-                SELECT ?xfmr ?name ?r ?x ?ratedS ?fromNode ?toNode
+                SELECT ?xfmr ?name ?r ?x ?fromNode ?toNode
                 WHERE {
                     ?xfmr rdf:type cim:PowerTransformer .
                     OPTIONAL { ?xfmr cim:IdentifiedObject.name ?name }
                     OPTIONAL { ?xfmr cim:PowerTransformer.r ?r }
                     OPTIONAL { ?xfmr cim:PowerTransformer.x ?x }
-                    OPTIONAL {
-                        ?end cim:PowerTransformerEnd.PowerTransformer ?xfmr .
-                        ?end cim:PowerTransformerEnd.ratedS ?ratedS
-                    }
                     OPTIONAL {
                         ?t1 cim:Terminal.ConductingEquipment ?xfmr .
                         ?t1 cim:Terminal.ConnectivityNode ?fromNode .
@@ -519,92 +593,204 @@ public class CIMNetworkExtractor {
                 }
                 """.formatted(CIM_PREFIX);
 
-        java.util.Set<String> processedXfmrs = new java.util.HashSet<>();
-
         try (QueryExecution qexec = QueryExecutionFactory.create(QueryFactory.create(query), cimModel)) {
             ResultSet results = qexec.execSelect();
-            int xfmrCount = 0;
-
             while (results.hasNext()) {
                 QuerySolution soln = results.nextSolution();
                 String xfmrId = soln.getResource("xfmr").getLocalName();
-                if (processedXfmrs.contains(xfmrId)) continue;
-                processedXfmrs.add(xfmrId);
-
-                String xfmrName = soln.contains("name") ? soln.getLiteral("name").getString() : xfmrId;
-                double ratedMva = soln.contains("ratedS") ? soln.getLiteral("ratedS").getDouble() : 150.0;
-
-                // Default per-unit impedance for transformer (on transformer MVA base)
-                double r = soln.contains("r") ? soln.getLiteral("r").getDouble() : 0.005;
-                double x = soln.contains("x") ? soln.getLiteral("x").getDouble() : 0.05;
-
-                String fromNodeId = soln.contains("fromNode") ? soln.getResource("fromNode").getLocalName() : null;
-                String toNodeId = soln.contains("toNode") ? soln.getResource("toNode").getLocalName() : null;
-
-                Bus fromBus = null;
-                Bus toBus = null;
-
-                // Try direct terminal connectivity first
-                if (fromNodeId != null && toNodeId != null) {
-                    String fromBusId = fromNodeId.endsWith("_CN") ?
-                            fromNodeId.substring(0, fromNodeId.length() - 3) : fromNodeId;
-                    String toBusId = toNodeId.endsWith("_CN") ?
-                            toNodeId.substring(0, toNodeId.length() - 3) : toNodeId;
-                    fromBus = findBusFlexible(network, fromBusId, fromNodeId);
-                    toBus = findBusFlexible(network, toBusId, toNodeId);
+                if (transformers.containsKey(xfmrId)) {
+                    continue;
                 }
 
-                // Fallback: infer connections from transformer name
-                // e.g. "Brauweiler 380/220 Transformer" → find Brauweiler 380kV and 220kV buses
-                if (fromBus == null || toBus == null) {
-                    Bus[] inferred = inferTransformerBuses(xfmrName, network);
-                    if (inferred != null) {
-                        fromBus = inferred[0];
-                        toBus = inferred[1];
-                        log.info("Inferred transformer {} connections from name: {} -> {}",
-                                xfmrName, fromBus.getId(), toBus.getId());
-                    }
-                }
-
-                if (fromBus != null && toBus != null) {
-                    // Ensure HV bus is 'from' and LV bus is 'to'
-                    if (fromBus.getBaseVoltageKv() < toBus.getBaseVoltageKv()) {
-                        Bus temp = fromBus;
-                        fromBus = toBus;
-                        toBus = temp;
-                    }
-
-                    Branch branch = Branch.builder()
-                            .id(xfmrId)
-                            .name(xfmrName)
-                            .type(Branch.BranchType.TRANSFORMER)
-                            .fromBusId(fromBus.getId())
-                            .toBusId(toBus.getId())
-                            .resistance(r)
-                            .reactance(x)
-                            .susceptance(0.0)
-                            .turnsRatio(fromBus.getBaseVoltageKv() / toBus.getBaseVoltageKv())
-                            .phaseShift(0.0)
-                            .ratingMva(ratedMva)
-                            .inService(true)
-                            .overloaded(false)
-                            .build();
-
-                    network.addBranch(branch);
-                    xfmrCount++;
-                    log.info("Connected transformer {} '{}' (R={}, X={}, ratio={}, ratedMVA={}) from {} ({} kV) to {} ({} kV)",
-                            xfmrId, xfmrName, r, x, branch.getTurnsRatio(), ratedMva,
-                            fromBus.getId(), fromBus.getBaseVoltageKv(),
-                            toBus.getId(), toBus.getBaseVoltageKv());
-                } else {
-                    log.warn("Could not connect transformer {} '{}'. No matching buses found.", xfmrId, xfmrName);
-                }
+                TransformerData data = new TransformerData();
+                data.id = xfmrId;
+                data.name = soln.contains("name") ? soln.getLiteral("name").getString() : xfmrId;
+                data.ohmicR = soln.contains("r") ? soln.getLiteral("r").getDouble() : null;
+                data.ohmicX = soln.contains("x") ? soln.getLiteral("x").getDouble() : null;
+                data.fromNodeId = soln.contains("fromNode") ? soln.getResource("fromNode").getLocalName() : null;
+                data.toNodeId = soln.contains("toNode") ? soln.getResource("toNode").getLocalName() : null;
+                transformers.put(xfmrId, data);
             }
-
-            log.info("Extracted {} power transformers", xfmrCount);
         } catch (Exception e) {
             log.warn("Error extracting transformers: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Collect the winding data of every PowerTransformerEnd
+     */
+    private void collectTransformerEnds(Model cimModel, java.util.Map<String, TransformerData> transformers) {
+        String query = """
+                PREFIX cim: <%s>
+
+                SELECT ?xfmr ?end ?r ?x ?ratedS ?ratedU
+                WHERE {
+                    ?end cim:PowerTransformerEnd.PowerTransformer ?xfmr .
+                    OPTIONAL { ?end cim:PowerTransformerEnd.r ?r }
+                    OPTIONAL { ?end cim:PowerTransformerEnd.x ?x }
+                    OPTIONAL { ?end cim:PowerTransformerEnd.ratedS ?ratedS }
+                    OPTIONAL { ?end cim:PowerTransformerEnd.ratedU ?ratedU }
+                }
+                """.formatted(CIM_PREFIX);
+
+        java.util.Set<String> processedEnds = new java.util.HashSet<>();
+
+        try (QueryExecution qexec = QueryExecutionFactory.create(QueryFactory.create(query), cimModel)) {
+            ResultSet results = qexec.execSelect();
+            while (results.hasNext()) {
+                QuerySolution soln = results.nextSolution();
+                TransformerData data = transformers.get(soln.getResource("xfmr").getLocalName());
+                if (data == null || !processedEnds.add(soln.getResource("end").getLocalName())) {
+                    continue;
+                }
+
+                TransformerEndData end = new TransformerEndData();
+                end.r = soln.contains("r") ? soln.getLiteral("r").getDouble() : 0.0;
+                end.x = soln.contains("x") ? soln.getLiteral("x").getDouble() : 0.0;
+                end.ratedS = soln.contains("ratedS") ? soln.getLiteral("ratedS").getDouble() : 0.0;
+                end.ratedU = soln.contains("ratedU") ? soln.getLiteral("ratedU").getDouble() : 0.0;
+                data.ends.add(end);
+            }
+        } catch (Exception e) {
+            log.warn("Error extracting transformer ends: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Convert a transformer impedance to per-unit on the system base.
+     *
+     * Each end holds its impedance in ohms referred to its own ratedU, so every end is first
+     * referred to the highest rated voltage, then divided by Z_base = U_ref^2 / baseMva.
+     */
+    private TransformerImpedance computeTransformerImpedance(TransformerData data, Bus hvBus, Bus lvBus,
+                                                             double baseMva) {
+        TransformerImpedance result = new TransformerImpedance();
+        result.ratingMva = data.ends.stream()
+                .mapToDouble(end -> end.ratedS)
+                .filter(ratedS -> ratedS > 0)
+                .max()
+                .orElse(DEFAULT_TRANSFORMER_RATING_MVA);
+
+        double hvKv = hvBus.getBaseVoltageKv() > 0 ? hvBus.getBaseVoltageKv() : DEFAULT_BASE_VOLTAGE_KV;
+        double lvKv = lvBus.getBaseVoltageKv() > 0 ? lvBus.getBaseVoltageKv() : hvKv;
+
+        double refKv = 0.0;
+        for (TransformerEndData end : data.ends) {
+            end.ratedU = normalizeRatedU(end.ratedU, hvKv, lvKv);
+            refKv = Math.max(refKv, end.ratedU);
+        }
+        if (refKv <= 0) {
+            refKv = hvKv;
+        }
+
+        double rOhm = 0.0;
+        double xOhm = 0.0;
+        boolean hasImpedance = false;
+
+        for (TransformerEndData end : data.ends) {
+            if (end.r == 0.0 && end.x == 0.0) {
+                continue;
+            }
+            double turnsRatio = end.ratedU > 0 ? refKv / end.ratedU : 1.0;
+            double referral = turnsRatio * turnsRatio;
+            rOhm += end.r * referral;
+            xOhm += end.x * referral;
+            hasImpedance = true;
+        }
+
+        if (!hasImpedance && data.ohmicR != null && data.ohmicX != null) {
+            rOhm = data.ohmicR;
+            xOhm = data.ohmicX;
+            hasImpedance = true;
+        }
+
+        if (!hasImpedance) {
+            log.warn("Transformer {} '{}' carries no impedance data, falling back to typical values",
+                    data.id, data.name);
+            result.rPu = DEFAULT_TRANSFORMER_R_PU;
+            result.xPu = DEFAULT_TRANSFORMER_X_PU;
+            return result;
+        }
+
+        double zBase = (refKv * refKv) / baseMva;
+        if (zBase <= 0) {
+            result.rPu = DEFAULT_TRANSFORMER_R_PU;
+            result.xPu = DEFAULT_TRANSFORMER_X_PU;
+            return result;
+        }
+
+        result.rPu = rOhm / zBase;
+        result.xPu = xOhm / zBase;
+
+        // Short circuit voltage expressed on the transformer rating, reported as a data quality signal
+        double vkPercent = Math.hypot(result.rPu, result.xPu) * (result.ratingMva / baseMva) * 100.0;
+        if (vkPercent > MAX_PLAUSIBLE_VK_PERCENT) {
+            log.warn("Transformer {} '{}' has a short circuit voltage of {}% on its {} MVA rating, "
+                            + "outside the typical range for power transformers. Source data may be inconsistent.",
+                    data.id, data.name, String.format("%.1f", vkPercent), String.format("%.0f", result.ratingMva));
+        }
+
+        return result;
+    }
+
+    /**
+     * Some CIM exports store ratedU as a phase to neutral voltage (line voltage divided by sqrt(3)).
+     * Restore the line to line value when that reading matches a connected bus voltage.
+     */
+    private double normalizeRatedU(double ratedU, double hvKv, double lvKv) {
+        if (ratedU <= 0) {
+            return ratedU;
+        }
+
+        double lineVoltage = ratedU * Math.sqrt(3);
+        double directError = Math.min(relativeError(ratedU, hvKv), relativeError(ratedU, lvKv));
+        double scaledError = Math.min(relativeError(lineVoltage, hvKv), relativeError(lineVoltage, lvKv));
+
+        if (scaledError < directError && scaledError < 0.02) {
+            log.debug("Transformer end ratedU {} kV read as phase to neutral, using {} kV", ratedU, lineVoltage);
+            return lineVoltage;
+        }
+        return ratedU;
+    }
+
+    private double relativeError(double value, double reference) {
+        return reference > 0 ? Math.abs(value - reference) / reference : Double.MAX_VALUE;
+    }
+
+    private String stripConnectivityNodeSuffix(String nodeId) {
+        return nodeId.endsWith("_CN") ? nodeId.substring(0, nodeId.length() - 3) : nodeId;
+    }
+
+    /**
+     * Helper class to collect transformer data across queries
+     */
+    private static class TransformerData {
+        String id;
+        String name;
+        Double ohmicR;
+        Double ohmicX;
+        String fromNodeId;
+        String toNodeId;
+        final java.util.List<TransformerEndData> ends = new java.util.ArrayList<>();
+    }
+
+    /**
+     * Winding data of a single PowerTransformerEnd
+     */
+    private static class TransformerEndData {
+        double r;       // ohms, referred to ratedU
+        double x;       // ohms, referred to ratedU
+        double ratedS;  // MVA
+        double ratedU;  // kV
+    }
+
+    /**
+     * Transformer impedance in per-unit on the system base, with the rating it was derived from
+     */
+    private static class TransformerImpedance {
+        double rPu;
+        double xPu;
+        double ratingMva;
     }
 
     /**

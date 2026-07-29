@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ShieldCheck, AlertTriangle, CheckCircle, XCircle, Loader2, RefreshCw,
   Info, FileWarning, Clock, Hash, ChevronDown, ChevronRight,
-  Copy, Check, Download, Search, Filter, MessageSquare,
+  Copy, Check, Download, Search, MessageSquare,
   BarChart3, History, X, Layers, Wrench,
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
@@ -299,8 +299,8 @@ const Validation = () => {
     }
   }, []);
 
-  // auto-run on mount
-  useEffect(() => { handleValidate(); }, []);
+  // auto-run on mount (handleValidate is a stable callback)
+  useEffect(() => { handleValidate(); }, [handleValidate]);
 
   const score = result ? computeScore(result) : null;
 

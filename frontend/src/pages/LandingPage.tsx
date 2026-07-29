@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowRight, Zap, Brain, Database, GitBranch, Activity, Shield,
-  ChevronRight, Upload, BarChart3, Search, Network,
+  ArrowRight, Zap, Brain, Database, Activity, Shield,
+  ChevronRight, Upload, Search, Network,
   CheckCircle2, Code2, Cpu, Layers,
 } from 'lucide-react';
 

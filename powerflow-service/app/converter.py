@@ -140,29 +140,23 @@ def _create_line(
     """
     Create a pandapower line from a CIM branch.
 
-    CIM ACLineSegment.r and ACLineSegment.x are in physical Ohms (total),
-    NOT per-unit. We pass them directly to pandapower with length_km=1.0.
+    Branch.resistance and Branch.reactance always arrive in per-unit on the system base
+    (the CIM extractor converts the ohmic CIM values). pandapower wants physical ohms,
+    so they are scaled back with Z_base = Vn^2 / baseMva and passed with length_km=1.0.
     """
     from_bus_data = next((b for b in network.buses if b.id == branch.fromBusId), None)
     vn_kv = from_bus_data.baseVoltageKv if from_bus_data and from_bus_data.baseVoltageKv > 0 else 110.0
 
-    # CIM impedances are in physical Ohms (total line impedance)
-    r_ohm = branch.resistance
-    x_ohm = branch.reactance
+    z_base = (vn_kv ** 2) / network.baseMva if network.baseMva > 0 else 1.0
+    r_ohm = branch.resistance * z_base
+    x_ohm = branch.reactance * z_base
 
-    # Detect if values look like per-unit (very small) and convert if needed
-    if r_ohm > 0 and x_ohm > 0 and r_ohm < 0.1 and x_ohm < 0.5:
-        # Likely per-unit values, convert to physical ohms
-        z_base = (vn_kv ** 2) / network.baseMva
-        r_ohm = r_ohm * z_base
-        x_ohm = x_ohm * z_base
-        logger.info(f"Line {branch.name}: converted per-unit to ohms (Z_base={z_base:.1f}): R={r_ohm:.3f}, X={x_ohm:.3f}")
-
-    # Susceptance: CIM bch is in Siemens (total), convert to C in nF
+    # Susceptance arrives per-unit; back to Siemens with Y_base = 1 / Z_base, then to C in nF
     c_nf = 0.0
-    if branch.susceptance != 0:
+    if branch.susceptance != 0 and z_base > 0:
         # B = 2*pi*f*C => C = B / (2*pi*f), then to nF
-        c_nf = abs(branch.susceptance) * 1e9 / (2 * math.pi * 50)
+        b_siemens = abs(branch.susceptance) / z_base
+        c_nf = b_siemens * 1e9 / (2 * math.pi * 50)
     else:
         # Default susceptance based on voltage level and typical line parameters
         # Typical C ≈ 10-13 nF/km for overhead lines; we estimate from impedance
@@ -217,20 +211,12 @@ def _create_transformer(
 
     sn_mva = branch.ratingMva if branch.ratingMva > 0 else 100.0
 
-    # CIM impedances for transformers are in per-unit on the system base (baseMva).
+    # Transformer impedances arrive per-unit on the system base (baseMva), referred to the HV side.
     # pandapower expects per-unit on the transformer's own MVA base (sn_mva).
     # Convert: Z_trafo_pu = Z_sys_pu * (sn_mva / baseMva)
-    # If values look like physical ohms (large values), convert to pu first.
     r_pu = branch.resistance
     x_pu = branch.reactance
     sys_base_mva = network.baseMva if network.baseMva > 0 else 100.0
-
-    # Detect physical ohms: if impedance > 1.0 it's likely physical ohms, convert to pu
-    z_base_hv = (hv_kv ** 2) / sys_base_mva if hv_kv > 0 else 1.0
-    if abs(r_pu) > 1.0 or abs(x_pu) > 1.0:
-        r_pu = r_pu / z_base_hv
-        x_pu = x_pu / z_base_hv
-        logger.info(f"Transformer {branch.name}: converted physical ohms to pu (Z_base={z_base_hv:.1f}Ω)")
 
     # Re-base from system MVA to transformer MVA
     rebase = sn_mva / sys_base_mva

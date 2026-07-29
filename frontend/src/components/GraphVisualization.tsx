@@ -322,7 +322,7 @@ const GraphVisualization = () => {
         ['voltageMagnitude', 'voltageAngle', 'withinLimits', 'loadingPercentage', 'activePowerMw'].forEach(k => ele.removeData(k));
       });
     }
-  }, [loadFlowMode, loadFlowData]);
+  }, [loadFlowMode, loadFlowData, elements.length]);
 
   // ── Fetch graph data ───────────────────────────────────────────────────────
   const fetchGraphData = useCallback(async () => {
@@ -413,7 +413,11 @@ const GraphVisualization = () => {
   useEffect(() => {
     return () => {
       if (cyRef.current) {
-        try { cyRef.current.stop(); } catch (_) {}
+        try {
+          cyRef.current.stop();
+        } catch {
+          // The instance may already be torn down; nothing to clean up.
+        }
         cyRef.current = null;
       }
     };

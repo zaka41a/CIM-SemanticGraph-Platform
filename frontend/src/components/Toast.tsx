@@ -116,6 +116,9 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
+// The hook stays next to its provider so both share the context instance. This costs
+// fast refresh for this file only, which is an acceptable trade for a single module.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useToast = (): ToastContextValue => {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast must be used inside <ToastProvider>');

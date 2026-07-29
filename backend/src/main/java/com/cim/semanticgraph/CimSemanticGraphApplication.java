@@ -12,6 +12,8 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import java.util.Locale;
+
 @Slf4j
 @SpringBootApplication
 @EnableCaching
@@ -49,6 +51,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class CimSemanticGraphApplication {
 
     public static void main(String[] args) {
+        // All generated output (logs, PDF reports, API payloads) is English, so number and date
+        // formatting must not follow the host locale. Without this a German host renders "794,8 MW".
+        Locale.setDefault(Locale.ROOT);
+
         log.info("╔══════════════════════════════════════════════════════════════╗");
         log.info("║   CIM-SemanticGraph-Platform Starting...                     ║");
         log.info("║   Platform for CIM Knowledge Graphs with GraphRAG & LLM      ║");
