@@ -15,6 +15,7 @@ RESET='\033[0m'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$SCRIPT_DIR/backend"
 PID_FILE="$SCRIPT_DIR/.dev.pids"
+PORTS_FILE="$SCRIPT_DIR/.dev.ports"
 
 log()     { echo -e "${BOLD}${BLUE}[CIM]${RESET} $*"; }
 success() { echo -e "${GREEN}  [ok]${RESET} $*"; }
@@ -46,6 +47,18 @@ kill_port() {
   fi
 }
 
+# Same as kill_port, but only when the port answers as one of our services.
+kill_port_if_ours() {
+  local port=$1 name=$2 url=$3 marker=$4
+  lsof -ti ":$port" &>/dev/null || return 0
+
+  if curl -sf --max-time 2 "$url" 2>/dev/null | grep -q "$marker"; then
+    kill_port "$port" "$name"
+  else
+    warn "Port $port is used by another application - left untouched"
+  fi
+}
+
 # ── Stop processes from PID file (+ their children) ───────────────────────────
 if [ -f "$PID_FILE" ]; then
   while IFS='=' read -r name pid; do
@@ -59,11 +72,26 @@ if [ -f "$PID_FILE" ]; then
   rm -f "$PID_FILE"
 fi
 
-# ── Always kill by port - catches any surviving processes ─────────────────────
-kill_port 3000  "Frontend"
-kill_port 5173  "Frontend (Vite)"
-kill_port 8080  "Backend (Spring Boot)"
-kill_port 8000  "Powerflow"
+# ── Kill the exact ports this run used ────────────────────────────────────────
+# dev.sh records where each service actually landed, which matters because
+# powerflow and Vite both relocate when their default port is taken. Killing
+# only the recorded ports also avoids tearing down an unrelated application.
+if [ -f "$PORTS_FILE" ]; then
+  while IFS='=' read -r name port; do
+    [ -n "${port:-}" ] && kill_port "$port" "$name"
+  done < "$PORTS_FILE"
+  rm -f "$PORTS_FILE"
+else
+  warn "No .dev.ports file - probing the default ports"
+  # Without the port file we cannot know what dev.sh started, so every port is
+  # probed first. Killing a port blindly here once shut down an unrelated
+  # application that happened to use 8000.
+  kill_port_if_ours 8000 "Powerflow"          "http://localhost:8000/health"             '"service":"powerflow"'
+  kill_port_if_ours 8080 "Backend"            "http://localhost:8080/api/actuator/health" '"status"'
+  kill_port_if_ours 3000 "Frontend"           "http://localhost:3000"                    "CIM"
+  kill_port_if_ours 3001 "Frontend (fallback)" "http://localhost:3001"                   "CIM"
+  kill_port_if_ours 5173 "Frontend (Vite)"    "http://localhost:5173"                    "CIM"
+fi
 
 # ── Stop Docker services ───────────────────────────────────────────────────────
 if [ -f "$BACKEND_DIR/docker-compose.yml" ]; then

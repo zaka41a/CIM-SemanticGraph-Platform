@@ -25,3 +25,7 @@ ULTRA_PRO_PLAN.md
 
 # Local Claude Code settings
 .claude/
+
+# dev.sh runtime state
+.dev.pids
+.dev.ports

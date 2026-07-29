@@ -122,7 +122,7 @@ const DataImport = () => {
                 </div>
                 <div className="mt-3 flex items-start gap-2 text-xs text-neutral-400">
                   <Lightbulb size={14} className="text-accent-500 flex-shrink-0 mt-0.5" />
-                  <span>Column names can be in English or French. First row must be headers.</span>
+                  <span>Column names must be in English. First row must be headers.</span>
                 </div>
               </div>
             )}

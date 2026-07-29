@@ -27,13 +27,15 @@ POWERFLOW_DIR="$SCRIPT_DIR/powerflow-service"
 ENV_FILE="$BACKEND_DIR/.env"
 LOG_DIR="$SCRIPT_DIR/.logs"
 PID_FILE="$SCRIPT_DIR/.dev.pids"
+# Ports actually used by this run, so stop.sh tears down what dev.sh started.
+PORTS_FILE="$SCRIPT_DIR/.dev.ports"
 
-# ── Ports ─────────────────────────────────────────────────────────────────────
-PORT_FUSEKI=3030
-PORT_QDRANT=6333
-PORT_POWERFLOW=8000
-PORT_BACKEND=8080
-PORT_FRONTEND=3000
+# ── Ports (override from the environment when a port is already taken) ────────
+PORT_FUSEKI="${PORT_FUSEKI:-3030}"
+PORT_QDRANT="${PORT_QDRANT:-6333}"
+PORT_POWERFLOW="${PORT_POWERFLOW:-8000}"
+PORT_BACKEND="${PORT_BACKEND:-8080}"
+PORT_FRONTEND="${PORT_FRONTEND:-3000}"
 
 # ── Flags ─────────────────────────────────────────────────────────────────────
 START_INFRA=true
@@ -62,6 +64,29 @@ usage() {
 
 check_port() {
   lsof -i ":$1" &>/dev/null
+}
+
+# A port being busy does not mean OUR service owns it. Probing the health
+# endpoint is the only way to tell our process from an unrelated one, which is
+# what stops the backend from silently running without pandapower.
+port_serves() {
+  local url=$1
+  local marker=$2
+  curl -sf --max-time 2 "$url" 2>/dev/null | grep -q "$marker"
+}
+
+find_free_port() {
+  local port=$1
+  local limit=$((port + 20))
+  while [ "$port" -lt "$limit" ]; do
+    check_port "$port" || { echo "$port"; return 0; }
+    port=$((port + 1))
+  done
+  return 1
+}
+
+save_port() {
+  echo "$1=$2" >> "$PORTS_FILE"
 }
 
 wait_for_http() {
@@ -218,9 +243,24 @@ start_infrastructure() {
 start_powerflow() {
   header "Powerflow Service (Python)"
 
-  if check_port $PORT_POWERFLOW; then
+  if port_serves "http://localhost:$PORT_POWERFLOW/health" '"service":"powerflow"'; then
     success "Powerflow already running on :$PORT_POWERFLOW"
+    save_port "POWERFLOW" "$PORT_POWERFLOW"
     return 0
+  fi
+
+  # Busy but not ours: another application owns the port. Move rather than
+  # skip, otherwise the backend starts without pandapower and only says so
+  # through a health flag nobody reads.
+  if check_port $PORT_POWERFLOW; then
+    local taken=$PORT_POWERFLOW
+    local free
+    if ! free=$(find_free_port $((PORT_POWERFLOW + 1))); then
+      error "Port $taken is taken by another application and no free port was found nearby."
+      exit 1
+    fi
+    warn "Port $taken is used by another application - starting powerflow on :$free instead"
+    PORT_POWERFLOW=$free
   fi
 
   cd "$POWERFLOW_DIR"
@@ -248,6 +288,7 @@ start_powerflow() {
     > "$LOG_DIR/powerflow.log" 2>&1 &
 
   save_pid "POWERFLOW" $!
+  save_port "POWERFLOW" "$PORT_POWERFLOW"
 
   wait_for_http "http://localhost:$PORT_POWERFLOW/health" "Powerflow" 60 \
     || { error "Powerflow failed. Check: tail -f $LOG_DIR/powerflow.log"; exit 1; }
@@ -277,11 +318,15 @@ start_backend() {
   log "Loading environment variables from .env..."
   source_env
 
+  # Point the backend at wherever powerflow actually landed.
+  export POWERFLOW_SERVICE_URL="http://localhost:$PORT_POWERFLOW"
+
   log "Compiling & starting Spring Boot (this may take ~30s first time)..."
   nohup ./mvnw spring-boot:run \
     > "$LOG_DIR/backend.log" 2>&1 &
 
   save_pid "BACKEND" $!
+  save_port "BACKEND" "$PORT_BACKEND"
 
   wait_for_http "http://localhost:$PORT_BACKEND/api/actuator/health" "Backend" 120 \
     || { error "Backend failed. Check: tail -f $LOG_DIR/backend.log"; exit 1; }
@@ -297,17 +342,10 @@ start_backend() {
 start_frontend() {
   header "Frontend (React + Vite)"
 
-  if check_port $PORT_FRONTEND; then
-    local stale_pid
-    stale_pid=$(lsof -ti ":$PORT_FRONTEND" 2>/dev/null || true)
-    if [ -n "$stale_pid" ]; then
-      warn "Port $PORT_FRONTEND in use by PID $stale_pid - killing it..."
-      kill "$stale_pid" 2>/dev/null || true
-      sleep 1
-    else
-      success "Frontend already running on :$PORT_FRONTEND"
-      return 0
-    fi
+  if port_serves "http://localhost:$PORT_FRONTEND" "<!doctype html"; then
+    success "Frontend already running on :$PORT_FRONTEND"
+    save_port "FRONTEND" "$PORT_FRONTEND"
+    return 0
   fi
 
   cd "$FRONTEND_DIR"
@@ -322,8 +360,29 @@ start_frontend() {
 
   save_pid "FRONTEND" $!
 
-  wait_for_http "http://localhost:$PORT_FRONTEND" "Frontend" 30 \
-    || { error "Frontend failed. Check: tail -f $LOG_DIR/frontend.log"; exit 1; }
+  # Vite runs with strictPort disabled, so it silently moves to the next free
+  # port. Read the port it actually bound rather than assuming the configured one.
+  local waited=0
+  local detected=""
+  printf "  Waiting for %-20s" "Frontend..."
+  while [ $waited -lt 40 ]; do
+    detected=$(grep -oE 'localhost:[0-9]+' "$LOG_DIR/frontend.log" 2>/dev/null | head -1 | cut -d: -f2)
+    [ -n "$detected" ] && break
+    sleep 1
+    waited=$((waited + 1))
+    printf "."
+  done
+
+  if [ -z "$detected" ]; then
+    echo -e " ${RED}TIMEOUT${RESET}"
+    error "Frontend failed. Check: tail -f $LOG_DIR/frontend.log"
+    exit 1
+  fi
+
+  echo -e " ${GREEN}ready${RESET} (${waited}s)"
+  [ "$detected" != "$PORT_FRONTEND" ] && warn "Vite moved to port $detected (port $PORT_FRONTEND was busy)"
+  PORT_FRONTEND=$detected
+  save_port "FRONTEND" "$PORT_FRONTEND"
 
   success "Frontend ready   → logs: $LOG_DIR/frontend.log"
   cd "$SCRIPT_DIR"
@@ -358,8 +417,8 @@ print_summary() {
 # Main
 # =============================================================================
 
-# Clear old PID file
-rm -f "$PID_FILE"
+# Clear old PID and port files
+rm -f "$PID_FILE" "$PORTS_FILE"
 mkdir -p "$LOG_DIR"
 
 echo -e "\n${BOLD}${BLUE}╔══════════════════════════════════════════════╗${RESET}"
