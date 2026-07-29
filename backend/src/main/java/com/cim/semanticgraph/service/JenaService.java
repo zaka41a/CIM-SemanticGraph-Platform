@@ -250,7 +250,7 @@ public class JenaService {
         stats.put("totalClasses",      countFuseki("SELECT (COUNT(DISTINCT ?class) as ?count) WHERE { ?s rdf:type ?class }"));
 
         stats.put("substations",       countCimEntities("Substation"));
-        stats.put("generators",        countCimEntities("GeneratingUnit", "SynchronousMachine"));
+        stats.put("generators",        countGenerators());
         stats.put("transmissionLines", countCimEntities("ACLineSegment"));
         stats.put("transformers",      countCimEntities("PowerTransformer"));
         stats.put("breakers",          countCimEntities("Breaker"));
@@ -278,6 +278,20 @@ public class JenaService {
             log.error("Count query failed: {}", e.getMessage());
         }
         return 0;
+    }
+
+    /**
+     * Number of physical generating units.
+     *
+     * A machine is normally modelled twice in CIM: one GeneratingUnit carrying the
+     * operating limits and one SynchronousMachine carrying the electrical behaviour.
+     * Counting the union of both classes reported 12 generators for the 6 machines
+     * this network actually has, so GeneratingUnit is authoritative and
+     * SynchronousMachine is only a fallback for datasets that omit the units.
+     */
+    private long countGenerators() {
+        long units = countCimEntities("GeneratingUnit");
+        return units > 0 ? units : countCimEntities("SynchronousMachine");
     }
 
     private long countCimEntities(String... entityTypes) {

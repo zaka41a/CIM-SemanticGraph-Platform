@@ -364,13 +364,12 @@ const Statistics = () => {
           <div>
             <StatRow label="Circuit Breakers" value={stats?.breakers || 0} icon={ToggleRight} color="blue" />
             <StatRow label="Disconnectors" value={stats?.disconnectors || 0} icon={ToggleRight} color="accent" />
-            <StatRow label="Busbar Sections" value={stats?.busbarSections || 0} icon={TrendingUp} color="accent" />
           </div>
           <div className="mt-5 pt-4 border-t border-primary-700/30">
             <div className="flex items-center justify-between">
               <span className="text-neutral-400">Total Switching</span>
               <span className="text-2xl font-bold text-accent-400">
-                {((stats?.breakers || 0) + (stats?.disconnectors || 0) + (stats?.busbarSections || 0)).toLocaleString()}
+                {((stats?.breakers || 0) + (stats?.disconnectors || 0)).toLocaleString()}
               </span>
             </div>
           </div>
@@ -384,6 +383,7 @@ const Statistics = () => {
         >
           <div>
             <StatRow label="Connectivity Nodes" value={stats?.connectivityNodes || 0} icon={CircleDot} color="blue" />
+            <StatRow label="Busbar Sections" value={stats?.busbarSections || 0} icon={TrendingUp} color="blue" />
             <StatRow label="Terminals" value={stats?.terminals || 0} icon={GitBranch} color="blue" />
             <StatRow label="Voltage Levels" value={stats?.voltageLevels || 0} icon={Layers} color="emerald" />
             <StatRow label="Base Voltages" value={stats?.baseVoltages || 0} icon={Activity} color="accent" />

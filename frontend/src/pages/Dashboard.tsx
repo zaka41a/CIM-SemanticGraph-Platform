@@ -273,7 +273,7 @@ const Dashboard = () => {
     { title: 'Transmission Lines', value: stats?.transmissionLines || 0, icon: TrendingUp, ...SKY },
     { title: 'Transformers',       value: stats?.transformers || 0,      icon: GitBranch,  ...SKY },
     { title: 'Loads',              value: stats?.loads || 0,             icon: Cpu,        ...EMERALD },
-    { title: 'Buses (Nodes)',      value: stats?.busbarSections || 0,    icon: Layers,     ...SKY },
+    { title: 'Buses (Nodes)',      value: stats?.connectivityNodes || 0, icon: Layers,     ...SKY },
     {
       title: 'Vector Indexed',
       value: serviceStatus?.indexedEntities || 0,

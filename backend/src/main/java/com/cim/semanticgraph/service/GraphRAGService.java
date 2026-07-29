@@ -102,6 +102,10 @@ public class GraphRAGService {
                 // Hard cap: Groq free tier limit ~12k TPM → keep context under ~24k chars (~6k tokens)
                 graphContext = truncateContext(graphContext, 24_000);
 
+                // Prepended after truncation so the authoritative totals always survive,
+                // whatever the sample below them gets cut down to.
+                graphContext = buildInventoryContext() + graphContext;
+
                 log.debug("Step 4: Querying LLM");
                 String answer;
                 if (groqService.isConfigured(provider)) {
@@ -562,6 +566,62 @@ public class GraphRAGService {
                 .llmModel(modelUsed)
                 .confidence(0.3)
                 .build();
+    }
+
+    /**
+     * Class-level counts for the whole graph.
+     *
+     * The entity listings that follow in the context are a retrieved sample capped by
+     * max-triples, and the LLM has no way to tell a sample from a complete set. Without
+     * these totals it reports the sample size as the answer, which is how "how many
+     * busbar sections" came back as 9 for a graph that holds 292.
+     */
+    private String buildInventoryContext() {
+        String sparql = """
+            PREFIX cim: <%s>
+            SELECT ?class (COUNT(DISTINCT ?entity) AS ?count) WHERE {
+                ?entity a ?class .
+                FILTER(STRSTARTS(STR(?class), "%s"))
+            }
+            GROUP BY ?class
+            ORDER BY DESC(?count)
+            """.formatted(cimNamespace, cimNamespace);
+
+        try {
+            List<Map<String, String>> rows = jenaService.executeSparqlSelect(sparql);
+            if (rows.isEmpty()) {
+                return "";
+            }
+
+            StringBuilder ctx = new StringBuilder();
+            ctx.append("## Graph Inventory (authoritative totals for the ENTIRE knowledge graph)\n");
+            ctx.append("These counts come from a COUNT over the full graph. Use them verbatim for any\n");
+            ctx.append("\"how many\" or \"list all\" question. Everything below this block is a partial\n");
+            ctx.append("sample: never report the number of entities shown there as a total.\n");
+            for (Map<String, String> row : rows) {
+                String className = simplifyClassUri(row.get("class"));
+                String count = stripLiteralSuffix(row.get("count"));
+                if (className != null && count != null) {
+                    ctx.append(String.format("- %s: %s%n", className, count));
+                }
+            }
+            ctx.append("\n");
+            return ctx.toString();
+        } catch (Exception e) {
+            log.warn("SPARQL inventory query failed: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    private String simplifyClassUri(String uri) {
+        if (uri == null) return null;
+        int split = Math.max(uri.lastIndexOf('#'), uri.lastIndexOf('/'));
+        return (split >= 0 && split < uri.length() - 1) ? uri.substring(split + 1) : uri;
+    }
+
+    private String stripLiteralSuffix(String rawValue) {
+        if (rawValue == null) return null;
+        return rawValue.replaceAll("\\^\\^.*", "").replace("\"", "").trim();
     }
 
     private String buildSparqlContext(String question) {
