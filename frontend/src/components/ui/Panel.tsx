@@ -35,10 +35,17 @@ const TITLE_TONES = {
   warning: 'text-accent-300',
 } as const;
 
+// Sky marks structural sections, matching the Dashboard stat cards.
+const ICON_TONES = {
+  neutral: 'text-sky-400',
+  critical: 'text-red-300',
+  warning: 'text-accent-300',
+} as const;
+
 export function PanelHeader({ icon: Icon, title, badge, tone = 'neutral' }: PanelHeaderProps) {
   return (
     <div className={`px-5 py-3.5 border-b flex items-center gap-3 ${TONES[tone]}`}>
-      {Icon && <Icon size={16} className={tone === 'neutral' ? 'text-neutral-400' : TITLE_TONES[tone]} />}
+      {Icon && <Icon size={16} className={ICON_TONES[tone]} />}
       <h3 className={`text-sm font-semibold ${TITLE_TONES[tone]}`}>{title}</h3>
       {badge && <div className="ml-auto">{badge}</div>}
     </div>

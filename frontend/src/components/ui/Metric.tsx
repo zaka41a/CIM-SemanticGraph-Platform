@@ -32,12 +32,20 @@ export default function Metric({
   tone = 'neutral',
   unit,
 }: MetricProps) {
-  const valueColor = emphasis === 'headline' && tone === 'neutral' ? 'text-accent-400' : TONE_VALUE[tone];
+  const headline = emphasis === 'headline' && tone === 'neutral';
+  const valueColor = headline ? 'text-accent-400' : TONE_VALUE[tone];
+  // Amber marks the headline metric, sky the structural ones: same rule as the Dashboard.
+  const iconColor = headline ? 'text-accent-300' : 'text-sky-400';
+  const iconBg = headline ? 'bg-accent-500/15' : 'bg-sky-500/15';
 
   return (
     <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10">
       <div className="flex items-center gap-2 mb-2">
-        {Icon && <Icon size={14} className="text-neutral-500" />}
+        {Icon && (
+          <span className={`p-1.5 rounded-md ${iconBg}`}>
+            <Icon size={13} className={iconColor} />
+          </span>
+        )}
         <span className="text-xs text-neutral-400 uppercase tracking-wide">{label}</span>
       </div>
       <div className={`text-2xl font-bold tabular-nums ${valueColor}`}>

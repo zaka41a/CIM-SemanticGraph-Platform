@@ -309,7 +309,7 @@ const Diagnostics = () => {
 
               {hasIssues && (
                 <Button
-                  variant="secondary"
+                  variant="primary"
                   fullWidth
                   icon={Wrench}
                   iconRight={ArrowRight}

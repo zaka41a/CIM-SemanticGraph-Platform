@@ -28,7 +28,7 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, loading }: {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-red-500/10 rounded-full blur-3xl" />
 
         <div className="relative p-8">
-          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-red-500/20 to-orange-500/20 border-2 border-red-500/50 rounded-full flex items-center justify-center mb-6">
+          <div className="mx-auto w-20 h-20 bg-red-500/15 border-2 border-red-500/50 rounded-full flex items-center justify-center mb-6">
             <AlertTriangle size={40} className="text-red-400" />
           </div>
 
@@ -116,15 +116,16 @@ const ServiceStatusCard = ({
   actionLoading?: boolean;
 }) => (
   <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary-800/40 border border-primary-700/30">
-    <div className={`p-2 rounded-lg ${status === 'UP' ? 'bg-emerald-500/20' : status === 'DOWN' ? 'bg-red-500/20' : 'bg-neutral-500/20'}`}>
-      <Icon size={16} className={status === 'UP' ? 'text-emerald-400' : status === 'DOWN' ? 'text-red-400' : 'text-neutral-400'} />
+    {/* Sky marks the service itself, like the stat cards. The dot alone reports health. */}
+    <div className="p-2 rounded-lg bg-sky-500/20">
+      <Icon size={16} className="text-sky-300" />
     </div>
     <div className="flex-1 min-w-0">
       <p className="text-xs font-semibold text-neutral-300">{label}</p>
       {detail && <p className="text-xs text-neutral-500 truncate">{detail}</p>}
     </div>
     <div className="flex items-center gap-2">
-      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status === 'UP' ? 'bg-emerald-400 animate-pulse' : status === 'DOWN' ? 'bg-red-400' : 'bg-neutral-400 animate-pulse'}`} />
+      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status === 'UP' ? 'bg-emerald-400' : status === 'DOWN' ? 'bg-red-400' : 'bg-neutral-400 animate-pulse'}`} />
       {onAction && (
         <button
           onClick={onAction}
@@ -325,7 +326,7 @@ const Dashboard = () => {
       />
 
       {error && (
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/30 p-5 animate-slide-up">
+        <div className="relative overflow-hidden rounded-xl bg-red-500/10 border border-red-500/30 p-5 animate-slide-up">
           <div className="flex items-start gap-3">
             <div className="p-2 bg-red-500/20 rounded-lg flex-shrink-0">
               <Activity size={20} className="text-red-400" />
@@ -373,8 +374,8 @@ const Dashboard = () => {
         <div className="px-6 py-4 border-b border-primary-700/30 bg-gradient-to-r from-primary-800/50 to-transparent">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-accent-500/20 rounded-lg">
-                <Activity size={18} className="text-accent-400" />
+              <div className="p-2 bg-sky-500/20 rounded-lg">
+                <Activity size={18} className="text-sky-300" />
               </div>
               <div>
                 <h3 className="font-semibold text-white">Platform Services</h3>

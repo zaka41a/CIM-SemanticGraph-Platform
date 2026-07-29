@@ -54,8 +54,8 @@ const ReportCard = ({
     <Panel className="p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2.5 rounded-lg bg-white/[0.04] border border-white/5 shrink-0">
-            <Icon size={20} className="text-neutral-400" />
+          <div className="p-2.5 rounded-lg bg-sky-500/20 shrink-0">
+            <Icon size={20} className="text-sky-300" />
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-white text-sm">{report.title}</h3>
@@ -101,7 +101,7 @@ const ReportCard = ({
       )}
 
       <Button
-        variant="secondary"
+        variant="primary"
         fullWidth
         loading={isGenerating}
         icon={isDone ? Download : FileText}
