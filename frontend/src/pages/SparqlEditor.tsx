@@ -43,7 +43,6 @@ LIMIT 10`);
       name: 'Substations',
       description: 'Get all substations with their descriptions',
       icon: Database,
-      color: 'accent',
       query: `PREFIX cim: <http://iec.ch/TC57/CIM100#>
 SELECT ?name ?description
 WHERE {
@@ -56,7 +55,6 @@ WHERE {
       name: 'Generators',
       description: 'List generating units with power capacity',
       icon: Zap,
-      color: 'emerald',
       query: `PREFIX cim: <http://iec.ch/TC57/CIM100#>
 SELECT ?name ?maxPower
 WHERE {
@@ -69,7 +67,6 @@ WHERE {
       name: 'Total Capacity',
       description: 'Aggregate generation capacity and count',
       icon: BarChart3,
-      color: 'blue',
       query: `PREFIX cim: <http://iec.ch/TC57/CIM100#>
 SELECT (SUM(?power) as ?totalCapacity) (COUNT(?g) as ?count)
 WHERE {
@@ -81,7 +78,6 @@ WHERE {
       name: 'Transmission Lines',
       description: 'List AC line segments with impedance data',
       icon: Cable,
-      color: 'purple',
       query: `PREFIX cim: <http://iec.ch/TC57/CIM100#>
 SELECT ?name ?r ?x ?length
 WHERE {
@@ -97,7 +93,6 @@ LIMIT 50`,
       name: 'Network Topology',
       description: 'Equipment terminal connectivity',
       icon: Layers,
-      color: 'cyan',
       query: `PREFIX cim: <http://iec.ch/TC57/CIM100#>
 SELECT ?equipment ?terminal ?node
 WHERE {
@@ -111,7 +106,6 @@ LIMIT 50`,
       name: 'Voltage Levels',
       description: 'Base voltages and associated levels',
       icon: Zap,
-      color: 'yellow',
       query: `PREFIX cim: <http://iec.ch/TC57/CIM100#>
 SELECT ?vlName ?nominalVoltage
 WHERE {
@@ -123,15 +117,6 @@ WHERE {
 ORDER BY DESC(?nominalVoltage)`,
     },
   ];
-
-  const colorMap: Record<string, { iconBg: string; iconText: string; border: string; dot: string }> = {
-    accent:  { iconBg: 'bg-blue-500/20',   iconText: 'text-blue-400',   border: 'hover:border-blue-500/30',   dot: 'bg-blue-500'   },
-    emerald: { iconBg: 'bg-emerald-500/20', iconText: 'text-emerald-400', border: 'hover:border-emerald-500/30', dot: 'bg-emerald-500' },
-    blue:    { iconBg: 'bg-sky-500/20',     iconText: 'text-sky-400',     border: 'hover:border-sky-500/30',    dot: 'bg-sky-500'    },
-    purple:  { iconBg: 'bg-purple-500/20',  iconText: 'text-purple-400',  border: 'hover:border-purple-500/30', dot: 'bg-purple-500' },
-    cyan:    { iconBg: 'bg-cyan-500/20',    iconText: 'text-cyan-400',    border: 'hover:border-cyan-500/30',   dot: 'bg-cyan-500'   },
-    yellow:  { iconBg: 'bg-yellow-500/20',  iconText: 'text-accent-500',  border: 'hover:border-yellow-500/30', dot: 'bg-yellow-500' },
-  };
 
   const handleExecute = async () => {
     if (!query.trim()) return;
@@ -234,7 +219,6 @@ ORDER BY DESC(?nominalVoltage)`,
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         icon={Code2}
-        iconColor="text-blue-400"
         title="SPARQL Query Editor"
         subtitle="Execute powerful queries against your CIM Knowledge Graph"
       />
@@ -279,31 +263,28 @@ ORDER BY DESC(?nominalVoltage)`,
             <div className="card p-5 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-accent-500/5 rounded-full blur-2xl"></div>
               <div className="relative space-y-2.5">
+                {/* Templates are peers: one shared sky treatment, no per-item colour. */}
                 {sampleQueries.map((sample, index) => {
                   const Icon = sample.icon;
-                  const c = colorMap[sample.color] || colorMap.accent;
                   return (
                     <button
                       key={index}
                       onClick={() => setQuery(sample.query)}
-                      className={`group w-full text-left p-3.5 rounded-xl bg-primary-800/30 hover:bg-primary-700/40 border border-primary-700/30 ${c.border} transition-all duration-200 active:scale-[0.98]`}
+                      className="group w-full text-left p-3.5 rounded-xl bg-primary-800/30 hover:bg-primary-700/40 border border-primary-700/30 hover:border-sky-500/40 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60"
                     >
                       <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-lg ${c.iconBg} flex-shrink-0 shadow-sm`}>
-                          <Icon size={16} className={c.iconText} />
+                        <div className="p-2 rounded-lg bg-sky-500/20 flex-shrink-0">
+                          <Icon size={16} className="text-sky-300" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${c.dot}`} />
-                            <p className={`font-semibold text-sm ${c.iconText} group-hover:opacity-80 transition-opacity`}>
-                              {sample.name}
-                            </p>
-                          </div>
+                          <p className="font-semibold text-sm text-white mb-0.5">
+                            {sample.name}
+                          </p>
                           <p className="text-[11px] text-neutral-500 leading-relaxed">
                             {sample.description}
                           </p>
                         </div>
-                        <ArrowRight size={14} className={`${c.iconText} opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 mt-1`} />
+                        <ArrowRight size={14} className="text-sky-300 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1" />
                       </div>
                     </button>
                   );

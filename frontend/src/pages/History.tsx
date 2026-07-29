@@ -258,7 +258,7 @@ const History = () => {
         <StatCard icon={FileText}     label="Total Imports"  value={stats.total}                      color="text-accent-400"   border="border-accent-500/30" />
         <StatCard icon={CheckCircle2} label="Successful"     value={stats.success}                    color="text-emerald-400" border="border-emerald-500/30" />
         <StatCard icon={XCircle}      label="Failed"         value={stats.failed}                     color="text-red-400"     border="border-red-500/30" />
-        <StatCard icon={Database}     label="Total Triples"  value={stats.totalTriples.toLocaleString()} color="text-purple-400" border="border-purple-500/30" />
+        <StatCard icon={Database}     label="Total Triples"  value={stats.totalTriples.toLocaleString()} color="text-accent-400" border="border-accent-500/30" />
       </div>
 
       {/* Empty / Error state */}

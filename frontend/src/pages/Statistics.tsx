@@ -256,7 +256,7 @@ const Statistics = () => {
               <Database className="w-6 h-6 text-accent-400" />
             </div>
             <div>
-              <p className="text-3xl font-bold text-white">{stats?.totalTriples?.toLocaleString() || 0}</p>
+              <p className="text-3xl font-bold tabular-nums text-accent-400">{stats?.totalTriples?.toLocaleString() || 0}</p>
               <p className="text-sm text-neutral-400">Total Triples</p>
             </div>
           </div>

@@ -487,20 +487,20 @@ const Validation = () => {
       {result && !isValidating && score !== null && (
         <div className="space-y-6">
 
-          {/* Summary + gauge */}
-          <div className={`card overflow-hidden border ${result.valid ? 'border-accent-500/50' : 'border-red-500/30'}`}>
-            <div className={`p-6 border-b ${result.valid ? 'bg-accent-500/15 border-accent-500/30' : 'bg-gradient-to-r from-red-500/8 to-transparent border-red-500/20'}`}>
+          {/* Summary + gauge. Full compliance reads green, anything short of it reads red. */}
+          <div className={`card overflow-hidden border ${score === 100 ? 'border-emerald-500/50' : 'border-red-500/40'}`}>
+            <div className={`p-6 border-b ${score === 100 ? 'bg-emerald-500/15 border-emerald-500/30' : 'bg-red-500/10 border-red-500/25'}`}>
               <div className="flex items-center justify-between flex-wrap gap-6">
                 {/* Status */}
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-xl ${result.valid ? 'bg-accent-500/20' : 'bg-red-500/20'}`}>
-                    {result.valid ? <CheckCircle size={28} className="text-accent-400" /> : <AlertTriangle size={28} className="text-red-400" />}
+                  <div className={`p-3 rounded-xl ${score === 100 ? 'bg-emerald-500/20' : 'bg-red-500/20'}`}>
+                    {score === 100 ? <CheckCircle size={28} className="text-emerald-400" /> : <AlertTriangle size={28} className="text-red-400" />}
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-white">
-                      {result.valid ? 'Validation Passed' : 'Validation Failed'}
+                      {score === 100 ? 'Validation Passed' : 'Validation Failed'}
                     </h3>
-                    <p className={`text-sm mt-0.5 ${result.valid ? 'text-accent-400' : 'text-red-400'}`}>{result.message}</p>
+                    <p className={`text-sm mt-0.5 ${score === 100 ? 'text-emerald-400' : 'text-red-400'}`}>{result.message}</p>
                   </div>
                 </div>
                 {/* Gauge */}
@@ -513,7 +513,7 @@ const Validation = () => {
               {[
                 { label: 'Triples', value: result.triplesValidated.toLocaleString(), icon: Hash, color: 'text-accent-400', bg: 'bg-accent-500/10 border-accent-500/20' },
                 { label: 'Errors',  value: result.errorCount,   icon: XCircle,       color: 'text-red-400',    bg: 'bg-red-500/10 border-red-500/20' },
-                { label: 'Warnings', value: result.warningCount, icon: AlertTriangle, color: 'text-accent-500', bg: 'bg-yellow-500/10 border-yellow-500/20' },
+                { label: 'Warnings', value: result.warningCount, icon: AlertTriangle, color: 'text-accent-400', bg: 'bg-accent-500/10 border-accent-500/20' },
                 { label: 'Time',    value: formatMs(result.executionTimeMs), icon: Clock, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
               ].map(({ label, value, icon: Icon, color, bg }) => (
                 <div key={label} className={`p-4 rounded-xl border ${bg} text-center`}>

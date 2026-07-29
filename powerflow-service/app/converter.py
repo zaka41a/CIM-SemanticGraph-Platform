@@ -205,9 +205,10 @@ def _create_transformer(
     hv_kv = max(from_kv, to_kv)
     lv_kv = min(from_kv, to_kv)
 
-    # Avoid equal HV and LV
-    if abs(hv_kv - lv_kv) < 1.0:
-        lv_kv = hv_kv / 2.0
+    # A transformer whose two ends sit at the same nominal voltage is a legitimate 1:1 unit
+    # (bus coupler, phase shifter). Inventing a ratio here would contradict the bus voltages
+    # pandapower already holds and makes the Jacobian singular, so the rated values are kept
+    # exactly as the buses report them.
 
     sn_mva = branch.ratingMva if branch.ratingMva > 0 else 100.0
 

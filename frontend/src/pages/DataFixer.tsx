@@ -6,6 +6,7 @@ import {
   Search, Cable, Gauge, Network, ArrowRight, RotateCcw,
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import Button from '@/components/ui/Button';
 import api from '@/services/api';
 import { storageGet, storageSet, storageRemove } from '@/utils/storage';
 
@@ -333,43 +334,29 @@ WHERE {
 
       <PageHeader
         icon={Wrench}
-        iconColor="text-yellow-400"
         title="CIM Data Fixer"
         subtitle="Network data quality analysis and automatic correction"
         actions={
           <>
             {score !== null && (
-              <div className="text-center px-4 py-1.5 rounded-lg bg-primary-800 border border-primary-600/50">
-                <div className={`text-xl font-black ${scoreColor}`}>{score}</div>
-                <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Quality Score</div>
+              <div className="flex items-baseline gap-2 px-3.5 py-2 rounded-lg bg-white/[0.04] border border-white/10">
+                <span className={`text-lg font-bold tabular-nums leading-none ${scoreColor}`}>{score}</span>
+                <span className="text-[10px] text-neutral-500 uppercase tracking-wide leading-none">Quality score</span>
               </div>
             )}
             {analysisComplete && (
-              <button
-                onClick={clearAnalysis}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-800 hover:bg-red-500/10 border border-primary-600/50 hover:border-red-500/30 text-neutral-300 hover:text-red-300 text-sm transition-all"
-              >
-                <RotateCcw size={15} /> Reset
-              </button>
+              <Button variant="ghost" icon={RotateCcw} onClick={clearAnalysis}>
+                Reset
+              </Button>
             )}
             {pendingFixes.length > 0 && (
-              <button
-                onClick={applyAllFixes}
-                disabled={applying}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
-              >
-                <PlayCircle size={15} className={applying ? 'animate-pulse' : ''} />
-                {applying ? 'Applying…' : `Apply All (${pendingFixes.length})`}
-              </button>
+              <Button variant="primary" icon={PlayCircle} loading={applying} onClick={applyAllFixes}>
+                {applying ? 'Applying' : `Apply all (${pendingFixes.length})`}
+              </Button>
             )}
-            <button
-              onClick={analyzeNetwork}
-              disabled={analyzing}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
-            >
-              <Zap size={15} className={analyzing ? 'animate-spin' : ''} />
-              {analyzing ? 'Analyzing…' : analysisComplete ? 'Re-analyze' : 'Analyze Network'}
-            </button>
+            <Button variant="secondary" icon={Zap} loading={analyzing} onClick={analyzeNetwork}>
+              {analyzing ? 'Analyzing' : analysisComplete ? 'Re-analyze' : 'Analyze network'}
+            </Button>
           </>
         }
       />

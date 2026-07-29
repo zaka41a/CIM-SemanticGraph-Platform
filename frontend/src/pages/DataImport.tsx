@@ -152,7 +152,7 @@ const DataImport = () => {
               <button
                 onClick={handleImport}
                 disabled={!file || isUploading}
-                className="flex-1 py-4 bg-gradient-to-r from-accent-500 to-accent-600 hover:from-accent-600 hover:to-accent-700 disabled:from-neutral-600 disabled:to-neutral-700 disabled:cursor-not-allowed text-white rounded-xl transition-all font-semibold shadow-lg shadow-accent-500/20 hover:shadow-xl active:scale-[0.98] flex items-center justify-center gap-3"
+                className="flex-1 py-4 bg-accent-500 hover:bg-accent-400 disabled:bg-neutral-700 disabled:text-neutral-400 disabled:cursor-not-allowed text-primary-950 rounded-xl transition-colors duration-150 font-semibold flex items-center justify-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-primary-900"
               >
                 {isUploading ? (
                   <>
