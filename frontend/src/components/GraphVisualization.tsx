@@ -263,7 +263,9 @@ const GraphVisualization = () => {
       }
       // Auto-calculate if no valid cached data
       setLoadFlowLoading(true);
-      const response = await api.calculateLoadFlow('DC');
+      // Nodes are coloured by voltage magnitude, and DC power flow holds every magnitude
+      // at 1.000 pu, so a DC run paints the whole graph one colour.
+      const response = await api.calculateLoadFlow('AC_NEWTON_RAPHSON');
       if (Array.isArray(response?.busResults)) {
         localStorage.setItem('cim_load_flow_results', JSON.stringify(response));
         setLoadFlowData(response);
