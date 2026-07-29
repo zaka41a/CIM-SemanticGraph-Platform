@@ -1,12 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity, CheckCircle2, XCircle, AlertTriangle,
   Database, Zap, Loader2, RefreshCw,
-  Cable, Plug, CircleDot, Wrench, ArrowRight, BarChart3
+  Cable, Plug, CircleDot, Wrench, ArrowRight, BarChart3,
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
+import Button from '@/components/ui/Button';
+import CollapsibleList from '@/components/ui/CollapsibleList';
+import EmptyState from '@/components/ui/EmptyState';
+import Metric from '@/components/ui/Metric';
+import { Panel, PanelHeader, CountBadge } from '@/components/ui/Panel';
 import { apiService } from '@/services/api';
+
+interface DiagnosticIssue {
+  code: string;
+  message: string;
+}
 
 interface DiagnosticResult {
   status: string;
@@ -26,80 +36,93 @@ interface DiagnosticResult {
   generatorIds: string[];
   loadIds: string[];
   nodeConnections: Record<string, number>;
-  errors: Array<{ code: string; message: string }>;
-  warnings: Array<{ code: string; message: string }>;
+  errors: DiagnosticIssue[];
+  warnings: DiagnosticIssue[];
 }
 
-// Compact ratio bar - shows X/total connected
+/** Connected ratio for one equipment class. Colour reports health only. */
 const RatioBar = ({
-  label, icon: Icon, connected, total, color,
+  label, icon: Icon, connected, total,
 }: {
-  label: string; icon: React.ElementType;
-  connected: number; total: number; color: string;
+  label: string; icon: React.ElementType; connected: number; total: number;
 }) => {
   const pct = total > 0 ? Math.round((connected / total) * 100) : 0;
+  const bar = pct === 100 ? 'bg-emerald-400' : pct >= 70 ? 'bg-accent-400' : 'bg-red-400';
+
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-xs">
         <span className="flex items-center gap-1.5 text-neutral-400">
-          <Icon size={13} className={color} /> {label}
+          <Icon size={13} className="text-neutral-500" /> {label}
         </span>
-        <span className="font-mono font-semibold text-white">
+        <span className="tabular-nums font-semibold text-white">
           {connected}<span className="text-neutral-500">/{total}</span>
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-primary-700/50 overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${
-            pct === 100 ? 'bg-emerald-400' : pct >= 70 ? 'bg-yellow-400' : 'bg-red-400'
-          }`}
-          style={{ width: `${pct}%` }}
-        />
+      <div className="h-1.5 rounded-full bg-primary-800/60 overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-500 ${bar}`} style={{ width: `${pct}%` }} />
       </div>
-      <div className="text-right text-[10px] text-neutral-500">{pct}% connected</div>
+      <div className="text-right text-[10px] text-neutral-500 tabular-nums">{pct}% connected</div>
     </div>
   );
 };
 
-// Power balance visual
 const PowerBalance = ({ gen, load }: { gen: number; load: number }) => {
   const imbalance = gen - load;
   const max = Math.max(gen, load, 1);
-  const genPct  = Math.min((gen  / max) * 100, 100);
-  const loadPct = Math.min((load / max) * 100, 100);
   const balanced = Math.abs(imbalance) < 50;
 
+  const Row = ({ label, icon: Icon, value }: { label: string; icon: React.ElementType; value: number }) => (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-xs">
+        <span className="flex items-center gap-1.5 text-neutral-400">
+          <Icon size={12} className="text-neutral-500" /> {label}
+        </span>
+        <span className="tabular-nums font-semibold text-white">{value.toFixed(1)} MW</span>
+      </div>
+      <div className="h-2 rounded-full bg-primary-800/60 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-sky-400/70 transition-all duration-500"
+          style={{ width: `${Math.min((value / max) * 100, 100)}%` }}
+        />
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-3">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-1.5 text-emerald-400"><Zap size={12} /> Generation</span>
-          <span className="font-mono font-bold text-white">{gen.toFixed(1)} MW</span>
-        </div>
-        <div className="h-2 rounded-full bg-primary-700/50 overflow-hidden">
-          <div className="h-full rounded-full bg-emerald-400 transition-all duration-700" style={{ width: `${genPct}%` }} />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-1.5 text-orange-400"><Plug size={12} /> Load</span>
-          <span className="font-mono font-bold text-white">{load.toFixed(1)} MW</span>
-        </div>
-        <div className="h-2 rounded-full bg-primary-700/50 overflow-hidden">
-          <div className="h-full rounded-full bg-orange-400 transition-all duration-700" style={{ width: `${loadPct}%` }} />
-        </div>
-      </div>
+    <div className="space-y-4">
+      <Row label="Generation" icon={Zap} value={gen} />
+      <Row label="Load" icon={Plug} value={load} />
       <div className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold border ${
         balanced
-          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-          : 'bg-yellow-500/10 border-yellow-500/20 text-accent-500'
+          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+          : 'bg-accent-500/10 border-accent-500/20 text-accent-300'
       }`}>
         <span>Imbalance</span>
-        <span className="font-mono">{imbalance > 0 ? '+' : ''}{imbalance.toFixed(1)} MW</span>
+        <span className="tabular-nums">{imbalance > 0 ? '+' : ''}{imbalance.toFixed(1)} MW</span>
       </div>
     </div>
   );
 };
+
+const STATUS_CONFIG = {
+  OK:      { icon: CheckCircle2,  color: 'text-emerald-400', ring: 'bg-emerald-500/10 border-emerald-500/25', label: 'Healthy' },
+  WARNING: { icon: AlertTriangle, color: 'text-accent-400',  ring: 'bg-accent-500/10 border-accent-500/25',   label: 'Warning' },
+  ERROR:   { icon: XCircle,       color: 'text-red-400',     ring: 'bg-red-500/10 border-red-500/25',         label: 'Critical' },
+} as const;
+
+const IssueRow = ({ issue, tone }: { issue: DiagnosticIssue; tone: 'critical' | 'warning' }) => (
+  <div className="flex items-start gap-3 px-5 py-3.5">
+    <span className={`flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-semibold border mt-0.5 ${
+      tone === 'critical'
+        ? 'bg-red-500/15 text-red-300 border-red-500/30'
+        : 'bg-accent-500/15 text-accent-300 border-accent-500/30'
+    }`}>
+      {issue.code}
+    </span>
+    <p className="text-sm text-neutral-300 leading-relaxed">{issue.message}</p>
+  </div>
+);
 
 const Diagnostics = () => {
   const navigate = useNavigate();
@@ -107,262 +130,194 @@ const Diagnostics = () => {
   const [loading, setLoading] = useState(false);
   const [lastRun, setLastRun] = useState<Date | null>(null);
 
-  const runDiagnostics = async () => {
+  const runDiagnostics = useCallback(async () => {
     setLoading(true);
     try {
       const result = await apiService.runNetworkDiagnostics();
       setDiagnostics(result);
       setLastRun(new Date());
-    } catch (error: any) {
-      console.error('Error running diagnostics:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { runDiagnostics(); }, []);
+  useEffect(() => { runDiagnostics(); }, [runDiagnostics]);
 
-  const statusConfig = {
-    OK:      { border: 'border-emerald-500/30', iconBg: 'bg-emerald-500/20', icon: CheckCircle2, color: 'text-emerald-400', label: 'Healthy',  dot: 'bg-emerald-400' },
-    WARNING: { border: 'border-yellow-500/30',  iconBg: 'bg-yellow-500/20',  icon: AlertTriangle, color: 'text-accent-500', label: 'Warning',  dot: 'bg-yellow-400' },
-    ERROR:   { border: 'border-red-500/30',     iconBg: 'bg-red-500/20',     icon: XCircle,       color: 'text-red-400',    label: 'Critical', dot: 'bg-red-400' },
-  };
-
-  const cfg = diagnostics ? (statusConfig[diagnostics.status as keyof typeof statusConfig] ?? statusConfig.WARNING) : null;
-  const hasIssues = (diagnostics?.errors?.length ?? 0) + (diagnostics?.warnings?.length ?? 0) > 0;
+  const cfg = diagnostics
+    ? STATUS_CONFIG[diagnostics.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.WARNING
+    : null;
+  const errorCount = diagnostics?.errors?.length ?? 0;
+  const warningCount = diagnostics?.warnings?.length ?? 0;
+  const hasIssues = errorCount + warningCount > 0;
 
   return (
     <div className="space-y-6 animate-fade-in">
 
       <PageHeader
         icon={Activity}
-        iconColor="text-purple-400"
         title="Network Diagnostics"
-        subtitle={lastRun ? `Last run: ${lastRun.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}` : 'Comprehensive network health check'}
+        subtitle={lastRun
+          ? `Last run at ${lastRun.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+          : 'Comprehensive network health check'}
         actions={
           <>
             {hasIssues && (
-              <button
-                onClick={() => navigate('/data-fixer')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-800 hover:bg-primary-700 border border-primary-600/50 text-sm text-neutral-300 transition-all"
-              >
-                <Wrench size={15} className="text-accent-400" /> Fix Issues <ArrowRight size={13} className="text-neutral-500" />
-              </button>
+              <Button icon={Wrench} iconRight={ArrowRight} onClick={() => navigate('/data-fixer')}>
+                Fix issues
+              </Button>
             )}
-            <button
-              onClick={runDiagnostics}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
-            >
-              {loading ? <><Loader2 className="animate-spin" size={15} /> Running...</> : <><RefreshCw size={15} /> Run Diagnostics</>}
-            </button>
+            <Button variant="primary" icon={RefreshCw} loading={loading} onClick={runDiagnostics}>
+              {loading ? 'Running' : 'Run diagnostics'}
+            </Button>
           </>
         }
       />
 
-      {/* Loading */}
       {loading && !diagnostics && (
-        <div className="card py-20 text-center">
-          <Loader2 size={40} className="text-accent-400 animate-spin mx-auto mb-4" />
-          <p className="text-neutral-400">Running network analysis...</p>
-        </div>
+        <Panel>
+          <div className="py-20 text-center">
+            <Loader2 size={32} className="text-accent-400 animate-spin mx-auto mb-4" />
+            <p className="text-sm text-neutral-400">Running network analysis...</p>
+          </div>
+        </Panel>
       )}
 
       {diagnostics && cfg && (
         <>
-          {/* Status Banner */}
-          <div className={`card overflow-hidden border ${cfg.border}`}>
+          {/* Status banner */}
+          <Panel>
             <div className="p-5 flex items-center gap-4">
-              <div className={`p-3 rounded-xl ${cfg.iconBg}`}>
-                <cfg.icon size={28} className={cfg.color} />
+              <div className={`p-3 rounded-xl border ${cfg.ring}`}>
+                <cfg.icon size={24} className={cfg.color} />
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-0.5">
-                  <span className={`w-2 h-2 rounded-full ${cfg.dot} animate-pulse`} />
-                  <h2 className="text-lg font-bold text-white">
-                    {cfg.label} - {diagnostics.message}
-                  </h2>
-                </div>
-                <p className="text-xs text-neutral-500">
-                  {diagnostics.totalTriples.toLocaleString()} triples ·{' '}
-                  {diagnostics.errors.length} error{diagnostics.errors.length !== 1 ? 's' : ''} ·{' '}
-                  {diagnostics.warnings.length} warning{diagnostics.warnings.length !== 1 ? 's' : ''}
+              <div className="flex-1 min-w-0">
+                <h2 className="text-base font-semibold text-white truncate">
+                  {cfg.label} &middot; {diagnostics.message}
+                </h2>
+                <p className="text-xs text-neutral-500 mt-0.5 tabular-nums">
+                  {diagnostics.totalTriples.toLocaleString('en-GB')} triples
                 </p>
               </div>
-              <div className="flex gap-3 text-center">
-                <div className="px-4 py-2 rounded-xl bg-red-500/10 border border-red-500/20">
-                  <div className="text-2xl font-black text-red-400">{diagnostics.errors.length}</div>
-                  <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Errors</div>
+              <div className="flex gap-6 text-right">
+                <div>
+                  <div className={`text-xl font-bold tabular-nums ${errorCount > 0 ? 'text-red-400' : 'text-neutral-600'}`}>
+                    {errorCount}
+                  </div>
+                  <div className="text-[10px] text-neutral-500 uppercase tracking-wide">Errors</div>
                 </div>
-                <div className="px-4 py-2 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
-                  <div className="text-2xl font-black text-accent-500">{diagnostics.warnings.length}</div>
-                  <div className="text-[10px] text-neutral-500 uppercase tracking-wider">Warnings</div>
+                <div>
+                  <div className={`text-xl font-bold tabular-nums ${warningCount > 0 ? 'text-accent-400' : 'text-neutral-600'}`}>
+                    {warningCount}
+                  </div>
+                  <div className="text-[10px] text-neutral-500 uppercase tracking-wide">Warnings</div>
                 </div>
               </div>
             </div>
-          </div>
+          </Panel>
 
-          {/* Main grid */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-            {/* Left: Stat cards + issues */}
             <div className="xl:col-span-2 space-y-6">
 
-              {/* KPI row */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: 'Triples', value: diagnostics.totalTriples.toLocaleString(), icon: Database, color: 'text-accent-400', bg: 'bg-accent-500/10 border-accent-500/20' },
-                  { label: 'Buses',   value: diagnostics.busCount,    icon: CircleDot, color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
-                  { label: 'Branches', value: diagnostics.branchCount, icon: Cable,    color: 'text-blue-400',   bg: 'bg-blue-500/10 border-blue-500/20' },
-                  { label: 'Generators', value: diagnostics.generatorCount, icon: Zap, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-                ].map(({ label, value, icon: Icon, color, bg }) => (
-                  <div key={label} className={`p-4 rounded-xl border ${bg} bg-primary-800/20`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Icon size={15} className={color} />
-                      <span className="text-xs text-neutral-400">{label}</span>
-                    </div>
-                    <div className={`text-2xl font-black ${color}`}>{value}</div>
-                  </div>
-                ))}
+                <Metric label="Triples" value={diagnostics.totalTriples.toLocaleString('en-GB')} icon={Database} emphasis="headline" />
+                <Metric label="Buses" value={diagnostics.busCount} icon={CircleDot} />
+                <Metric label="Branches" value={diagnostics.branchCount} icon={Cable} />
+                <Metric label="Generators" value={diagnostics.generatorCount} icon={Zap} />
               </div>
 
-              {/* Errors */}
-              {diagnostics.errors.length > 0 && (
-                <div className="card overflow-hidden">
-                  <div className="px-5 py-4 border-b border-red-500/20 bg-red-500/5 flex items-center gap-3">
-                    <XCircle size={18} className="text-red-400" />
-                    <h2 className="font-bold text-red-400">Critical Errors</h2>
-                    <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30">
-                      {diagnostics.errors.length}
-                    </span>
-                  </div>
-                  <div className="divide-y divide-primary-700/20">
-                    {diagnostics.errors.map((error, i) => (
-                      <div key={i} className="flex items-start gap-3 px-5 py-4 hover:bg-red-500/5 transition-colors">
-                        <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black font-mono bg-red-500/20 text-red-400 border border-red-500/30 mt-0.5">
-                          {error.code}
-                        </span>
-                        <p className="text-sm text-neutral-300 leading-relaxed">{error.message}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {errorCount > 0 && (
+                <Panel>
+                  <PanelHeader
+                    icon={XCircle}
+                    title="Critical errors"
+                    tone="critical"
+                    badge={<CountBadge value={errorCount} tone="critical" />}
+                  />
+                  <CollapsibleList
+                    items={diagnostics.errors}
+                    itemLabel="errors"
+                    renderItem={(issue, i) => <IssueRow key={i} issue={issue} tone="critical" />}
+                  />
+                </Panel>
               )}
 
-              {/* Warnings */}
-              {diagnostics.warnings.length > 0 && (
-                <div className="card overflow-hidden">
-                  <div className="px-5 py-4 border-b border-yellow-500/20 bg-yellow-500/5 flex items-center gap-3">
-                    <AlertTriangle size={18} className="text-accent-500" />
-                    <h2 className="font-bold text-accent-500">Warnings</h2>
-                    <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-yellow-500/20 text-accent-500 border border-yellow-500/30">
-                      {diagnostics.warnings.length}
-                    </span>
-                  </div>
-                  <div className="divide-y divide-primary-700/20">
-                    {diagnostics.warnings.map((w, i) => (
-                      <div key={i} className="flex items-start gap-3 px-5 py-4 hover:bg-yellow-500/5 transition-colors">
-                        <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-black font-mono bg-yellow-500/20 text-accent-500 border border-yellow-500/30 mt-0.5">
-                          {w.code}
-                        </span>
-                        <p className="text-sm text-neutral-300 leading-relaxed">{w.message}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {warningCount > 0 && (
+                <Panel>
+                  <PanelHeader
+                    icon={AlertTriangle}
+                    title="Warnings"
+                    tone="warning"
+                    badge={<CountBadge value={warningCount} tone="warning" />}
+                  />
+                  <CollapsibleList
+                    items={diagnostics.warnings}
+                    itemLabel="warnings"
+                    renderItem={(issue, i) => <IssueRow key={i} issue={issue} tone="warning" />}
+                  />
+                </Panel>
               )}
 
-              {/* All clear */}
-              {diagnostics.errors.length === 0 && diagnostics.warnings.length === 0 && (
-                <div className="card py-12 text-center">
-                  <CheckCircle2 size={40} className="text-emerald-400 mx-auto mb-3" />
-                  <p className="text-white font-semibold mb-1">No issues detected</p>
-                  <p className="text-sm text-neutral-400">Your CIM network data is consistent and complete.</p>
-                </div>
+              {!hasIssues && (
+                <Panel>
+                  <EmptyState
+                    icon={CheckCircle2}
+                    tone="positive"
+                    title="No issues detected"
+                    hint="The CIM network data is consistent and complete."
+                  />
+                </Panel>
               )}
             </div>
 
-            {/* Right: Connectivity + Power balance */}
             <div className="space-y-6">
 
-              {/* Connectivity ratios */}
-              <div className="card overflow-hidden">
-                <div className="px-5 py-4 border-b border-primary-700/30 flex items-center gap-3">
-                  <BarChart3 size={16} className="text-accent-400" />
-                  <h3 className="font-bold text-white text-sm">Connectivity</h3>
-                </div>
+              <Panel>
+                <PanelHeader icon={BarChart3} title="Connectivity" />
                 <div className="p-5 space-y-5">
-                  <RatioBar
-                    label="Branches"
-                    icon={Cable}
-                    connected={diagnostics.connectedBranchCount}
-                    total={diagnostics.branchCount}
-                    color="text-blue-400"
-                  />
-                  <RatioBar
-                    label="Generators"
-                    icon={Zap}
-                    connected={diagnostics.connectedGeneratorCount}
-                    total={diagnostics.generatorCount}
-                    color="text-emerald-400"
-                  />
-                  <RatioBar
-                    label="Loads"
-                    icon={Plug}
-                    connected={diagnostics.connectedLoadCount}
-                    total={diagnostics.loadCount}
-                    color="text-orange-400"
-                  />
+                  <RatioBar label="Branches" icon={Cable} connected={diagnostics.connectedBranchCount} total={diagnostics.branchCount} />
+                  <RatioBar label="Generators" icon={Zap} connected={diagnostics.connectedGeneratorCount} total={diagnostics.generatorCount} />
+                  <RatioBar label="Loads" icon={Plug} connected={diagnostics.connectedLoadCount} total={diagnostics.loadCount} />
                 </div>
-              </div>
+              </Panel>
 
-              {/* Power balance */}
-              <div className="card overflow-hidden">
-                <div className="px-5 py-4 border-b border-primary-700/30 flex items-center gap-3">
-                  <Activity size={16} className="text-accent-400" />
-                  <h3 className="font-bold text-white text-sm">Power Balance</h3>
-                </div>
+              <Panel>
+                <PanelHeader icon={Activity} title="Power balance" />
                 <div className="p-5">
                   <PowerBalance gen={diagnostics.totalGenerationMw} load={diagnostics.totalLoadMw} />
                 </div>
-              </div>
+              </Panel>
 
-              {/* Entity counts */}
-              <div className="card overflow-hidden">
-                <div className="px-5 py-4 border-b border-primary-700/30 flex items-center gap-3">
-                  <Database size={16} className="text-accent-400" />
-                  <h3 className="font-bold text-white text-sm">Entities</h3>
-                </div>
+              <Panel>
+                <PanelHeader icon={Database} title="Entities" />
                 <div className="divide-y divide-primary-700/20">
                   {[
-                    { label: 'Buses',       count: diagnostics.busIds.length,       icon: CircleDot, color: 'text-violet-400' },
-                    { label: 'Lines',       count: diagnostics.lineIds.length,       icon: Cable,     color: 'text-blue-400' },
-                    { label: 'Generators',  count: diagnostics.generatorIds.length,  icon: Zap,       color: 'text-emerald-400' },
-                    { label: 'Loads',       count: diagnostics.loadIds.length,       icon: Plug,      color: 'text-orange-400' },
-                  ].map(({ label, count, icon: Icon, color }) => (
+                    { label: 'Buses', count: diagnostics.busIds.length, icon: CircleDot },
+                    { label: 'Lines', count: diagnostics.lineIds.length, icon: Cable },
+                    { label: 'Generators', count: diagnostics.generatorIds.length, icon: Zap },
+                    { label: 'Loads', count: diagnostics.loadIds.length, icon: Plug },
+                  ].map(({ label, count, icon: Icon }) => (
                     <div key={label} className="flex items-center justify-between px-5 py-3">
                       <span className="flex items-center gap-2 text-sm text-neutral-400">
-                        <Icon size={14} className={color} /> {label}
+                        <Icon size={14} className="text-neutral-500" /> {label}
                       </span>
-                      <span className={`text-sm font-bold font-mono ${color}`}>{count}</span>
+                      <span className="text-sm font-semibold tabular-nums text-white">{count}</span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </Panel>
 
-              {/* CTA to Data Fixer */}
               {hasIssues && (
-                <button
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  icon={Wrench}
+                  iconRight={ArrowRight}
                   onClick={() => navigate('/data-fixer')}
-                  className="w-full flex items-center gap-3 px-5 py-4 rounded-xl bg-accent-500/10 hover:bg-accent-500/20 border border-accent-500/30 hover:border-accent-500/50 transition-all text-left group"
+                  className="py-3"
                 >
-                  <Wrench size={20} className="text-accent-400 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-white">Fix detected issues</p>
-                    <p className="text-xs text-neutral-400">Run automated SPARQL corrections</p>
-                  </div>
-                  <ArrowRight size={16} className="text-neutral-500 group-hover:text-accent-400 transition-colors" />
-                </button>
+                  Run automated corrections
+                </Button>
               )}
             </div>
           </div>
