@@ -60,8 +60,32 @@ def run_power_flow(
         f"Power flow completed: converged={converged}, "
         f"iterations={iterations}, time={execution_time_ms}ms"
     )
+    _log_voltage_profile(net, converged)
 
     return converged, iterations, execution_time_ms
+
+
+def _log_voltage_profile(net: pp.pandapowerNet, converged: bool) -> None:
+    """
+    Report the solved voltage spread.
+
+    A converged AC run whose magnitudes are all exactly 1.0 pu is not a real solution,
+    it is a flat start that was never updated, so the spread is worth having in the log
+    next to the iteration count rather than only in the API payload.
+    """
+    if not converged or not hasattr(net, "res_bus") or net.res_bus.empty:
+        return
+    try:
+        vm = net.res_bus["vm_pu"].dropna()
+        va = net.res_bus["va_degree"].dropna()
+        if vm.empty:
+            return
+        logger.info(
+            "Voltage profile: vm %.6f to %.6f pu, angle %.2f to %.2f deg, %d isolated buses",
+            vm.min(), vm.max(), va.min(), va.max(), len(net.res_bus) - len(vm),
+        )
+    except Exception as e:
+        logger.warning(f"Could not summarise voltage profile: {e}")
 
 
 def _run_ac_robust(net: pp.pandapowerNet, max_iterations: int, tolerance: float) -> tuple[bool, int]:

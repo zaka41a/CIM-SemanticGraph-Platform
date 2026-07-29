@@ -182,10 +182,17 @@ def build_response(
 
     # Build bus results
     bus_results = []
+    # Buses in an island with no source are returned as NaN by pandapower. They are a
+    # connectivity fault, not a voltage fault, so they are tracked separately instead of
+    # collapsing to 0.0 pu and producing one bogus VOLTAGE_LOW critical each.
+    isolated_bus_ids: set[str] = set()
     for original_bus in network_input.buses:
         pp_idx = bus_mapping.get(original_bus.id)
         if pp_idx is None:
             continue
+
+        if pp_idx in net.res_bus.index and _is_missing(net.res_bus.at[pp_idx, "vm_pu"]):
+            isolated_bus_ids.add(original_bus.id)
 
         # Get results from pandapower
         vm_pu = _safe_float(net.res_bus.at[pp_idx, "vm_pu"] if pp_idx in net.res_bus.index else 1.0)
@@ -196,7 +203,10 @@ def build_response(
         vn_kv = original_bus.baseVoltageKv if original_bus.baseVoltageKv > 0 else 110.0
         v_kv = vm_pu * vn_kv
 
-        within_limits = original_bus.voltageMin <= vm_pu <= original_bus.voltageMax
+        within_limits = (
+            original_bus.id not in isolated_bus_ids
+            and original_bus.voltageMin <= vm_pu <= original_bus.voltageMax
+        )
 
         bus_results.append(BusResult(
             busId=original_bus.id,
@@ -273,13 +283,16 @@ def build_response(
     total_loss_mvar = sum(br.lossReactivePowerMvar for br in branch_results)
     loss_pct = (total_loss_mw / total_load_mw * 100) if total_load_mw > 0 else 0.0
 
-    voltages = [br.voltageMagnitude for br in bus_results]
+    # Isolated buses carry no solved voltage, so including their placeholder 0.0 would
+    # report the whole network as sitting at 0.000 pu minimum.
+    energised = [br for br in bus_results if br.busId not in isolated_bus_ids]
+    voltages = [br.voltageMagnitude for br in energised]
     min_v = min(voltages) if voltages else 1.0
     max_v = max(voltages) if voltages else 1.0
     avg_v = sum(voltages) / len(voltages) if voltages else 1.0
 
-    min_v_bus = next((br.busId for br in bus_results if br.voltageMagnitude == min_v), "N/A")
-    max_v_bus = next((br.busId for br in bus_results if br.voltageMagnitude == max_v), "N/A")
+    min_v_bus = next((br.busId for br in energised if br.voltageMagnitude == min_v), "N/A")
+    max_v_bus = next((br.busId for br in energised if br.voltageMagnitude == max_v), "N/A")
 
     statistics = SystemStatistics(
         totalBuses=len(network_input.buses),
@@ -303,9 +316,27 @@ def build_response(
 
     # Detect violations
     violations = []
+
+    if isolated_bus_ids:
+        sample = sorted(isolated_bus_ids)[0]
+        violations.append(Violation(
+            type="BUS_ISOLATED",
+            severity="CRITICAL",
+            elementId=sample,
+            elementName=next((br.busName for br in bus_results if br.busId == sample), sample),
+            actualValue=float(len(isolated_bus_ids)),
+            limitValue=0.0,
+            violationPercentage=round(len(isolated_bus_ids) / len(bus_results) * 100, 2)
+            if bus_results else 0.0,
+            description=(
+                f"{len(isolated_bus_ids)} buses are in an island with no generation or slack "
+                f"and were not energised by the solver"
+            ),
+        ))
+
     for br in bus_results:
         bus_input = next((b for b in network_input.buses if b.id == br.busId), None)
-        if bus_input is None:
+        if bus_input is None or br.busId in isolated_bus_ids:
             continue
 
         if br.voltageMagnitude < bus_input.voltageMin:
@@ -360,6 +391,17 @@ def build_response(
         violations=violations,
         networkId=network_input.networkId,
     )
+
+
+def _is_missing(val) -> bool:
+    """True when pandapower left a result empty, which it does for unsupplied buses."""
+    if val is None:
+        return True
+    try:
+        f = float(val)
+    except (ValueError, TypeError):
+        return True
+    return math.isnan(f) or math.isinf(f)
 
 
 def _safe_float(val, default: float = 0.0) -> float:

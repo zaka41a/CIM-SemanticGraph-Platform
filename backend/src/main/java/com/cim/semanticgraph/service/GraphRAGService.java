@@ -4,6 +4,7 @@ import com.cim.semanticgraph.dto.GraphRAGResponse;
 import com.cim.semanticgraph.graphrag.AnswerEvaluator;
 import com.cim.semanticgraph.graphrag.ContextBuilder;
 import com.cim.semanticgraph.graphrag.GraphTraverser;
+import com.cim.semanticgraph.loadflow.model.CalculationMethod;
 import com.cim.semanticgraph.model.ChatHistory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -1049,9 +1050,14 @@ public class GraphRAGService {
                 log.info("Executing load flow calculation for entire network (no specific bus found in: '{}')", question);
             }
 
+            // Chat load flow questions are almost always about voltages, and DC power flow
+            // holds every magnitude at 1.000 pu by construction, so a DC run answers
+            // "what is the voltage at this bus" with a constant. AC is the only method that
+            // produces a real magnitude; LoadFlowService still falls back to DC on its own
+            // when the pandapower service is down.
             com.cim.semanticgraph.dto.LoadFlowResponse lfResult = targetBusId != null
-                    ? loadFlowService.calculateLoadFlow(targetBusId)
-                    : loadFlowService.calculateLoadFlow();
+                    ? loadFlowService.calculateLoadFlow(targetBusId, CalculationMethod.AC_NEWTON_RAPHSON)
+                    : loadFlowService.calculateLoadFlow(null, CalculationMethod.AC_NEWTON_RAPHSON);
 
             StringBuilder answer = new StringBuilder();
 
