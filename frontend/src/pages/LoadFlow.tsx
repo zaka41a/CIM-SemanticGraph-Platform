@@ -123,8 +123,8 @@ const BranchTable = ({ branches }: { branches: BranchResult[] }) => {
                 <td className="px-4 py-3 text-sm">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                     branch.branchType === 'TRANSFORMER'
-                      ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                      : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
+                      ? 'bg-primary-700/50 text-neutral-300 border border-primary-600/50'
+                      : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
                   }`}>
                     {branch.branchType}
                   </span>
@@ -140,7 +140,7 @@ const BranchTable = ({ branches }: { branches: BranchResult[] }) => {
                   {formatNumber(branch.fromActivePowerMw)}
                 </td>
                 <td className="px-4 py-3 text-sm text-right font-mono">
-                  <span className={branch.lossActivePowerMw > 1 ? 'text-orange-400' : 'text-neutral-400'}>
+                  <span className={branch.lossActivePowerMw > 1 ? 'text-accent-400' : 'text-neutral-400'}>
                     {formatNumber(branch.lossActivePowerMw, 3)}
                   </span>
                 </td>

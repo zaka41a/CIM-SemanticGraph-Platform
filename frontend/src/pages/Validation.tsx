@@ -210,10 +210,10 @@ const ViolationItem = ({
           </button>
           <button
             onClick={e => { e.stopPropagation(); onAskClaude(`How do I fix this SHACL violation: [${violation.severity}] path: ${violation.path} - ${violation.message}${violation.focusNode ? ` (node: ${shortNode(violation.focusNode)})` : ''}`); }}
-            className="p-1.5 rounded-lg hover:bg-purple-500/20 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-sky-500/20 transition-colors"
             title="Ask Claude"
           >
-            <MessageSquare size={13} className="text-purple-400" />
+            <MessageSquare size={13} className="text-sky-400" />
           </button>
           {open ? <ChevronDown size={14} className="text-neutral-500" /> : <ChevronRight size={14} className="text-neutral-600" />}
         </div>
@@ -469,7 +469,7 @@ const Validation = () => {
 
       {/* ── Error ─────────────────────────────────────────────────────────── */}
       {error && (
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/30 p-5">
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-red-500/10 to-accent-500/10 border border-red-500/30 p-5">
           <div className="flex items-start gap-3">
             <div className="p-2 bg-red-500/20 rounded-lg flex-shrink-0"><XCircle size={20} className="text-red-400" /></div>
             <div>

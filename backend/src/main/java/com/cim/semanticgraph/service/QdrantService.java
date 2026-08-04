@@ -63,6 +63,34 @@ public class QdrantService {
     }
 
     /**
+     * Re-probes Qdrant and refreshes the cached state.
+     *
+     * The cache is only written at startup, so a backend that booted before Docker was up
+     * reported DISCONNECTED forever even once Qdrant came back. Fuseki reconnects per query
+     * and hides this, Qdrant does not. Hot query paths keep using the cached
+     * {@link #isAvailable()}; this is for status endpoints, where one HTTP call is cheap
+     * and a stale answer is the whole problem.
+     */
+    public boolean refreshAvailability() {
+        boolean wasAvailable = this.available;
+        this.available = checkAvailability();
+
+        if (this.available) {
+            if (!wasAvailable) {
+                log.info("Qdrant is reachable again at {}, restoring vector search.", qdrantUrl);
+                ensureCollectionExists();
+            }
+            this.cachedPointCount = fetchPointCount();
+        } else {
+            if (wasAvailable) {
+                log.warn("Qdrant at {} stopped responding. Vector search is disabled.", qdrantUrl);
+            }
+            this.cachedPointCount = 0;
+        }
+        return this.available;
+    }
+
+    /**
      * Returns cached point count - no HTTP call.
      */
     public long countPoints() {

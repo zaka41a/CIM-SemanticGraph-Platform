@@ -7,10 +7,10 @@ import { ExcelMappingModal } from '@/components/dataimport/ExcelMappingModal';
 import { useDataImport } from '@/hooks/useDataImport';
 
 const formats = [
-  { name: 'CIM/XML',  icon: FileCode2, color: 'from-blue-500 to-indigo-600' },
-  { name: 'CIM/RDF',  icon: Share2,    color: 'from-blue-500 to-indigo-600' },
-  { name: 'RDF/XML',  icon: Code2,     color: 'from-blue-500 to-indigo-600' },
-  { name: 'TURTLE',   icon: Leaf,      color: 'from-blue-500 to-indigo-600' },
+  { name: 'CIM/XML',  icon: FileCode2, color: 'from-sky-500 to-sky-600' },
+  { name: 'CIM/RDF',  icon: Share2,    color: 'from-sky-500 to-sky-600' },
+  { name: 'RDF/XML',  icon: Code2,     color: 'from-sky-500 to-sky-600' },
+  { name: 'TURTLE',   icon: Leaf,      color: 'from-sky-500 to-sky-600' },
 ];
 
 const excelSheets = [

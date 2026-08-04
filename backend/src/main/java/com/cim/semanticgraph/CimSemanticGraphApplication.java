@@ -34,9 +34,9 @@ import java.util.Locale;
             - Analyzing power grid impact and consistency
             """,
         contact = @Contact(
-            name = "Your Name",
-            email = "your.email@alumni.fh-aachen.de",
-            url = "https://github.com/yourusername/CIM-SemanticGraph-Platform"
+            name = "Zakaria",
+            email = "zaksab98@gmail.com",
+            url = "https://github.com/zaka41a/CIM-SemanticGraph-Platform"
         ),
         license = @License(
             name = "MIT License",
@@ -44,8 +44,7 @@ import java.util.Locale;
         )
     ),
     servers = {
-        @Server(url = "http://localhost:8080/api", description = "Development Server"),
-        @Server(url = "https://api.cim-platform.example.com/api", description = "Production Server")
+        @Server(url = "http://localhost:8080/api", description = "Development Server")
     }
 )
 public class CimSemanticGraphApplication {

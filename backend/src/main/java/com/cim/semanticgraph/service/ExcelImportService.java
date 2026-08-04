@@ -163,7 +163,7 @@ public class ExcelImportService {
             processedRows++;
 
             String id = getCellValue(row, columns.getOrDefault("id", 0));
-            String name = getCellValue(row, columns.getOrDefault("name", columns.getOrDefault("nom", 1)));
+            String name = getCellValue(row, columns.getOrDefault("name", 1));
 
             if (id == null || id.isEmpty()) {
                 id = "SUB_" + i;
@@ -210,9 +210,9 @@ public class ExcelImportService {
             }
 
             String id = getCellValue(row, columns.getOrDefault("id", 0));
-            String name = getCellValue(row, columns.getOrDefault("name", columns.getOrDefault("nom", 1)));
-            String voltage = getCellValue(row, columns.getOrDefault("voltage", columns.getOrDefault("tension", -1)));
-            String substation = getCellValue(row, columns.getOrDefault("substation", columns.getOrDefault("poste", -1)));
+            String name = getCellValue(row, columns.getOrDefault("name", 1));
+            String voltage = getCellValue(row, columns.getOrDefault("voltage", -1));
+            String substation = getCellValue(row, columns.getOrDefault("substation", -1));
 
             if (id == null || id.isEmpty()) {
                 id = "BUS_" + i;
@@ -279,10 +279,10 @@ public class ExcelImportService {
             if (row == null || isRowEmpty(row)) continue;
 
             String id = getCellValue(row, columns.getOrDefault("id", 0));
-            String name = getCellValue(row, columns.getOrDefault("name", columns.getOrDefault("nom", 1)));
-            String fromBus = getCellValue(row, columns.getOrDefault("from", columns.getOrDefault("de", columns.getOrDefault("from_bus", -1))));
-            String toBus = getCellValue(row, columns.getOrDefault("to", columns.getOrDefault("vers", columns.getOrDefault("to_bus", -1))));
-            String length = getCellValue(row, columns.getOrDefault("length", columns.getOrDefault("longueur", -1)));
+            String name = getCellValue(row, columns.getOrDefault("name", 1));
+            String fromBus = getCellValue(row, columns.getOrDefault("from", columns.getOrDefault("from_bus", -1)));
+            String toBus = getCellValue(row, columns.getOrDefault("to", columns.getOrDefault("to_bus", -1)));
+            String length = getCellValue(row, columns.getOrDefault("length", -1));
             String resistance = getCellValue(row, columns.getOrDefault("r", columns.getOrDefault("resistance", -1)));
             String reactance = getCellValue(row, columns.getOrDefault("x", columns.getOrDefault("reactance", -1)));
 
@@ -344,10 +344,10 @@ public class ExcelImportService {
             if (row == null || isRowEmpty(row)) continue;
 
             String id = getCellValue(row, columns.getOrDefault("id", 0));
-            String name = getCellValue(row, columns.getOrDefault("name", columns.getOrDefault("nom", 1)));
-            String hvBus = getCellValue(row, columns.getOrDefault("hv_bus", columns.getOrDefault("ht", -1)));
-            String lvBus = getCellValue(row, columns.getOrDefault("lv_bus", columns.getOrDefault("bt", -1)));
-            String ratedS = getCellValue(row, columns.getOrDefault("rated_s", columns.getOrDefault("puissance", -1)));
+            String name = getCellValue(row, columns.getOrDefault("name", 1));
+            String hvBus = getCellValue(row, columns.getOrDefault("hv_bus", -1));
+            String lvBus = getCellValue(row, columns.getOrDefault("lv_bus", -1));
+            String ratedS = getCellValue(row, columns.getOrDefault("rated_s", -1));
 
             if (id == null || id.isEmpty()) {
                 id = "TRAFO_" + i;
@@ -426,11 +426,11 @@ public class ExcelImportService {
             if (row == null || isRowEmpty(row)) continue;
 
             String id = getCellValue(row, columns.getOrDefault("id", 0));
-            String name = getCellValue(row, columns.getOrDefault("name", columns.getOrDefault("nom", 1)));
+            String name = getCellValue(row, columns.getOrDefault("name", 1));
             String p = getCellValue(row, columns.getOrDefault("p", columns.getOrDefault("mw", -1)));
             String maxP = getCellValue(row, columns.getOrDefault("max_p", columns.getOrDefault("pmax", -1)));
             String minP = getCellValue(row, columns.getOrDefault("min_p", columns.getOrDefault("pmin", -1)));
-            String bus = getCellValue(row, columns.getOrDefault("bus", columns.getOrDefault("noeud", columns.getOrDefault("node", -1))));
+            String bus = getCellValue(row, columns.getOrDefault("bus", columns.getOrDefault("node", -1)));
 
             log.debug("Generator row {}: id={}, bus={}, p={}, maxP={}", i, id, bus, p, maxP);
 
@@ -533,10 +533,10 @@ public class ExcelImportService {
             if (row == null || isRowEmpty(row)) continue;
 
             String id = getCellValue(row, columns.getOrDefault("id", 0));
-            String name = getCellValue(row, columns.getOrDefault("name", columns.getOrDefault("nom", 1)));
+            String name = getCellValue(row, columns.getOrDefault("name", 1));
             String p = getCellValue(row, columns.getOrDefault("p", columns.getOrDefault("mw", -1)));
             String q = getCellValue(row, columns.getOrDefault("q", columns.getOrDefault("mvar", -1)));
-            String bus = getCellValue(row, columns.getOrDefault("bus", columns.getOrDefault("noeud", columns.getOrDefault("node", -1))));
+            String bus = getCellValue(row, columns.getOrDefault("bus", columns.getOrDefault("node", -1)));
 
             log.debug("Load row {}: id={}, bus={}, p={}, q={}", i, id, bus, p, q);
 
@@ -613,9 +613,9 @@ public class ExcelImportService {
             if (row == null || isRowEmpty(row)) continue;
 
             String id = getCellValue(row, columns.getOrDefault("id", 0));
-            String name = getCellValue(row, columns.getOrDefault("name", columns.getOrDefault("nom", 1)));
-            String voltage = getCellValue(row, columns.getOrDefault("voltage", columns.getOrDefault("tension", -1)));
-            String substation = getCellValue(row, columns.getOrDefault("substation", columns.getOrDefault("poste", -1)));
+            String name = getCellValue(row, columns.getOrDefault("name", 1));
+            String voltage = getCellValue(row, columns.getOrDefault("voltage", -1));
+            String substation = getCellValue(row, columns.getOrDefault("substation", -1));
 
             if (id == null || id.isEmpty()) {
                 id = "VL_" + i;
@@ -702,19 +702,19 @@ public class ExcelImportService {
      */
     private String detectSheetType(String sheetNameLower, Sheet sheet) {
         // Name-based detection (expanded with German, Dutch, Spanish, Italian variants)
-        if (sheetNameLower.matches(".*\\b(substation|substat|poste|postes|umspannwerk|umspannstation|substatie|unterwerk|station)\\b.*"))
+        if (sheetNameLower.matches(".*\\b(substation|substat|umspannwerk|umspannstation|substatie|unterwerk|station)\\b.*"))
             return "substation";
-        if (sheetNameLower.matches(".*\\b(bus|buses|busbar|noeud|noeuds|jeu|sammelschiene|knooppunt|sbarra)\\b.*"))
+        if (sheetNameLower.matches(".*\\b(bus|buses|busbar|sammelschiene|knooppunt|sbarra)\\b.*"))
             return "bus";
-        if (sheetNameLower.matches(".*\\b(line|lines|ligne|lignes|leitung|leitungen|linie|linies|lijn|linea|lineas)\\b.*"))
+        if (sheetNameLower.matches(".*\\b(line|lines|leitung|leitungen|linie|linies|lijn|linea|lineas)\\b.*"))
             return "line";
         if (sheetNameLower.matches(".*\\b(transformer|transformers|transfo|transformateur|transformateurs|trafo|trafos|transformator)\\b.*"))
             return "transformer";
         if (sheetNameLower.matches(".*\\b(generator|generators|gen|generation|generateur|generateurs|erzeuger|erzeugung|centrale)\\b.*"))
             return "generator";
-        if (sheetNameLower.matches(".*\\b(load|loads|charge|charges|consommation|last|lasten|verbruik|carga)\\b.*"))
+        if (sheetNameLower.matches(".*\\b(load|loads|last|lasten|verbruik|carga)\\b.*"))
             return "load";
-        if (sheetNameLower.matches(".*\\b(voltage|tension|spannungsebene|spannung|spanning|voltaje)\\b.*"))
+        if (sheetNameLower.matches(".*\\b(voltage|spannungsebene|spannung|spanning|voltaje)\\b.*"))
             return "voltage";
 
         // Column-header-based fallback detection
@@ -742,18 +742,18 @@ public class ExcelImportService {
                 || cols.containsKey("minp") || cols.containsKey("pmax") || cols.containsKey("pmin"))
             return "generator";
         if (cols.containsKey("from") || cols.containsKey("to") || cols.containsKey("from_bus")
-                || cols.containsKey("to_bus") || cols.containsKey("de") || cols.containsKey("vers")
+                || cols.containsKey("to_bus")
                 || cols.containsKey("von") || cols.containsKey("nach"))
             return "line";
         // PyPSA/pandapower lines: bus0 + bus1 + length (after aliasing bus0→from already done but raw check)
         if (cols.containsKey("bus0") && cols.containsKey("bus1"))
             return "line";
-        if (cols.containsKey("substation") || cols.containsKey("poste") || cols.containsKey("region"))
-            return (cols.containsKey("voltage") || cols.containsKey("tension") || cols.containsKey("spannung"))
+        if (cols.containsKey("substation") || cols.containsKey("region"))
+            return (cols.containsKey("voltage") || cols.containsKey("spannung"))
                     ? "bus" : "substation";
         if ((cols.containsKey("p") || cols.containsKey("mw")) && cols.containsKey("bus"))
             return "load";
-        if (cols.containsKey("bus") || cols.containsKey("voltage") || cols.containsKey("tension"))
+        if (cols.containsKey("bus") || cols.containsKey("voltage"))
             return "bus";
 
         return null; // unrecognized
@@ -772,48 +772,48 @@ public class ExcelImportService {
         Map<String, String> ALIASES = new HashMap<>();
         // ID aliases
         ALIASES.put("identifier", "id"); ALIASES.put("key", "id"); ALIASES.put("uuid", "id");
-        ALIASES.put("code", "id"); ALIASES.put("nummer", "id"); ALIASES.put("numero", "id");
+        ALIASES.put("code", "id"); ALIASES.put("nummer", "id"); 
         // PyPSA/pandapower: id_ (trailing underscore) → id
         ALIASES.put("id_", "id");
         // Name aliases
-        ALIASES.put("nom", "name"); ALIASES.put("bezeichnung", "name"); ALIASES.put("beschreibung", "name");
+        ALIASES.put("bezeichnung", "name"); ALIASES.put("beschreibung", "name");
         ALIASES.put("label", "name"); ALIASES.put("title", "name"); ALIASES.put("bezeichner", "name");
         // Region aliases
         ALIASES.put("area", "region"); ALIASES.put("zone", "region"); ALIASES.put("gebiet", "region");
         ALIASES.put("bereich", "region"); ALIASES.put("region", "region");
         // Voltage aliases
-        ALIASES.put("tension", "voltage"); ALIASES.put("spannung", "voltage"); ALIASES.put("kv", "voltage");
+        ALIASES.put("spannung", "voltage"); ALIASES.put("kv", "voltage");
         ALIASES.put("nominal_voltage", "voltage"); ALIASES.put("nominalvoltage", "voltage");
         ALIASES.put("base_voltage", "voltage"); ALIASES.put("basevoltage", "voltage");
         ALIASES.put("vn_kv", "voltage"); ALIASES.put("vnom", "voltage");
         // PyPSA/pandapower: v_nom → voltage
         ALIASES.put("v_nom", "voltage"); ALIASES.put("vnom_kv", "voltage"); ALIASES.put("v0", "voltage");
         // Substation aliases
-        ALIASES.put("poste", "substation"); ALIASES.put("umspannwerk", "substation");
+        ALIASES.put("umspannwerk", "substation");
         ALIASES.put("substationid", "substation"); ALIASES.put("station", "substation");
         // Bus aliases
-        ALIASES.put("noeud", "bus"); ALIASES.put("node", "bus"); ALIASES.put("busbar", "bus");
+        ALIASES.put("node", "bus"); ALIASES.put("busbar", "bus");
         ALIASES.put("sammelschiene", "bus"); ALIASES.put("knotenpunkt", "bus");
         // PyPSA/pandapower: bus0 → bus (primary bus for loads/consumers)
         ALIASES.put("bus0", "bus");
         // From/To bus aliases
         ALIASES.put("from_bus", "from"); ALIASES.put("frombus", "from"); ALIASES.put("bus_from", "from");
-        ALIASES.put("de", "from"); ALIASES.put("von", "from"); ALIASES.put("start", "from");
+        ALIASES.put("von", "from"); ALIASES.put("start", "from");
         ALIASES.put("startbus", "from"); ALIASES.put("startnode", "from");
         ALIASES.put("to_bus", "to"); ALIASES.put("tobus", "to"); ALIASES.put("bus_to", "to");
-        ALIASES.put("vers", "to"); ALIASES.put("nach", "to"); ALIASES.put("end", "to");
+        ALIASES.put("nach", "to"); ALIASES.put("end", "to");
         ALIASES.put("endbus", "to"); ALIASES.put("endnode", "to");
         // PyPSA/pandapower: bus1 → to (second bus for lines)
         ALIASES.put("bus1", "to");
         // Line parameters
-        ALIASES.put("longueur", "length"); ALIASES.put("laenge", "length"); ALIASES.put("len", "length");
+        ALIASES.put("laenge", "length"); ALIASES.put("len", "length");
         ALIASES.put("resistance", "r"); ALIASES.put("reactance", "x");
         // Transformer HV/LV bus
         ALIASES.put("hv_bus", "hv_bus"); ALIASES.put("hvbus", "hv_bus"); ALIASES.put("bus_hv", "hv_bus");
-        ALIASES.put("ht", "hv_bus"); ALIASES.put("high_voltage_bus", "hv_bus"); ALIASES.put("os_bus", "hv_bus");
+        ALIASES.put("high_voltage_bus", "hv_bus"); ALIASES.put("os_bus", "hv_bus");
         ALIASES.put("lv_bus", "lv_bus"); ALIASES.put("lvbus", "lv_bus"); ALIASES.put("bus_lv", "lv_bus");
-        ALIASES.put("bt", "lv_bus"); ALIASES.put("low_voltage_bus", "lv_bus"); ALIASES.put("us_bus", "lv_bus");
-        ALIASES.put("rated_s", "rated_s"); ALIASES.put("rateds", "rated_s"); ALIASES.put("puissance", "rated_s");
+        ALIASES.put("low_voltage_bus", "lv_bus"); ALIASES.put("us_bus", "lv_bus");
+        ALIASES.put("rated_s", "rated_s"); ALIASES.put("rateds", "rated_s");
         ALIASES.put("sn_mva", "rated_s"); ALIASES.put("snmva", "rated_s"); ALIASES.put("mva", "rated_s");
         // PyPSA/pandapower: s_nom → rated_s
         ALIASES.put("s_nom", "rated_s"); ALIASES.put("snom", "rated_s");
@@ -1131,7 +1131,7 @@ public class ExcelImportService {
             Row row = sheet.getRow(i);
             if (row == null || isRowEmpty(row)) continue;
             String id   = getCellValue(row, columns.getOrDefault("id", 0));
-            String name = getCellValue(row, columns.getOrDefault("name", columns.getOrDefault("nom", 1)));
+            String name = getCellValue(row, columns.getOrDefault("name", 1));
             if (id == null || id.isEmpty()) id = "SUB_" + i;
             Resource sub = model.createResource(BASE_URI + "Substation/" + sanitizeId(id));
             sub.addProperty(RDF.type, model.createResource(cimNamespace + "Substation"));
@@ -1305,19 +1305,19 @@ public class ExcelImportService {
 
     private Map<String, String> buildAliasMap() {
         Map<String, String> a = new HashMap<>();
-        a.put("identifier","id"); a.put("key","id"); a.put("uuid","id"); a.put("code","id"); a.put("nummer","id"); a.put("numero","id");
-        a.put("nom","name"); a.put("bezeichnung","name"); a.put("beschreibung","name"); a.put("label","name"); a.put("title","name");
+        a.put("identifier","id"); a.put("key","id"); a.put("uuid","id"); a.put("code","id"); a.put("nummer","id");
+        a.put("bezeichnung","name"); a.put("beschreibung","name"); a.put("label","name"); a.put("title","name");
         a.put("area","region"); a.put("zone","region"); a.put("gebiet","region"); a.put("bereich","region"); a.put("region","region");
-        a.put("tension","voltage"); a.put("spannung","voltage"); a.put("kv","voltage"); a.put("nominal_voltage","voltage");
+        a.put("spannung","voltage"); a.put("kv","voltage"); a.put("nominal_voltage","voltage");
         a.put("base_voltage","voltage"); a.put("vn_kv","voltage"); a.put("vnom","voltage"); a.put("nominalvoltage","voltage"); a.put("basevoltage","voltage");
-        a.put("poste","substation"); a.put("umspannwerk","substation"); a.put("substationid","substation"); a.put("station","substation");
-        a.put("noeud","bus"); a.put("node","bus"); a.put("busbar","bus"); a.put("sammelschiene","bus"); a.put("knotenpunkt","bus");
-        a.put("from_bus","from"); a.put("frombus","from"); a.put("bus_from","from"); a.put("de","from"); a.put("von","from"); a.put("start","from"); a.put("startbus","from");
-        a.put("to_bus","to"); a.put("tobus","to"); a.put("bus_to","to"); a.put("vers","to"); a.put("nach","to"); a.put("end","to"); a.put("endbus","to");
-        a.put("longueur","length"); a.put("laenge","length"); a.put("len","length"); a.put("resistance","r"); a.put("reactance","x");
-        a.put("hv_bus","hv_bus"); a.put("hvbus","hv_bus"); a.put("bus_hv","hv_bus"); a.put("ht","hv_bus"); a.put("os_bus","hv_bus"); a.put("high_voltage_bus","hv_bus");
-        a.put("lv_bus","lv_bus"); a.put("lvbus","lv_bus"); a.put("bus_lv","lv_bus"); a.put("bt","lv_bus"); a.put("us_bus","lv_bus"); a.put("low_voltage_bus","lv_bus");
-        a.put("rated_s","rated_s"); a.put("rateds","rated_s"); a.put("puissance","rated_s"); a.put("sn_mva","rated_s"); a.put("snmva","rated_s"); a.put("mva","rated_s");
+        a.put("umspannwerk","substation"); a.put("substationid","substation"); a.put("station","substation");
+        a.put("node","bus"); a.put("busbar","bus"); a.put("sammelschiene","bus"); a.put("knotenpunkt","bus");
+        a.put("from_bus","from"); a.put("frombus","from"); a.put("bus_from","from"); a.put("von","from"); a.put("start","from"); a.put("startbus","from");
+        a.put("to_bus","to"); a.put("tobus","to"); a.put("bus_to","to"); a.put("nach","to"); a.put("end","to"); a.put("endbus","to");
+        a.put("laenge","length"); a.put("len","length"); a.put("resistance","r"); a.put("reactance","x");
+        a.put("hv_bus","hv_bus"); a.put("hvbus","hv_bus"); a.put("bus_hv","hv_bus"); a.put("os_bus","hv_bus"); a.put("high_voltage_bus","hv_bus");
+        a.put("lv_bus","lv_bus"); a.put("lvbus","lv_bus"); a.put("bus_lv","lv_bus"); a.put("us_bus","lv_bus"); a.put("low_voltage_bus","lv_bus");
+        a.put("rated_s","rated_s"); a.put("rateds","rated_s"); a.put("sn_mva","rated_s"); a.put("snmva","rated_s"); a.put("mva","rated_s");
         a.put("max_p","max_p"); a.put("maxp","max_p"); a.put("pmax","max_p"); a.put("p_max_mw","max_p"); a.put("max_mw","max_p");
         a.put("min_p","min_p"); a.put("minp","min_p"); a.put("pmin","min_p"); a.put("p_min_mw","min_p"); a.put("min_mw","min_p");
         a.put("p_mw","p"); a.put("pmw","p"); a.put("active_power","p"); a.put("mw","p");

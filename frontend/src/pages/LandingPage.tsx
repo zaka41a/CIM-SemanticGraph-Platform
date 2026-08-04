@@ -7,40 +7,51 @@ import {
 
 // ── Data ───────────────────────────────────────────────────────────────────────
 
+// Locked platform palette: amber carries the AI and the primary actions, sky carries the
+// data and analysis surfaces, emerald means healthy or valid. Nothing else is used, so the
+// landing page reads as the same product as the app behind it.
+const ACCENT_AMBER = '#f59e0b';
+const ACCENT_SKY = '#38bdf8';
+const ACCENT_EMERALD = '#10b981';
+
+const GLOW_AMBER = 'rgba(245,158,11,0.12)';
+const GLOW_SKY = 'rgba(56,189,248,0.12)';
+const GLOW_EMERALD = 'rgba(16,185,129,0.12)';
+
 const FEATURES = [
   {
     icon: Brain,
     title: 'GraphRAG AI Chat',
     desc: 'Ask natural language questions. The AI agent reasons over the knowledge graph using 5 native tools - SPARQL, vector search, load flow, entity details, graph traversal.',
-    accent: '#8b5cf6',
-    glow: 'rgba(139,92,246,0.12)',
+    accent: ACCENT_AMBER,
+    glow: GLOW_AMBER,
     route: '/chat',
-    tag: 'GPT-5.5',
+    tag: 'Claude / Groq',
   },
   {
     icon: Zap,
     title: 'Load Flow Analysis',
     desc: 'DC, AC Newton-Raphson and OPF calculations on your CIM network with real-time topology map, voltage-colored buses and branch loading visualization.',
-    accent: '#f59e0b',
-    glow: 'rgba(245,158,11,0.12)',
+    accent: ACCENT_AMBER,
+    glow: GLOW_AMBER,
     route: '/load-flow',
     tag: 'pandapower',
   },
   {
     icon: Database,
     title: 'Semantic Knowledge Graph',
-    desc: 'CIM IEC 61970/61968 compliant RDF triple store powered by Apache Jena 5 with embedded Fuseki/TDB2, full SPARQL 1.1 support and OWL reasoning.',
-    accent: '#10b981',
-    glow: 'rgba(16,185,129,0.12)',
+    desc: 'CIM IEC 61970/61968 compliant RDF triple store powered by Apache Jena with embedded Fuseki/TDB2, full SPARQL 1.1 support and OWL reasoning.',
+    accent: ACCENT_AMBER,
+    glow: GLOW_AMBER,
     route: '/sparql',
-    tag: 'Apache Jena 5',
+    tag: 'Apache Jena',
   },
   {
     icon: Search,
     title: 'Vector Search (Qdrant)',
     desc: 'Semantic entity retrieval with OpenAI text-embedding-3-small. 1536-dimension vectors indexed automatically after every import. Finds equipment by meaning.',
-    accent: '#38bdf8',
-    glow: 'rgba(56,189,248,0.12)',
+    accent: ACCENT_EMERALD,
+    glow: GLOW_EMERALD,
     route: '/dashboard',
     tag: 'Qdrant',
   },
@@ -48,8 +59,8 @@ const FEATURES = [
     icon: Code2,
     title: 'SPARQL Editor',
     desc: 'Monaco-based query editor with syntax highlighting, 6 pre-built templates, execution history and CSV/JSON export for deep data exploration.',
-    accent: '#f43f5e',
-    glow: 'rgba(244,63,94,0.12)',
+    accent: ACCENT_EMERALD,
+    glow: GLOW_EMERALD,
     route: '/sparql',
     tag: 'SPARQL 1.1',
   },
@@ -57,8 +68,8 @@ const FEATURES = [
     icon: Shield,
     title: 'SHACL Validation',
     desc: 'Validate CIM data against SHACL shapes and IEC 61970 profiles. Detect data quality issues before they impact your analysis.',
-    accent: '#fb923c',
-    glow: 'rgba(251,146,60,0.12)',
+    accent: ACCENT_EMERALD,
+    glow: GLOW_EMERALD,
     route: '/validation',
     tag: 'IEC 61970',
   },
@@ -70,21 +81,21 @@ const STEPS = [
     icon: Upload,
     title: 'Import your CIM data',
     desc: 'Upload CIM/XML, RDF or Excel files. Entities are automatically indexed into Qdrant as semantic vectors.',
-    color: '#10b981',
+    color: ACCENT_EMERALD,
   },
   {
     num: '02',
     icon: Network,
     title: 'Explore the Knowledge Graph',
     desc: 'Query with SPARQL, run load flow, visualize the network topology, or ask the AI agent in natural language.',
-    color: '#8b5cf6',
+    color: ACCENT_SKY,
   },
   {
     num: '03',
     icon: Brain,
     title: 'Get AI-powered answers',
     desc: 'The AI agent reasons autonomously using tools: semantic search, SPARQL queries, power flow calculations and streams back precise answers.',
-    color: '#f59e0b',
+    color: ACCENT_AMBER,
   },
 ];
 
@@ -143,11 +154,11 @@ const DemoTerminal = () => (
 
       {/* Assistant response */}
       <div className="flex gap-2.5">
-        <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.3)' }}>
-          <Brain size={12} style={{ color: '#8b5cf6' }} />
+        <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.3)' }}>
+          <Brain size={12} style={{ color: ACCENT_AMBER }} />
         </div>
         <div className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>
-          <span style={{ color: '#10b981', fontWeight: 'bold' }}>3 voltage violations</span> detected in the NRW network:
+          <span style={{ color: ACCENT_EMERALD, fontWeight: 'bold' }}>3 voltage violations</span> detected in the NRW network:
           <br />
           <span style={{ color: '#f87171' }}>• Düsseldorf 220kV</span> - 0.87 pu (min 0.90)
           <br />
@@ -218,7 +229,7 @@ export default function LandingPage() {
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div style={{ animation: 'glow-pulse 5s ease-in-out infinite', position: 'absolute', top: '-5%', left: '5%', width: '700px', height: '700px', background: 'radial-gradient(circle, rgba(245,158,11,0.06) 0%, transparent 65%)', borderRadius: '50%' }} />
         <div style={{ animation: 'glow-pulse 6s ease-in-out 1.5s infinite', position: 'absolute', bottom: '5%', right: '0%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(56,189,248,0.05) 0%, transparent 65%)', borderRadius: '50%' }} />
-        <div style={{ animation: 'glow-pulse 7s ease-in-out 3s infinite', position: 'absolute', top: '50%', left: '40%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 65%)', borderRadius: '50%' }} />
+        <div style={{ animation: 'glow-pulse 7s ease-in-out 3s infinite', position: 'absolute', top: '50%', left: '40%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(16,185,129,0.05) 0%, transparent 65%)', borderRadius: '50%' }} />
         <div className="absolute inset-0 grid-bg" />
       </div>
 
@@ -272,7 +283,7 @@ export default function LandingPage() {
             <p className="fade-up-2 text-base sm:text-lg text-neutral-400 mb-4 leading-relaxed lg:mx-0 mx-auto max-w-xl">
               Transform power system CIM data into an AI-queryable knowledge graph.
               Import CIM/RDF or Excel, run load flow, and interrogate your network
-              with <span style={{ color: '#8b5cf6' }}>AI Agent</span> using natural language.
+              with <span style={{ color: ACCENT_AMBER }}>AI Agent</span> using natural language.
             </p>
 
             {/* Mini feature pills */}
@@ -340,7 +351,7 @@ export default function LandingPage() {
       <section id="how-it-works" className="relative z-10 max-w-7xl mx-auto px-6 lg:px-10 pb-24">
         <div className="text-center mb-14">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-4"
-            style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#a78bfa' }}>
+            style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', color: ACCENT_SKY }}>
             Workflow
           </div>
           <h2 className="text-3xl sm:text-4xl font-black text-white mb-3">How it works</h2>
@@ -349,7 +360,6 @@ export default function LandingPage() {
 
         <div className="grid md:grid-cols-3 gap-6 relative">
           {/* connector line (desktop only) */}
-          <div className="hidden md:block absolute top-10 left-1/3 right-1/3 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }} />
 
           {STEPS.map(({ num, icon: Icon, title, desc, color }, i) => (
             <div
@@ -368,11 +378,6 @@ export default function LandingPage() {
               </div>
               <h3 className="font-bold text-white text-base mb-2">{title}</h3>
               <p className="text-xs text-neutral-500 leading-relaxed">{desc}</p>
-              {i < STEPS.length - 1 && (
-                <div className="hidden md:block absolute top-10 -right-3 z-10 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <ChevronRight size={12} className="text-neutral-600" />
-                </div>
-              )}
             </div>
           ))}
         </div>

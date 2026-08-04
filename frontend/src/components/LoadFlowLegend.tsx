@@ -15,7 +15,7 @@ const LoadFlowLegend = ({ mode }: LoadFlowLegendProps) => {
             <span className="text-xs text-neutral-400 font-medium">Critical Low (&lt;0.90 pu)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-gradient-to-r from-orange-600 to-orange-500 border-2 border-orange-400" />
+            <div className="w-5 h-5 rounded-full bg-gradient-to-r from-accent-600 to-accent-500 border-2 border-accent-400" />
             <span className="text-xs text-neutral-400 font-medium">Low (0.90-0.95 pu)</span>
           </div>
           <div className="flex items-center gap-2">
@@ -54,7 +54,7 @@ const LoadFlowLegend = ({ mode }: LoadFlowLegendProps) => {
           <span className="text-xs text-neutral-400 font-medium">Heavy (70-90%)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-8 h-4 bg-orange-500 rounded" />
+          <div className="w-8 h-4 bg-accent-500 rounded" />
           <span className="text-xs text-neutral-400 font-medium">Critical (90-100%)</span>
         </div>
         <div className="flex items-center gap-2">

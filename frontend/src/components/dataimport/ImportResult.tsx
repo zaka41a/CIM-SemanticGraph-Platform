@@ -156,9 +156,9 @@ export const ImportResult = ({ result, error }: ImportResultProps) => {
               </button>
               <button
                 onClick={() => navigate('/chat')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-700/50 hover:bg-primary-700 border border-primary-600/50 hover:border-violet-500/50 text-sm text-neutral-300 hover:text-white transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-700/50 hover:bg-primary-700 border border-primary-600/50 hover:border-sky-500/50 text-sm text-neutral-300 hover:text-white transition-all"
               >
-                <MessageSquare size={15} className="text-violet-400" />
+                <MessageSquare size={15} className="text-sky-400" />
                 Ask GraphRAG
                 <ArrowRight size={13} className="text-neutral-500" />
               </button>

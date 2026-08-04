@@ -59,9 +59,9 @@ function getFileType(name: string): { label: string; icon: React.ComponentType<a
   if (ext === 'xlsx' || ext === 'xls')
     return { label: 'Excel', icon: FileSpreadsheet, color: 'text-emerald-400', bg: 'bg-emerald-500/15 border-emerald-500/30' };
   if (ext === 'xml')
-    return { label: 'CIM/XML', icon: FileCode2, color: 'text-blue-400', bg: 'bg-blue-500/15 border-blue-500/30' };
+    return { label: 'CIM/XML', icon: FileCode2, color: 'text-sky-400', bg: 'bg-sky-500/15 border-sky-500/30' };
   if (ext === 'rdf' || ext === 'ttl' || ext === 'n3')
-    return { label: 'RDF', icon: FileCode2, color: 'text-purple-400', bg: 'bg-purple-500/15 border-purple-500/30' };
+    return { label: 'RDF', icon: FileCode2, color: 'text-sky-400', bg: 'bg-sky-500/15 border-sky-500/30' };
   return { label: 'File', icon: FileText, color: 'text-accent-400', bg: 'bg-accent-500/15 border-accent-500/30' };
 }
 
@@ -263,16 +263,16 @@ const History = () => {
 
       {/* Empty / Error state */}
       {!loading && history.length === 0 && (
-        <div className="card relative overflow-hidden border-yellow-500/20 bg-gradient-to-r from-yellow-500/5 to-transparent p-6">
+        <div className="card relative overflow-hidden border-primary-700/40 p-6">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-yellow-500/20 rounded-xl flex-shrink-0">
-              {error ? <AlertTriangle size={22} className="text-accent-500" /> : <Lightbulb size={22} className="text-accent-500" />}
+            <div className="p-3 bg-accent-500/15 rounded-xl flex-shrink-0">
+              {error ? <AlertTriangle size={22} className="text-accent-400" /> : <Lightbulb size={22} className="text-accent-400" />}
             </div>
             <div className="flex-1">
-              <h4 className="font-semibold text-accent-500 mb-1">
+              <h4 className="font-semibold text-white mb-1">
                 {error ? 'Could not load history' : 'No Import History Yet'}
               </h4>
-              <p className="text-sm text-yellow-300/80 mb-3">
+              <p className="text-sm text-white/80 mb-3">
                 {error
                   ? error
                   : 'Import history is stored in memory and reset when the server restarts. Start by importing a CIM or Excel file.'}
@@ -476,7 +476,7 @@ const History = () => {
                             </span>
                           )}
                           {item.status === 'rolled_back' && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/15 text-orange-400 border border-orange-500/30 rounded-full text-xs font-semibold">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-accent-500/15 text-accent-400 border border-accent-500/30 rounded-full text-xs font-semibold">
                               <RotateCcw size={12} />
                               Rolled Back
                             </span>
@@ -523,7 +523,7 @@ const History = () => {
                                 <div className="flex items-center gap-1">
                                   <button
                                     onClick={() => handleRollback(item.id)}
-                                    className="px-2 py-1 text-xs bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 border border-orange-500/30 rounded-lg transition-all"
+                                    className="px-2 py-1 text-xs bg-accent-500/20 hover:bg-accent-500/30 text-accent-400 border border-accent-500/30 rounded-lg transition-all"
                                   >
                                     Confirm
                                   </button>
@@ -538,12 +538,12 @@ const History = () => {
                                 <button
                                   onClick={() => setRollbackConfirm(item.id)}
                                   disabled={rollingBack === item.id}
-                                  className="p-2 hover:bg-orange-500/15 rounded-xl transition-all group/rb disabled:opacity-50"
+                                  className="p-2 hover:bg-accent-500/15 rounded-xl transition-all group/rb disabled:opacity-50"
                                   title="Rollback - remove these triples from the graph"
                                 >
                                   {rollingBack === item.id
-                                    ? <RotateCcw size={15} className="text-orange-400 animate-spin" />
-                                    : <RotateCcw size={15} className="text-neutral-600 group-hover/rb:text-orange-400 transition-colors" />
+                                    ? <RotateCcw size={15} className="text-accent-400 animate-spin" />
+                                    : <RotateCcw size={15} className="text-neutral-600 group-hover/rb:text-accent-400 transition-colors" />
                                   }
                                 </button>
                               )

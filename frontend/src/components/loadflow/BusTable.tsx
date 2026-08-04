@@ -34,7 +34,7 @@ export const BusTable = ({ buses, sortConfig, onSort }: BusTableProps) => {
   };
 
   const getVoltageBarColor = (pu: number) => {
-    if (pu < 0.95) return 'bg-orange-500';
+    if (pu < 0.95) return 'bg-accent-500';
     if (pu > 1.05) return 'bg-yellow-500';
     return 'bg-emerald-500';
   };
@@ -98,7 +98,7 @@ export const BusTable = ({ buses, sortConfig, onSort }: BusTableProps) => {
           </thead>
           <tbody className="divide-y divide-primary-700/20">
             {buses.map((bus) => {
-              const voltageColor = bus.voltageMagnitude < 0.95 ? 'text-orange-400' :
+              const voltageColor = bus.voltageMagnitude < 0.95 ? 'text-accent-400' :
                                    bus.voltageMagnitude > 1.05 ? 'text-yellow-400' :
                                    'text-green-400';
               const angleAbnormal = Math.abs(bus.voltageAngle) > 30;

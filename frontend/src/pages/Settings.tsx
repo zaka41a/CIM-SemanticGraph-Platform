@@ -521,11 +521,11 @@ const Settings = () => {
                 <StatItem label="Subjects" value={graphStats?.totalSubjects ?? 0} color="text-accent-400" />
                 <StatItem label="Predicates" value={graphStats?.totalPredicates ?? 0} />
                 <StatItem label="Classes" value={graphStats?.totalClasses ?? 0} />
-                <StatItem label="Substations" value={graphStats?.substations ?? 0} color="text-violet-400" />
+                <StatItem label="Substations" value={graphStats?.substations ?? 0} color="text-sky-400" />
                 <StatItem label="Generators" value={graphStats?.generators ?? 0} color="text-emerald-400" />
-                <StatItem label="Transmission Lines" value={graphStats?.transmissionLines ?? 0} color="text-blue-400" />
-                <StatItem label="Transformers" value={graphStats?.transformers ?? 0} color="text-cyan-400" />
-                <StatItem label="Loads" value={graphStats?.loads ?? 0} color="text-orange-400" />
+                <StatItem label="Transmission Lines" value={graphStats?.transmissionLines ?? 0} color="text-sky-400" />
+                <StatItem label="Transformers" value={graphStats?.transformers ?? 0} color="text-sky-400" />
+                <StatItem label="Loads" value={graphStats?.loads ?? 0} color="text-sky-400" />
                 <StatItem label="Bus Sections" value={graphStats?.busbarSections ?? 0} />
                 <StatItem label="Connectivity Nodes" value={graphStats?.connectivityNodes ?? 0} />
                 <StatItem label="Voltage Levels" value={graphStats?.voltageLevels ?? 0} />
@@ -543,7 +543,7 @@ const Settings = () => {
               badge={indexingStatus?.qdrantAvailable ? 'CONNECTED' : 'OFFLINE'}
             />
             <div className="p-5">
-              <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-violet-500/10 to-violet-600/5 border border-violet-500/20">
+              <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-sky-500/10 to-sky-600/5 border border-sky-500/20">
                 <p className="text-xs text-neutral-500 mb-1">Indexed Entities</p>
                 <p className="text-4xl font-black text-white tracking-tight">
                   {indexingStatus?.indexedEntities?.toLocaleString() ?? '-'}
@@ -552,7 +552,7 @@ const Settings = () => {
                   {indexingStatus?.collectionName ?? 'cim_entities'} · cosine distance
                 </p>
               </div>
-              <StatItem label="Vector Dimensions" value="1 536" color="text-violet-400" />
+              <StatItem label="Vector Dimensions" value="1 536" color="text-sky-400" />
               <StatItem label="Similarity Threshold" value="0.35" />
               <StatItem label="Batch Size" value="100 pts/req" />
               <StatItem

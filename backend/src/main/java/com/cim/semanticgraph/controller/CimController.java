@@ -231,7 +231,9 @@ public class CimController {
     public ResponseEntity<Map<String, Object>> getIndexingStatus() {
         Map<String, Object> status = new HashMap<>();
         try {
-            boolean qdrantAvailable = qdrantService.isAvailable();
+            // Live probe, not the startup cache: this endpoint drives the Dashboard status
+            // light, so it has to reflect Qdrant now rather than when the backend booted.
+            boolean qdrantAvailable = qdrantService.refreshAvailability();
             long pointCount = qdrantAvailable ? qdrantService.countPoints() : 0;
             status.put("qdrantAvailable", qdrantAvailable);
             status.put("indexedEntities", pointCount);
