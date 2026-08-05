@@ -328,7 +328,10 @@ start_backend() {
   save_pid "BACKEND" $!
   save_port "BACKEND" "$PORT_BACKEND"
 
-  wait_for_http "http://localhost:$PORT_BACKEND/api/actuator/health" "Backend" 120 \
+  # Spring context init alone takes ~55s on a cold JVM here, and Jena plus the SHACL
+  # shapes push first boot past 120s. A too-short wait reports a failure for a backend
+  # that is still coming up fine.
+  wait_for_http "http://localhost:$PORT_BACKEND/api/actuator/health" "Backend" 300 \
     || { error "Backend failed. Check: tail -f $LOG_DIR/backend.log"; exit 1; }
 
   success "Backend ready    → logs: $LOG_DIR/backend.log"
