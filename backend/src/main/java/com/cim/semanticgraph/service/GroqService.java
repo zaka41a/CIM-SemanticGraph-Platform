@@ -7,6 +7,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,9 +100,19 @@ public class GroqService {
     }
 
     public String queryWithContext(String question, String graphContext, String provider) {
+        return queryWithContext(question, graphContext, provider, List.of());
+    }
+
+    public String queryWithContext(
+            String question,
+            String graphContext,
+            String provider,
+            List<ConversationMemoryService.Turn> conversation
+    ) {
         log.info("Querying LLM provider '{}' with context for: {}", resolve(provider).id(), question);
 
         String prompt = """
+            Treat earlier conversation messages only as context for resolving references.
             Based on the following knowledge graph data about a power system network:
 
             %s
@@ -112,7 +123,7 @@ public class GroqService {
             Format your response in markdown for readability.
             """.formatted(graphContext, question);
 
-        return chat(systemMessage, prompt, provider);
+        return chat(systemMessage, prompt, provider, conversation);
     }
 
     public String simpleQuery(String question) {
@@ -194,8 +205,17 @@ public class GroqService {
         return chat(systemPrompt, userMessage, null);
     }
 
-    @SuppressWarnings("unchecked")
     private String chat(String systemPrompt, String userMessage, String provider) {
+        return chat(systemPrompt, userMessage, provider, List.of());
+    }
+
+    @SuppressWarnings("unchecked")
+    private String chat(
+            String systemPrompt,
+            String userMessage,
+            String provider,
+            List<ConversationMemoryService.Turn> conversation
+    ) {
         ProviderCfg cfg = resolve(provider);
         if (!cfg.configured()) {
             log.warn("LLM provider '{}' has no API key configured.", cfg.id());
@@ -214,10 +234,18 @@ public class GroqService {
                 requestBody.put("temperature", temperature);
             }
             requestBody.put("max_tokens", maxTokens);
-            requestBody.put("messages", List.of(
-                Map.of("role", "system", "content", systemPrompt),
-                Map.of("role", "user", "content", userMessage)
-            ));
+            List<Map<String, String>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "system", "content", systemPrompt));
+            for (ConversationMemoryService.Turn turn : conversation) {
+                if (!turn.question().isBlank()) {
+                    messages.add(Map.of("role", "user", "content", turn.question()));
+                }
+                if (!turn.answer().isBlank()) {
+                    messages.add(Map.of("role", "assistant", "content", turn.answer()));
+                }
+            }
+            messages.add(Map.of("role", "user", "content", userMessage));
+            requestBody.put("messages", messages);
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
 

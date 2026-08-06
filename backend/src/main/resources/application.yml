@@ -94,6 +94,10 @@ graphrag:
     similarity-threshold: 0.35
   reranking:
     candidateMultiplier: 3
+  memory:
+    maxTurns: 6
+    maxCharacters: 12000
+    retrievalTurns: 2
   context:
     max-triples: 500
     include-inference: true

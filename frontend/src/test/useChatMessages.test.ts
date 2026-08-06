@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useChatMessages } from '@/hooks/useChatMessages';
+import { apiService } from '@/services/api';
 
 // Mock apiService - getChatHistory resolves with empty array (no race with sendMessage)
 vi.mock('@/services/api', () => ({
@@ -84,6 +85,20 @@ describe('useChatMessages', () => {
     await act(async () => { result.current.sendMessage('first question'); });
 
     expect(result.current.getLastUserQuestion()).toBe('first question');
+  });
+
+  it('forwards the active session to the stream', async () => {
+    const { result } = renderHook(() => useChatMessages('session-1', 'gpt5'));
+    await waitFor(() => result.current.isLoading === false);
+
+    await act(async () => { result.current.sendMessage('Show voltage'); });
+
+    expect(apiService.streamGraphRAG).toHaveBeenCalledWith(
+      'Show voltage',
+      expect.any(Object),
+      'session-1',
+      'gpt5',
+    );
   });
 
   it('stopGeneration halts streaming', async () => {

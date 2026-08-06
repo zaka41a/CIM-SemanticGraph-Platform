@@ -6,7 +6,6 @@ import com.cim.semanticgraph.graphrag.ContextBuilder;
 import com.cim.semanticgraph.graphrag.GraphTraverser;
 import com.cim.semanticgraph.graphrag.RelevanceScorer;
 import com.cim.semanticgraph.loadflow.model.CalculationMethod;
-import com.cim.semanticgraph.model.ChatHistory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.rdf.model.Model;
@@ -37,7 +36,7 @@ public class GraphRAGService {
     private final ContextBuilder contextBuilder;
     private final RelevanceScorer relevanceScorer;
     private final AnswerEvaluator answerEvaluator;
-    private final ChatHistoryService chatHistoryService;
+    private final ConversationMemoryService conversationMemoryService;
     private final LoadFlowService loadFlowService;
 
     @Value("${graphrag.retrieval.top-k}")
@@ -71,21 +70,25 @@ public class GraphRAGService {
         long startTime = System.currentTimeMillis();
 
         try {
-            if (isLoadFlowRequest(question)) {
+            List<ConversationMemoryService.Turn> conversation =
+                    conversationMemoryService.getRecentTurns(sessionId);
+            String retrievalQuestion = conversationMemoryService.contextualizeQuery(question, conversation);
+
+            if (isLoadFlowRequest(retrievalQuestion)) {
                 log.info("Detected load flow calculation request");
-                return handleLoadFlowRequest(question, sessionId, startTime);
+                return handleLoadFlowRequest(question, retrievalQuestion, sessionId, startTime);
             }
 
             log.debug("Step 1: Retrieving relevant entities");
-            List<String> relevantEntities = findRelevantEntities(question);
+            List<String> relevantEntities = findRelevantEntities(retrievalQuestion);
 
             log.debug("Step 1b: Building direct SPARQL context for aggregate questions");
-            String sparqlContext = buildSparqlContext(question);
+            String sparqlContext = buildSparqlContext(retrievalQuestion);
 
             GraphRAGResponse response;
             if (relevantEntities.isEmpty() && sparqlContext.isEmpty()) {
                 log.warn("No relevant entities found for query");
-                response = buildFallbackResponse(question, startTime, provider);
+                response = buildFallbackResponse(question, startTime, provider, conversation);
             } else {
                 log.debug("Step 3: Building LLM context");
                 String graphContext;
@@ -115,14 +118,14 @@ public class GraphRAGService {
                 String answer;
                 if (groqService.isConfigured(provider)) {
                     log.info("Using LLM provider '{}' for query", provider == null ? "default" : provider);
-                    answer = groqService.queryWithContext(question, graphContext, provider);
+                    answer = groqService.queryWithContext(question, graphContext, provider, conversation);
                 } else if (claudeAgentService.isConfigured()) {
                     log.info("Using Claude API for LLM query (Groq not configured)");
-                    answer = claudeAgentService.queryWithContext(question, graphContext);
+                    answer = claudeAgentService.queryWithContext(question, graphContext, conversation);
                 } else {
                     log.warn("No LLM configured (Groq/Claude keys missing). Trying Ollama as last resort.");
                     try {
-                        answer = ollamaService.queryWithContext(question, graphContext);
+                        answer = ollamaService.queryWithContext(question, graphContext, conversation);
                     } catch (Exception ollamaEx) {
                         throw new RuntimeException(
                             "No LLM service is available. Please configure CLAUDE_API_KEY or GROQ_API_KEY " +
@@ -153,33 +156,13 @@ public class GraphRAGService {
                         .build();
             }
 
-            saveChatHistory(sessionId, response);
+            conversationMemoryService.remember(sessionId, response);
 
             return response;
 
         } catch (Exception e) {
             log.error("Error processing GraphRAG query", e);
             throw new RuntimeException("GraphRAG processing failed: " + e.getMessage(), e);
-        }
-    }
-
-    private void saveChatHistory(String sessionId, GraphRAGResponse response) {
-        try {
-            ChatHistory chatHistory = ChatHistory.create(
-                    sessionId,
-                    response.getQuestion(),
-                    response.getAnswer(),
-                    response.getSources(),
-                    response.getConfidence(),
-                    response.getTriplesRetrieved(),
-                    response.getExecutionTimeMs(),
-                    response.getLlmModel()
-            );
-            chatHistoryService.saveChatHistory(chatHistory);
-            log.debug("Chat history saved for session: {}", sessionId);
-        } catch (Exception e) {
-            // Don't fail the request if history save fails
-            log.error("Failed to save chat history", e);
         }
     }
 
@@ -555,16 +538,34 @@ public class GraphRAGService {
         return (entityScore + tripleScore) / 2.0;
     }
 
-    private GraphRAGResponse buildFallbackResponse(String question, long startTime, String provider) {
+    private GraphRAGResponse buildFallbackResponse(
+            String question,
+            long startTime,
+            String provider,
+            List<ConversationMemoryService.Turn> conversation
+    ) {
         String fallbackAnswer;
         String modelUsed = llmModel;
         if (groqService.isConfigured(provider)) {
-            fallbackAnswer = groqService.simpleQuery(question, provider);
+            fallbackAnswer = groqService.queryWithContext(
+                    question,
+                    "No specific CIM graph context available.",
+                    provider,
+                    conversation
+            );
             modelUsed = groqService.modelFor(provider);
         } else if (claudeAgentService.isConfigured()) {
-            fallbackAnswer = claudeAgentService.queryWithContext(question, "No specific CIM graph context available.");
+            fallbackAnswer = claudeAgentService.queryWithContext(
+                    question,
+                    "No specific CIM graph context available.",
+                    conversation
+            );
         } else {
-            fallbackAnswer = ollamaService.simpleQuery(question);
+            fallbackAnswer = ollamaService.queryWithContext(
+                    question,
+                    "No specific CIM graph context available.",
+                    conversation
+            );
         }
 
         return GraphRAGResponse.builder()
@@ -1043,15 +1044,20 @@ public class GraphRAGService {
         return normalized.toUpperCase();
     }
 
-    private GraphRAGResponse handleLoadFlowRequest(String question, String sessionId, long startTime) {
+    private GraphRAGResponse handleLoadFlowRequest(
+            String question,
+            String retrievalQuestion,
+            String sessionId,
+            long startTime
+    ) {
         try {
             // Primary: semantic search via Qdrant (Python service)
-            String targetBusId = loadFlowService.findBusForQuestion(question);
+            String targetBusId = loadFlowService.findBusForQuestion(retrievalQuestion);
 
             // Fallback: regex extraction if semantic search unavailable
             if (targetBusId == null) {
                 log.info("Semantic bus search unavailable, falling back to regex extraction");
-                targetBusId = extractTargetBus(question);
+                targetBusId = extractTargetBus(retrievalQuestion);
             }
 
             if (targetBusId != null) {
@@ -1191,13 +1197,13 @@ public class GraphRAGService {
                     .timestamp(LocalDateTime.now())
                     .build();
 
-            saveChatHistory(sessionId, response);
+            conversationMemoryService.remember(sessionId, response);
 
             return response;
 
         } catch (Exception e) {
             log.error("Error in load flow calculation", e);
-            return GraphRAGResponse.builder()
+            GraphRAGResponse response = GraphRAGResponse.builder()
                     .answer("Error calculating load flow: " + e.getMessage())
                     .question(question)
                     .graphContext("Load flow calculation failed")
@@ -1207,6 +1213,8 @@ public class GraphRAGService {
                     .llmModel("Load Flow Calculator")
                     .confidence(0.0)
                     .build();
+            conversationMemoryService.remember(sessionId, response);
+            return response;
         }
     }
 }

@@ -21,9 +21,10 @@ public class RelevanceScorer {
     private static final double AGREEMENT_WEIGHT = 0.05;
 
     private static final Set<String> STOP_WORDS = Set.of(
-            "a", "about", "all", "an", "and", "are", "at", "by", "can", "do",
-            "for", "from", "give", "how", "in", "is", "me", "of", "on", "please",
-            "show", "tell", "the", "to", "what", "when", "where", "which", "with"
+            "a", "about", "all", "an", "and", "answer", "are", "at", "by", "can",
+            "current", "do", "for", "from", "give", "how", "in", "is", "me", "of",
+            "on", "please", "previous", "question", "show", "tell", "the", "to", "what",
+            "when", "where", "which", "with"
     );
 
     public List<RankedCandidate> rankResults(String query, List<Candidate> candidates, int limit) {

@@ -1,9 +1,19 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useChatSession } from '@/hooks/useChatSession';
+import { apiService } from '@/services/api';
+
+vi.mock('@/services/api', () => ({
+  apiService: {
+    deleteChatSession: vi.fn().mockResolvedValue({ status: 'ok' }),
+  },
+}));
 
 describe('useChatSession', () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
 
   it('creates a new session on first load', () => {
     const { result } = renderHook(() => useChatSession());
@@ -34,6 +44,7 @@ describe('useChatSession', () => {
     const sidToDelete = result.current.sessions[1].id;
     act(() => { result.current.deleteSession(sidToDelete); });
     expect(result.current.sessions.find(s => s.id === sidToDelete)).toBeUndefined();
+    expect(apiService.deleteChatSession).toHaveBeenCalledWith(sidToDelete);
   });
 
   it('deleteSession on current session switches to another', () => {
@@ -42,6 +53,16 @@ describe('useChatSession', () => {
     const currentSid = result.current.sessionId;
     act(() => { result.current.deleteSession(currentSid); });
     expect(result.current.sessionId).not.toBe(currentSid);
+  });
+
+  it('deleting the only session replaces it without restoring the deleted session', () => {
+    const { result } = renderHook(() => useChatSession());
+    const deletedSession = result.current.sessionId;
+
+    act(() => { result.current.deleteSession(deletedSession); });
+
+    expect(result.current.sessions).toHaveLength(1);
+    expect(result.current.sessions[0].id).not.toBe(deletedSession);
   });
 
   it('selectSession changes the active session', () => {

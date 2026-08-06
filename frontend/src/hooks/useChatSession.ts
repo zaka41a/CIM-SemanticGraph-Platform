@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiService } from '@/services/api';
 import { storageGet, storageSet, storageRemove } from '@/utils/storage';
 
 interface ChatSession {
@@ -41,7 +42,7 @@ export const useChatSession = () => {
     setSessions(newSessions);
   };
 
-  const createNewSession = () => {
+  const createSession = (existingSessions: ChatSession[]) => {
     const newSessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     storageSet(KEY_SESSION_ID, newSessionId);
     setSessionId(newSessionId);
@@ -51,9 +52,11 @@ export const useChatSession = () => {
       title: 'New Chat',
       timestamp: new Date(),
     };
-    saveSessions([newSession, ...sessions]);
+    saveSessions([newSession, ...existingSessions]);
     return newSessionId;
   };
+
+  const createNewSession = () => createSession(sessions);
 
   const selectSession = (sid: string) => {
     setSessionId(sid);
@@ -64,12 +67,13 @@ export const useChatSession = () => {
     const updated = sessions.filter(s => s.id !== sid);
     saveSessions(updated);
     storageRemove(`graphrag-chat-${sid}`);
+    void apiService.deleteChatSession(sid).catch(() => undefined);
 
     if (sessionId === sid) {
       if (updated.length > 0) {
         selectSession(updated[0].id);
       } else {
-        createNewSession();
+        createSession(updated);
       }
     }
   };

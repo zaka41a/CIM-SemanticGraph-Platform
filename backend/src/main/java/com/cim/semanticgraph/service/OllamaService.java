@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -33,10 +34,18 @@ public class OllamaService {
     private final ObjectMapper objectMapper;
 
     public String queryWithContext(String userQuestion, String graphContext) {
+        return queryWithContext(userQuestion, graphContext, List.of());
+    }
+
+    public String queryWithContext(
+            String userQuestion,
+            String graphContext,
+            List<ConversationMemoryService.Turn> conversation
+    ) {
         log.info("Querying Ollama with context. Question: {}", userQuestion);
 
         try {
-            String userPrompt = buildPromptWithContext(userQuestion, graphContext);
+            String userPrompt = buildPromptWithContext(userQuestion, graphContext, conversation);
             String response = callOllamaApi(userPrompt);
             log.info("Ollama response received successfully");
             return response;
@@ -91,8 +100,22 @@ public class OllamaService {
         }
     }
 
-    private String buildPromptWithContext(String question, String graphContext) {
+    private String buildPromptWithContext(
+            String question,
+            String graphContext,
+            List<ConversationMemoryService.Turn> conversation
+    ) {
+        StringBuilder history = new StringBuilder();
+        for (ConversationMemoryService.Turn turn : conversation) {
+            history.append("User: ").append(turn.question()).append('\n');
+            history.append("Assistant: ").append(turn.answer()).append('\n');
+        }
+
         return """
+            Earlier conversation for resolving references:
+
+            %s
+
             Here is relevant information from the CIM Knowledge Graph:
 
             %s
@@ -104,7 +127,7 @@ public class OllamaService {
             Provide a clear, accurate answer based on the graph data. Reference specific equipment IDs
             or resource URIs when relevant. If the graph data doesn't contain enough information to
             answer the question fully, clearly state what information is missing.
-            """.formatted(graphContext, question);
+            """.formatted(history, graphContext, question);
     }
 
     public String explainSparqlResults(String sparqlQuery, String results, String userQuestion) {

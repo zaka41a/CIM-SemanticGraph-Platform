@@ -175,7 +175,7 @@ export const useChatMessages = (sessionId: string, provider: string = '') => {
           return updated;
         });
       },
-    }, provider);
+    }, sessionId, provider);
 
     stopRef.current = stop;
   }, [isLoading, sessionId, provider]);

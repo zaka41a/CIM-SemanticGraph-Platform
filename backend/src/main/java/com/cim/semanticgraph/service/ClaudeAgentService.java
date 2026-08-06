@@ -52,6 +52,7 @@ public class ClaudeAgentService {
     private final GraphTraverser    graphTraverser;
     private final ContextBuilder    contextBuilder;
     private final RelevanceScorer   relevanceScorer;
+    private final ConversationMemoryService conversationMemoryService;
     private final LoadFlowService   loadFlowService;
 
     @Value("${claude.api.key:}")
@@ -134,14 +135,21 @@ public class ClaudeAgentService {
 
     public Flux<String> processQueryStreaming(String question, String sessionId) {
         String ctx = buildDataContext();
-        return processQueryStreamingWithContext(question, sessionId, ctx);
+        List<ConversationMemoryService.Turn> conversation =
+                conversationMemoryService.getRecentTurns(sessionId);
+        return processQueryStreamingWithContext(question, sessionId, ctx, conversation);
     }
 
-    private Flux<String> processQueryStreamingWithContext(String question, String sessionId, String dataContext) {
+    private Flux<String> processQueryStreamingWithContext(
+            String question,
+            String sessionId,
+            String dataContext,
+            List<ConversationMemoryService.Turn> conversation
+    ) {
         return Flux.<String>create(sink ->
                 Schedulers.boundedElastic().schedule(() -> {
                     try {
-                        runAgentLoop(question, dataContext, sink);
+                        runAgentLoop(question, sessionId, dataContext, conversation, sink);
                     } catch (Exception e) {
                         log.error("Agent loop fatal error", e);
                         sink.next(sseEvent("error", Map.of("message", e.getMessage())));
@@ -199,12 +207,14 @@ public class ClaudeAgentService {
 
     public GraphRAGResponse processQuery(String question, String sessionId) {
         long startTime = System.currentTimeMillis();
+        List<ConversationMemoryService.Turn> conversation =
+                conversationMemoryService.getRecentTurns(sessionId);
 
         // Pre-flight: check data exists in Fuseki
         String dataContext = buildDataContext();
         if (dataContext == null) {
             log.warn("Knowledge graph is empty - returning no-data response");
-            return GraphRAGResponse.builder()
+            GraphRAGResponse response = GraphRAGResponse.builder()
                     .question(question)
                     .answer("The knowledge graph is empty. Please **import CIM data** first via the **Data Import** page, then try again.")
                     .sources(List.of())
@@ -213,6 +223,8 @@ public class ClaudeAgentService {
                     .llmModel(claudeModel)
                     .timestamp(LocalDateTime.now())
                     .build();
+            conversationMemoryService.remember(sessionId, response);
+            return response;
         }
 
         List<String> sources   = new ArrayList<>();
@@ -220,14 +232,14 @@ public class ClaudeAgentService {
         AtomicReference<String> finalAnswer = new AtomicReference<>("");
 
         // Collect SSE stream synchronously (with data context injected)
-        processQueryStreamingWithContext(question, sessionId, dataContext)
+        processQueryStreamingWithContext(question, sessionId, dataContext, conversation)
                 .doOnNext(event -> {
                     try {
                         @SuppressWarnings("unchecked")
                         Map<String, Object> map = objectMapper.readValue(event, Map.class);
                         String type = (String) map.get("type");
                         if ("text".equals(type) && map.get("text") instanceof String t) {
-                            finalAnswer.set(t);
+                            finalAnswer.updateAndGet(current -> current + t);
                         } else if ("error".equals(type) && map.get("message") instanceof String m) {
                             log.warn("Agent error event captured: {}", m);
                             finalAnswer.set("Agent error: " + m);
@@ -261,9 +273,23 @@ public class ClaudeAgentService {
     // Agent loop
     // ─────────────────────────────────────────────────────────────────────
 
-    private void runAgentLoop(String question, String dataContext, reactor.core.publisher.FluxSink<String> sink) {
+    private void runAgentLoop(
+            String question,
+            String sessionId,
+            String dataContext,
+            List<ConversationMemoryService.Turn> conversation,
+            reactor.core.publisher.FluxSink<String> sink
+    ) {
         long startTime = System.currentTimeMillis();
         List<Map<String, Object>> messages = new ArrayList<>();
+        for (ConversationMemoryService.Turn turn : conversation) {
+            if (!turn.question().isBlank()) {
+                messages.add(Map.of("role", "user", "content", turn.question()));
+            }
+            if (!turn.answer().isBlank()) {
+                messages.add(Map.of("role", "assistant", "content", turn.answer()));
+            }
+        }
         // Prepend data context so Claude knows what data is available before first tool call
         String initialContent = (dataContext != null && !dataContext.isBlank())
                 ? dataContext + question
@@ -273,6 +299,7 @@ public class ClaudeAgentService {
         List<String> usedTools  = new ArrayList<>();
         List<String> sourceUris = new ArrayList<>();
         String finalAnswer      = "";
+        StringBuilder visibleAnswer = new StringBuilder();
 
         for (int round = 0; round < maxToolRounds; round++) {
             log.debug("Agent round {}/{} for: {}", round + 1, maxToolRounds, question);
@@ -306,6 +333,7 @@ public class ClaudeAgentService {
             String partialText = textBuffer.toString().trim();
             if (!partialText.isEmpty()) {
                 finalAnswer = partialText;
+                visibleAnswer.append(partialText);
                 sink.next(sseEvent("text", Map.of("text", partialText)));
             }
 
@@ -358,6 +386,7 @@ public class ClaudeAgentService {
                     for (Map<String, Object> block : synthContent) {
                         if ("text".equals(block.get("type")) && block.get("text") instanceof String t && !t.isBlank()) {
                             finalAnswer = t.trim();
+                            visibleAnswer.append(finalAnswer);
                             sink.next(sseEvent("text", Map.of("text", finalAnswer)));
                             break;
                         }
@@ -369,8 +398,23 @@ public class ClaudeAgentService {
         // Emit done
         long elapsed    = System.currentTimeMillis() - startTime;
         double confidence = computeConfidence(usedTools, sourceUris, finalAnswer);
+        List<String> distinctSources = sourceUris.stream().distinct().limit(10).toList();
+        if (!sink.isCancelled() && !visibleAnswer.isEmpty()) {
+            GraphRAGResponse response = GraphRAGResponse.builder()
+                    .question(question)
+                    .answer(visibleAnswer.toString())
+                    .sources(distinctSources)
+                    .triplesRetrieved(0)
+                    .executionTimeMs(elapsed)
+                    .llmModel(claudeModel)
+                    .inferenceUsed(true)
+                    .confidence(confidence)
+                    .timestamp(LocalDateTime.now())
+                    .build();
+            conversationMemoryService.remember(sessionId, response);
+        }
         sink.next(sseEvent("done", Map.of(
-                "sources",          sourceUris.stream().distinct().limit(10).toList(),
+                "sources",          distinctSources,
                 "tools_used",       usedTools,
                 "confidence",       confidence,
                 "execution_time_ms", elapsed
@@ -413,9 +457,27 @@ public class ClaudeAgentService {
     /** Simple non-agentic Claude call with graph context - used as LLM fallback in GraphRAGService. */
     @SuppressWarnings("unchecked")
     public String queryWithContext(String question, String graphContext) {
+        return queryWithContext(question, graphContext, List.of());
+    }
+
+    @SuppressWarnings("unchecked")
+    public String queryWithContext(
+            String question,
+            String graphContext,
+            List<ConversationMemoryService.Turn> conversation
+    ) {
         String userMsg = "Context from CIM Knowledge Graph:\n" + graphContext
                 + "\n\nQuestion: " + question;
-        List<Map<String, Object>> messages = List.of(Map.of("role", "user", "content", userMsg));
+        List<Map<String, Object>> messages = new ArrayList<>();
+        for (ConversationMemoryService.Turn turn : conversation) {
+            if (!turn.question().isBlank()) {
+                messages.add(Map.of("role", "user", "content", turn.question()));
+            }
+            if (!turn.answer().isBlank()) {
+                messages.add(Map.of("role", "assistant", "content", turn.answer()));
+            }
+        }
+        messages.add(Map.of("role", "user", "content", userMsg));
         Map<String, Object> response = callClaudeNoTools(messages);
         if (response == null) return "Claude API call failed.";
         List<Map<String, Object>> content = (List<Map<String, Object>>) response.get("content");

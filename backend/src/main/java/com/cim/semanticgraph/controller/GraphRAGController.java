@@ -203,6 +203,19 @@ public class GraphRAGController {
         }
     }
 
+    @DeleteMapping("/history/session/{sessionId}")
+    @Operation(summary = "Delete session history", description = "Delete all chat history for a session")
+    public ResponseEntity<?> deleteChatSession(@PathVariable String sessionId) {
+        try {
+            chatHistoryService.deleteChatHistoryBySession(sessionId);
+            return ResponseEntity.ok(Map.of("message", "Session history deleted successfully"));
+        } catch (Exception e) {
+            log.error("Error deleting session history: {}", sessionId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to delete session history: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/impact")
     @Operation(summary = "Analyze impact", description = "Analyze impact of equipment failure")
     public ResponseEntity<?> analyzeImpact(@RequestBody ImpactRequest request) {

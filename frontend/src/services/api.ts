@@ -141,10 +141,12 @@ class ApiService {
       onDone: (sources: string[], confidence: number, executionTimeMs: number) => void;
       onError: (message: string) => void;
     },
+    sessionId = '',
     provider = '',
     maxRetries = 2,
   ): () => void {
     const url = `${API_BASE_URL}/graphrag/stream?question=${encodeURIComponent(question)}`
+      + (sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : '')
       + (provider ? `&provider=${encodeURIComponent(provider)}` : '');
     let retries = 0;
     let textReceived = false;
@@ -228,6 +230,11 @@ class ApiService {
 
   async deleteChatHistory(id: string): Promise<ApiResponse> {
     const response = await this.client.delete(`/graphrag/history/${id}`);
+    return response.data;
+  }
+
+  async deleteChatSession(sessionId: string): Promise<ApiResponse> {
+    const response = await this.client.delete(`/graphrag/history/session/${sessionId}`);
     return response.data;
   }
 
