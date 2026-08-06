@@ -320,5 +320,9 @@ public class QdrantService {
         public String getCimType() {
             return payload != null ? (String) payload.get("type") : null;
         }
+
+        public String getText() {
+            return payload != null ? (String) payload.get("text") : null;
+        }
     }
 }

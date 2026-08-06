@@ -4,6 +4,7 @@ import com.cim.semanticgraph.dto.GraphRAGResponse;
 import com.cim.semanticgraph.graphrag.AnswerEvaluator;
 import com.cim.semanticgraph.graphrag.ContextBuilder;
 import com.cim.semanticgraph.graphrag.GraphTraverser;
+import com.cim.semanticgraph.graphrag.RelevanceScorer;
 import com.cim.semanticgraph.loadflow.model.CalculationMethod;
 import com.cim.semanticgraph.model.ChatHistory;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,6 +35,7 @@ public class GraphRAGService {
     private final QdrantService qdrantService;
     private final GraphTraverser graphTraverser;
     private final ContextBuilder contextBuilder;
+    private final RelevanceScorer relevanceScorer;
     private final AnswerEvaluator answerEvaluator;
     private final ChatHistoryService chatHistoryService;
     private final LoadFlowService loadFlowService;
@@ -50,6 +51,9 @@ public class GraphRAGService {
 
     @Value("${graphrag.retrieval.similarity-threshold:0.35}")
     private double similarityThreshold;
+
+    @Value("${graphrag.reranking.candidateMultiplier:3}")
+    private int candidateMultiplier;
 
     @Value("${groq.api.model:${ollama.api.model:unknown}}")
     private String llmModel;
@@ -295,24 +299,31 @@ public class GraphRAGService {
     private List<String> findRelevantEntities(String question) {
         log.debug("Finding relevant entities for: {}", question);
 
-        // Hybrid fusion: run both vector and keyword search, then merge by weighted score
-        Map<String, Double> fusedScores = new LinkedHashMap<>();
+        int candidateLimit = Math.max(topK, topK * Math.max(1, candidateMultiplier));
+        Map<String, RelevanceScorer.Candidate> candidates = new LinkedHashMap<>();
 
-        // --- Vector search via Qdrant ---
         boolean vectorSearchDone = false;
         if (qdrantService.isAvailable() && qdrantService.countPoints() > 0) {
             try {
                 float[] queryEmbedding = embeddingService.generateEmbedding(question);
                 List<QdrantService.SearchResult> results =
-                        qdrantService.search(queryEmbedding, topK, similarityThreshold);
+                        qdrantService.search(queryEmbedding, candidateLimit, similarityThreshold);
 
                 if (!results.isEmpty()) {
                     log.info("Vector search found {} entities (top score: {})",
                             results.size(), String.format("%.3f", results.get(0).score()));
-                    for (QdrantService.SearchResult r : results) {
+                    for (int i = 0; i < results.size(); i++) {
+                        QdrantService.SearchResult r = results.get(i);
                         if (r.getUri() != null) {
-                            // Vector score weighted at 0.7
-                            fusedScores.merge(r.getUri(), r.score() * 0.7, Double::sum);
+                            candidates.put(r.getUri(), new RelevanceScorer.Candidate(
+                                    r.getUri(),
+                                    r.getLabel(),
+                                    r.getCimType(),
+                                    r.getText(),
+                                    r.score(),
+                                    i + 1,
+                                    0
+                            ));
                         }
                     }
                     vectorSearchDone = true;
@@ -328,32 +339,31 @@ public class GraphRAGService {
             log.info("Qdrant index is empty (run a CIM import to index entities), using keyword search only");
         }
 
-        // --- Keyword-based SPARQL search (always run for hybrid fusion) ---
-        List<String> keywordEntities = findEntitiesByKeywords(question);
+        List<String> keywordEntities = findEntitiesByKeywords(question, candidateLimit);
         if (!keywordEntities.isEmpty()) {
-            // Keyword score weighted at 0.3, boosted if entity also found by vector
-            double keywordBase = 0.3;
             for (int i = 0; i < keywordEntities.size(); i++) {
                 String uri = keywordEntities.get(i);
-                // Rank decay: first results more relevant
-                double rankScore = keywordBase * (1.0 - (i / (double) Math.max(keywordEntities.size(), 1)) * 0.5);
-                fusedScores.merge(uri, rankScore, Double::sum);
+                RelevanceScorer.Candidate candidate = candidates.get(uri);
+                if (candidate == null) {
+                    candidate = new RelevanceScorer.Candidate(uri, "", "", uri, 0.0, 0, i + 1);
+                } else {
+                    candidate = candidate.withKeywordRank(i + 1);
+                }
+                candidates.put(uri, candidate);
             }
         }
 
-        if (fusedScores.isEmpty()) {
+        if (candidates.isEmpty()) {
             return List.of();
         }
 
-        // Sort by fused score descending, return top-K URIs
-        List<String> ranked = fusedScores.entrySet().stream()
-                .sorted(Map.Entry.<String, Double>comparingByValue(Comparator.reverseOrder()))
-                .map(Map.Entry::getKey)
-                .limit(topK)
+        List<String> ranked = relevanceScorer.rankResults(question, List.copyOf(candidates.values()), topK)
+                .stream()
+                .map(result -> result.candidate().uri())
                 .toList();
 
-        log.info("Hybrid search: {} entities (vector={}, keyword={})",
-                ranked.size(), vectorSearchDone, !keywordEntities.isEmpty());
+        log.info("Reranked {} candidates into {} entities (vector={}, keyword={})",
+                candidates.size(), ranked.size(), vectorSearchDone, !keywordEntities.isEmpty());
 
         return ranked;
     }
@@ -397,7 +407,7 @@ public class GraphRAGService {
         CIM_TYPE_MAP.put("netz", List.of("Substation", "ACLineSegment", "PowerTransformer"));
     }
 
-    private List<String> findEntitiesByKeywords(String question) {
+    private List<String> findEntitiesByKeywords(String question, int limit) {
         String[] keywords = extractKeywords(question);
         List<String> entities = new ArrayList<>();
 
@@ -413,7 +423,7 @@ public class GraphRAGService {
                     )
                 }
                 LIMIT %d
-                """.formatted(keyword, keyword, topK);
+                """.formatted(keyword, keyword, limit);
             try {
                 List<Map<String, String>> results = jenaService.executeSparqlSelect(sparql);
                 for (Map<String, String> row : results) {
@@ -435,7 +445,7 @@ public class GraphRAGService {
                     FILTER(CONTAINS(LCASE(?name), LCASE("%s")))
                 }
                 LIMIT %d
-                """.formatted(cimNamespace, keyword, topK);
+                """.formatted(cimNamespace, keyword, limit);
             try {
                 List<Map<String, String>> results = jenaService.executeSparqlSelect(sparql);
                 for (Map<String, String> row : results) {
@@ -448,7 +458,7 @@ public class GraphRAGService {
         }
 
         // Strategy 3: CIM type-based lookup when entities still sparse
-        if (entities.size() < topK) {
+        if (entities.size() < limit) {
             for (String keyword : keywords) {
                 List<String> cimTypes = CIM_TYPE_MAP.get(keyword.toLowerCase());
                 if (cimTypes == null) continue;
@@ -459,7 +469,7 @@ public class GraphRAGService {
                             ?s a cim:%s .
                         }
                         LIMIT %d
-                        """.formatted(cimNamespace, cimType, topK);
+                        """.formatted(cimNamespace, cimType, limit);
                     try {
                         List<Map<String, String>> results = jenaService.executeSparqlSelect(sparql);
                         for (Map<String, String> row : results) {

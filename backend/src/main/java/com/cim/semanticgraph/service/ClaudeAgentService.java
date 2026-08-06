@@ -4,6 +4,7 @@ import com.cim.semanticgraph.dto.GraphRAGResponse;
 import com.cim.semanticgraph.dto.LoadFlowResponse;
 import com.cim.semanticgraph.graphrag.ContextBuilder;
 import com.cim.semanticgraph.graphrag.GraphTraverser;
+import com.cim.semanticgraph.graphrag.RelevanceScorer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,7 @@ public class ClaudeAgentService {
     private final QdrantService     qdrantService;
     private final GraphTraverser    graphTraverser;
     private final ContextBuilder    contextBuilder;
+    private final RelevanceScorer   relevanceScorer;
     private final LoadFlowService   loadFlowService;
 
     @Value("${claude.api.key:}")
@@ -63,6 +65,9 @@ public class ClaudeAgentService {
 
     @Value("${claude.agent.max-tool-rounds:5}")
     private int maxToolRounds;
+
+    @Value("${graphrag.reranking.candidateMultiplier:3}")
+    private int candidateMultiplier;
 
     @Value("${cim.namespaces.cim:http://iec.ch/TC57/CIM100#}")
     private String cimNamespace;
@@ -484,21 +489,43 @@ public class ClaudeAgentService {
         }
 
         float[] embedding = embeddingService.generateEmbedding(query);
-        List<QdrantService.SearchResult> hits = qdrantService.search(embedding, 10, 0.30);
+        int resultLimit = 10;
+        int candidateLimit = resultLimit * Math.max(1, candidateMultiplier);
+        List<QdrantService.SearchResult> candidates = qdrantService.search(embedding, candidateLimit, 0.30);
 
-        if (hits.isEmpty()) {
+        if (candidates.isEmpty()) {
             return "No entities found semantically similar to: \"" + query + "\"";
         }
 
+        List<RelevanceScorer.Candidate> scoringCandidates = new ArrayList<>();
+        for (int i = 0; i < candidates.size(); i++) {
+            QdrantService.SearchResult result = candidates.get(i);
+            scoringCandidates.add(new RelevanceScorer.Candidate(
+                    result.getUri(),
+                    result.getLabel(),
+                    result.getCimType(),
+                    result.getText(),
+                    result.score(),
+                    i + 1,
+                    0
+            ));
+        }
+        List<RelevanceScorer.RankedCandidate> hits = relevanceScorer.rankResults(
+                query,
+                scoringCandidates,
+                resultLimit
+        );
+
         StringBuilder sb = new StringBuilder();
         sb.append("Found ").append(hits.size()).append(" semantically similar entities:\n\n");
-        for (QdrantService.SearchResult r : hits) {
-            String uri = r.getUri();
+        for (RelevanceScorer.RankedCandidate hit : hits) {
+            RelevanceScorer.Candidate r = hit.candidate();
+            String uri = r.uri();
             if (uri != null) sourceUris.add(uri);
-            sb.append(String.format("- [score=%.3f] %s (type=%s)\n  URI: %s\n",
-                    r.score(),
-                    r.getLabel() != null ? r.getLabel() : "unnamed",
-                    r.getCimType() != null ? r.getCimType() : "unknown",
+            sb.append(String.format("- [relevance=%.3f] %s (type=%s)\n  URI: %s\n",
+                    hit.score(),
+                    r.label().isBlank() ? "unnamed" : r.label(),
+                    r.type().isBlank() ? "unknown" : r.type(),
                     uri != null ? uri : "n/a"));
         }
         return sb.toString();

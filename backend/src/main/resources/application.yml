@@ -92,6 +92,8 @@ graphrag:
     top-k: 10
     max-depth: 3
     similarity-threshold: 0.35
+  reranking:
+    candidateMultiplier: 3
   context:
     max-triples: 500
     include-inference: true
