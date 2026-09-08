@@ -12,10 +12,6 @@ import jakarta.annotation.PostConstruct;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Embedding Service - generates real vector embeddings using OpenAI text-embedding-3-small.
- * Falls back to a deterministic hash-based embedding if the API key is not configured.
- */
 @Slf4j
 @Service
 public class EmbeddingService {
@@ -52,21 +48,14 @@ public class EmbeddingService {
         return openAiApiKey != null && !openAiApiKey.isBlank();
     }
 
-    /**
-     * Generate a single embedding vector for the given text.
-     * Uses OpenAI if configured, otherwise falls back to a deterministic hash-based approach.
-     */
     public float[] generateEmbedding(String text) {
         if (text == null || text.isBlank()) {
-            return new float[embeddingDimension];
+            throw new IllegalArgumentException("Embedding text cannot be blank");
         }
 
-        if (!isConfigured()) {
-            log.debug("OpenAI not configured, using fallback embedding");
-            return generateFallbackEmbedding(text);
-        }
+        requireConfiguration();
 
-        String cacheKey = text.length() > 200 ? text.substring(0, 200) : text;
+        String cacheKey = text;
         if (cacheEnabled && embeddingCache.containsKey(cacheKey)) {
             return embeddingCache.get(cacheKey);
         }
@@ -89,11 +78,10 @@ public class EmbeddingService {
                     .block();
 
             if (response == null || response.data() == null || response.data().isEmpty()) {
-                log.warn("Empty response from OpenAI, using fallback");
-                return generateFallbackEmbedding(text);
+                throw new IllegalStateException("OpenAI returned no embedding");
             }
 
-            float[] vector = toFloatArray(response.data().get(0).embedding());
+            float[] vector = toEmbedding(response.data().get(0).embedding());
 
             if (cacheEnabled) {
                 embeddingCache.put(cacheKey, vector);
@@ -103,20 +91,19 @@ public class EmbeddingService {
 
         } catch (Exception e) {
             log.error("Error calling OpenAI embeddings API: {}", e.getMessage());
-            return generateFallbackEmbedding(text);
+            if (e instanceof IllegalStateException illegalStateException) {
+                throw illegalStateException;
+            }
+            throw new IllegalStateException("Embedding generation failed", e);
         }
     }
 
-    /**
-     * Generate embeddings for a list of texts in batches of 100.
-     * Returns results in the same order as input.
-     */
     public List<float[]> batchGenerateEmbeddings(List<String> texts) {
         if (texts == null || texts.isEmpty()) return List.of();
 
-        if (!isConfigured()) {
-            log.warn("OpenAI not configured, generating fallback embeddings for {} texts", texts.size());
-            return texts.stream().map(this::generateFallbackEmbedding).toList();
+        requireConfiguration();
+        if (texts.stream().anyMatch(text -> text == null || text.isBlank())) {
+            throw new IllegalArgumentException("Embedding text cannot be blank");
         }
 
         List<float[]> results = new ArrayList<>(texts.size());
@@ -130,7 +117,6 @@ public class EmbeddingService {
             int processed = Math.min(i + batchSize, texts.size());
             log.info("Embedding progress: {}/{} texts processed", processed, texts.size());
 
-            // Small delay to respect rate limits
             if (processed < texts.size()) {
                 try { Thread.sleep(200); } catch (InterruptedException ignored) {}
             }
@@ -158,44 +144,40 @@ public class EmbeddingService {
                     .block();
 
             if (response == null || response.data() == null) {
-                return texts.stream().map(this::generateFallbackEmbedding).toList();
+                throw new IllegalStateException("OpenAI returned no embeddings");
             }
 
-            // Sort by index to maintain order, then extract vectors
-            return response.data().stream()
+            List<EmbeddingData> orderedEmbeddings = response.data().stream()
                     .sorted(Comparator.comparingInt(EmbeddingData::index))
-                    .map(d -> toFloatArray(d.embedding()))
                     .toList();
 
+            if (orderedEmbeddings.size() != texts.size()) {
+                throw new IllegalStateException("OpenAI returned an incomplete embedding batch");
+            }
+
+            List<float[]> results = new ArrayList<>(orderedEmbeddings.size());
+            for (int i = 0; i < orderedEmbeddings.size(); i++) {
+                EmbeddingData embeddingData = orderedEmbeddings.get(i);
+                if (embeddingData.index() != i) {
+                    throw new IllegalStateException("OpenAI returned an invalid embedding index");
+                }
+                results.add(toEmbedding(embeddingData.embedding()));
+            }
+            return results;
+
         } catch (Exception e) {
-            log.error("OpenAI batch embedding failed: {}, using fallback for {} texts",
-                    e.getMessage(), texts.size());
-            return texts.stream().map(this::generateFallbackEmbedding).toList();
+            log.error("OpenAI batch embedding failed for {} texts: {}", texts.size(), e.getMessage());
+            if (e instanceof IllegalStateException illegalStateException) {
+                throw illegalStateException;
+            }
+            throw new IllegalStateException("Batch embedding generation failed", e);
         }
     }
 
-    /**
-     * Deterministic fallback embedding based on text hash.
-     * Used when OpenAI is not configured or unavailable.
-     */
-    private float[] generateFallbackEmbedding(String text) {
-        float[] embedding = new float[embeddingDimension];
-        Random random = new Random(text.hashCode());
-        float norm = 0f;
-
-        for (int i = 0; i < embeddingDimension; i++) {
-            embedding[i] = (float) random.nextGaussian();
-            norm += embedding[i] * embedding[i];
+    private void requireConfiguration() {
+        if (!isConfigured()) {
+            throw new IllegalStateException("OpenAI embeddings are not configured");
         }
-
-        norm = (float) Math.sqrt(norm);
-        if (norm > 0) {
-            for (int i = 0; i < embeddingDimension; i++) {
-                embedding[i] /= norm;
-            }
-        }
-
-        return embedding;
     }
 
     public void clearCache() {
@@ -212,15 +194,21 @@ public class EmbeddingService {
         return embeddingDimension;
     }
 
-    private float[] toFloatArray(List<Double> doubles) {
-        float[] floats = new float[doubles.size()];
-        for (int i = 0; i < doubles.size(); i++) {
-            floats[i] = doubles.get(i).floatValue();
+    private float[] toEmbedding(List<Double> values) {
+        if (values == null || values.size() != embeddingDimension) {
+            throw new IllegalStateException("OpenAI returned an embedding with an invalid dimension");
         }
-        return floats;
-    }
 
-    // ---- OpenAI response DTOs ----
+        float[] result = new float[values.size()];
+        for (int i = 0; i < values.size(); i++) {
+            Double value = values.get(i);
+            if (value == null || !Double.isFinite(value)) {
+                throw new IllegalStateException("OpenAI returned an invalid embedding value");
+            }
+            result[i] = value.floatValue();
+        }
+        return result;
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record OpenAIEmbeddingResponse(
