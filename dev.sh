@@ -199,7 +199,7 @@ check_prerequisites() {
   if [ -n "${OPENAI_API_KEY:-}" ] && [[ "${OPENAI_API_KEY:-}" != "your-"* ]]; then
     success "OpenAI API key"
   else
-    warn "OpenAI API key not set - vector embeddings will use fallback"
+    warn "OpenAI API key not set - vector indexing will be disabled"
   fi
 
   if [ -n "${GROQ_API_KEY:-}" ] && [[ "${GROQ_API_KEY:-}" != "your-"* ]]; then
