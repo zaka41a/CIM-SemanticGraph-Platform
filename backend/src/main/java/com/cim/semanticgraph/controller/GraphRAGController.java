@@ -23,6 +23,7 @@ import reactor.core.publisher.Flux;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -71,9 +72,7 @@ public class GraphRAGController {
                     GraphRAGResponse resp = graphRAGService.processQuery(question, sid, provider);
                     sink.next("{\"type\":\"text\",\"text\":" +
                               "\"" + escapeJson(resp.getAnswer()) + "\"}");
-                    sink.next("{\"type\":\"done\",\"sources\":[],\"confidence\":"
-                              + resp.getConfidence() + ",\"execution_time_ms\":"
-                              + resp.getExecutionTimeMs() + "}");
+                    sink.next(doneEvent(resp));
                 } catch (Exception e) {
                     sink.next("{\"type\":\"error\",\"message\":\"" + escapeJson(e.getMessage()) + "\"}");
                 } finally {
@@ -92,9 +91,7 @@ public class GraphRAGController {
                             try {
                                 GraphRAGResponse resp = graphRAGService.processQuery(question, sid, provider);
                                 sink.next("{\"type\":\"text\",\"text\":\"" + escapeJson(resp.getAnswer()) + "\"}");
-                                sink.next("{\"type\":\"done\",\"sources\":[],\"confidence\":"
-                                        + resp.getConfidence() + ",\"execution_time_ms\":"
-                                        + resp.getExecutionTimeMs() + "}");
+                                sink.next(doneEvent(resp));
                             } catch (Exception e) {
                                 sink.next("{\"type\":\"error\",\"message\":\"" + escapeJson(e.getMessage()) + "\"}");
                             } finally {
@@ -304,5 +301,18 @@ public class GraphRAGController {
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n")
                 .replace("\r", "\\r");
+    }
+
+    private static String doneEvent(GraphRAGResponse response) {
+        return "{\"type\":\"done\",\"sources\":" + sourcesJson(response.getSources())
+                + ",\"confidence\":" + response.getConfidence()
+                + ",\"execution_time_ms\":" + response.getExecutionTimeMs() + "}";
+    }
+
+    private static String sourcesJson(List<String> sources) {
+        if (sources == null || sources.isEmpty()) return "[]";
+        return sources.stream()
+                .map(source -> "\"" + escapeJson(source) + "\"")
+                .collect(Collectors.joining(",", "[", "]"));
     }
 }
