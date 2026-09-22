@@ -1,31 +1,21 @@
-# OS / IDE
+# Local environment and editor settings
+.env
+.env.*
+!.env.example
 .DS_Store
 .idea/
-
-# Secrets
-backend/.env
-
-# Build artifacts
-backend/target/
-powerflow-service/app/__pycache__/
-
-# Generated reports and export pages
-backend/target/site/jacoco/**/*.html
-backend/target/site/jacoco/**/*.css
-examples/cim test/*.html
-backend/.env
-.env
-backend/.env
-
-# Runtime logs
-.logs/
-
-# Working notes (not part of the deliverable)
-ULTRA_PRO_PLAN.md
-
-# Local Claude Code settings
 .claude/
 
-# dev.sh runtime state
+# Dependencies and build output
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+backend/target/
+frontend/dist/
+
+# Runtime files and generated exports
+.logs/
 .dev.pids
 .dev.ports
+examples/cim test/*.html
