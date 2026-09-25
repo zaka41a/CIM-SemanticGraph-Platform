@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
-# =============================================================================
 #  CIM SemanticGraph Platform - Development Startup Script
 #  Usage:
 #    ./dev.sh           → start all services
 #    ./dev.sh --infra   → infrastructure only (Fuseki + Qdrant)
 #    ./dev.sh --backend → backend + infra only
 #    ./dev.sh --status  → show status of all services
-# =============================================================================
 
 set -uo pipefail
 
-# ── Colors ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -19,7 +16,6 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$SCRIPT_DIR/backend"
 FRONTEND_DIR="$SCRIPT_DIR/frontend"
@@ -30,28 +26,24 @@ PID_FILE="$SCRIPT_DIR/.dev.pids"
 # Ports actually used by this run, so stop.sh tears down what dev.sh started.
 PORTS_FILE="$SCRIPT_DIR/.dev.ports"
 
-# ── Ports (override from the environment when a port is already taken) ────────
 PORT_FUSEKI="${PORT_FUSEKI:-3030}"
 PORT_QDRANT="${PORT_QDRANT:-6333}"
 PORT_POWERFLOW="${PORT_POWERFLOW:-8000}"
 PORT_BACKEND="${PORT_BACKEND:-8080}"
 PORT_FRONTEND="${PORT_FRONTEND:-3000}"
 
-# ── Flags ─────────────────────────────────────────────────────────────────────
 START_INFRA=true
 START_POWERFLOW=true
 START_BACKEND=true
 START_FRONTEND=true
 
-# =============================================================================
 # Helpers
-# =============================================================================
 
 log()     { echo -e "${BOLD}${BLUE}[CIM]${RESET} $*"; }
 success() { echo -e "${GREEN}  [ok]${RESET} $*"; }
 warn()    { echo -e "${YELLOW}  [!]${RESET} $*"; }
 error()   { echo -e "${RED}  [x]${RESET} $*"; }
-header()  { echo -e "\n${BOLD}${CYAN}━━━ $* ━━━${RESET}"; }
+header()  { echo -e "\n${BOLD}${CYAN}$*${RESET}"; }
 
 usage() {
   echo -e "${BOLD}Usage:${RESET}"
@@ -153,9 +145,7 @@ source_env() {
   fi
 }
 
-# =============================================================================
 # Prerequisite checks
-# =============================================================================
 
 check_prerequisites() {
   header "Checking Prerequisites"
@@ -209,9 +199,7 @@ check_prerequisites() {
   fi
 }
 
-# =============================================================================
 # Step 1 - Infrastructure (Fuseki + Qdrant)
-# =============================================================================
 
 start_infrastructure() {
   header "Infrastructure (Fuseki + Qdrant)"
@@ -236,9 +224,7 @@ start_infrastructure() {
   cd "$SCRIPT_DIR"
 }
 
-# =============================================================================
 # Step 2 - Powerflow Service (Python)
-# =============================================================================
 
 start_powerflow() {
   header "Powerflow Service (Python)"
@@ -297,9 +283,7 @@ start_powerflow() {
   cd "$SCRIPT_DIR"
 }
 
-# =============================================================================
 # Step 3 - Spring Boot Backend
-# =============================================================================
 
 start_backend() {
   header "Backend (Spring Boot)"
@@ -338,9 +322,7 @@ start_backend() {
   cd "$SCRIPT_DIR"
 }
 
-# =============================================================================
 # Step 4 - Frontend (React + Vite)
-# =============================================================================
 
 start_frontend() {
   header "Frontend (React + Vite)"
@@ -391,19 +373,15 @@ start_frontend() {
   cd "$SCRIPT_DIR"
 }
 
-# =============================================================================
 # Summary
-# =============================================================================
 
 print_summary() {
   echo ""
-  echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════╗${RESET}"
-  echo -e "${BOLD}${GREEN}║      CIM SemanticGraph Platform running      ║${RESET}"
-  echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════╝${RESET}"
+  success "CIM SemanticGraph Platform running"
   echo ""
   echo -e "  ${CYAN}Frontend    ${RESET}→  http://localhost:$PORT_FRONTEND"
   echo -e "  ${CYAN}Backend API ${RESET}→  http://localhost:$PORT_BACKEND/api"
-  echo -e "  ${CYAN}Swagger UI  ${RESET}→  http://localhost:$PORT_BACKEND/swagger-ui.html"
+  echo -e "  ${CYAN}Swagger UI  ${RESET}→  http://localhost:$PORT_BACKEND/api/swagger-ui.html"
   echo -e "  ${CYAN}Fuseki UI   ${RESET}→  http://localhost:$PORT_FUSEKI"
   echo -e "  ${CYAN}Qdrant UI   ${RESET}→  http://localhost:$PORT_QDRANT/dashboard"
   echo -e "  ${CYAN}Powerflow   ${RESET}→  http://localhost:$PORT_POWERFLOW/docs"
@@ -411,22 +389,18 @@ print_summary() {
   echo -e "  ${YELLOW}Logs        ${RESET}→  .logs/"
   echo -e "  ${YELLOW}Stop all    ${RESET}→  ./stop.sh"
   echo ""
-  echo -e "  ${BOLD}Test Agent Claude:${RESET}"
+  echo -e "  ${BOLD}Test GraphRAG chat:${RESET}"
   echo -e "  curl -N 'http://localhost:$PORT_BACKEND/api/graphrag/stream?question=show+all+substations'"
   echo ""
 }
 
-# =============================================================================
 # Main
-# =============================================================================
 
 # Clear old PID and port files
 rm -f "$PID_FILE" "$PORTS_FILE"
 mkdir -p "$LOG_DIR"
 
-echo -e "\n${BOLD}${BLUE}╔══════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}${BLUE}║   CIM SemanticGraph Platform - Dev Setup     ║${RESET}"
-echo -e "${BOLD}${BLUE}╚══════════════════════════════════════════════╝${RESET}\n"
+log "Starting CIM SemanticGraph Platform"
 
 check_prerequisites
 

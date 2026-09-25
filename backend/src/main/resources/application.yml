@@ -17,10 +17,6 @@ spring:
     deserialization:
       fail-on-unknown-properties: false
     default-property-inclusion: non_null
-  cache:
-    type: caffeine
-    caffeine:
-      spec: maximumSize=1000,expireAfterAccess=30m
   security:
     user:
       name: admin
@@ -255,15 +251,6 @@ app:
     allowed-headers: "*"
     allow-credentials: true
     max-age: 3600
-  security:
-    jwt:
-      secret: ${JWT_SECRET:your-secret-key-change-in-production-minimum-256-bits}
-      expiration: 86400000
-  performance:
-    query-cache-enabled: true
-    query-cache-size: 1000
-    embedding-cache-enabled: true
-    embedding-cache-size: 5000
 
 ---
 spring:
@@ -278,8 +265,6 @@ logging:
 
 server:
   port: 8080
-
-jena:
 
 ---
 spring:

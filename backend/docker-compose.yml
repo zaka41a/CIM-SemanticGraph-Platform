@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Apache Jena Fuseki - SPARQL Triple Store
   fuseki:
@@ -34,7 +32,7 @@ services:
     networks:
       - cim-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:8000/health"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -63,7 +61,7 @@ services:
       - POWERFLOW_SERVICE_URL=http://powerflow:8000
 
       # Logging Configuration
-      - LOGS_PATH=/app/logs
+      - LOGGING_FILE_NAME=/app/logs/application.log
       - LOGGING_LEVEL_ROOT=INFO
       - LOGGING_LEVEL_COM_CIM=DEBUG
 
@@ -73,21 +71,20 @@ services:
       # Qdrant Vector DB Configuration
       - QDRANT_URL=http://qdrant:6333
 
-      # Groq AI Configuration
+      # Chat providers
+      - LLM_DEFAULT_PROVIDER=${LLM_DEFAULT_PROVIDER:-gpt5}
+      - KICONNECT_API_KEY=${KICONNECT_API_KEY:-}
+      - KICONNECT_BASE_URL=${KICONNECT_BASE_URL:-https://chat.kiconnect.nrw/api/v1}
+      - KICONNECT_MODEL=${KICONNECT_MODEL:-gpt-5.5}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-fable-5}
       - GROQ_API_KEY=${GROQ_API_KEY:-your-groq-api-key-here}
       - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
       - GROQ_BASE_URL=https://api.groq.com/openai/v1
 
       # Ollama Configuration (fallback)
-      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_API_URL=http://ollama:11434
       - OLLAMA_MODEL=llama3.2
-
-      # Security Configuration
-      - SECURITY_USER_NAME=admin
-      - SECURITY_USER_PASSWORD=admin123
-
-      # CORS Configuration
-      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:5174
 
       # File Upload Configuration
       - SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE=100MB
@@ -122,7 +119,7 @@ services:
 
     restart: unless-stopped
 
-  # Qdrant - Professional Vector Database
+  # Qdrant vector database
   qdrant:
     image: qdrant/qdrant:v1.7.4
     container_name: cim-qdrant
@@ -143,6 +140,7 @@ services:
 
   # Ollama Service (Local LLM - Fallback)
   ollama:
+    profiles: ["ollama"]
     image: ollama/ollama:latest
     container_name: cim-ollama
     ports:
@@ -152,7 +150,7 @@ services:
     networks:
       - cim-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "ollama", "list"]
       interval: 30s
       timeout: 10s
       retries: 3

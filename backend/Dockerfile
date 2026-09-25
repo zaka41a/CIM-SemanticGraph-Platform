@@ -55,8 +55,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 # Environment variables with defaults
 ENV JAVA_OPTS="-Xms512m -Xmx2g" \
     SPRING_PROFILES_ACTIVE="docker" \
-    JENA_STORAGE_MODE="remote" \
-    LOGS_PATH="/app/logs"
+    LOGGING_FILE_NAME="/app/logs/application.log"
 
 # Run the application
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom -jar app.jar"]
