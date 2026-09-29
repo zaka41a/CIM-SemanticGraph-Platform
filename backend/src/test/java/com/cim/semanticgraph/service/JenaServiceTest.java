@@ -97,6 +97,19 @@ class JenaServiceTest {
     }
 
     @Test
+    void emptyGraphHasZeroTriples() {
+        assertEquals(0, jenaService.getTripleCount());
+    }
+
+    @Test
+    void unavailableFusekiIsNotReportedAsAnEmptyGraph() {
+        doThrow(new IllegalStateException("Fuseki offline")).when(rdfConnection).query(anyString());
+
+        assertThrows(RuntimeException.class, () -> jenaService.getTripleCount());
+        assertThrows(RuntimeException.class, () -> jenaService.getGraphStatistics());
+    }
+
+    @Test
     void testGetTripleCount() {
         long initialCount = jenaService.getTripleCount();
         assertTrue(initialCount >= 0, "Initial triple count should be >= 0");

@@ -3,11 +3,13 @@ import type {
   ApiResponse,
   GraphStatistics,
   SparqlQueryResponse,
-  GraphRAGResponse,
   CimImportResponse,
+  LoadFlowResponse,
+  LoadFlowMethodInfo,
+  CalculationMethod,
 } from '@/types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 class ApiService {
   private client: AxiosInstance;
@@ -18,17 +20,8 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json',
       },
-      timeout: 300000, // 5 minutes for GraphRAG queries (Mistral can be slow)
+      timeout: 300000, // Imports and calculations can take several minutes.
     });
-
-    // Request interceptor
-    this.client.interceptors.request.use(
-      (config) => {
-        // Request interceptor - no authentication required
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
 
     // Response interceptor
     this.client.interceptors.response.use(
@@ -68,25 +61,8 @@ class ApiService {
     return response.data;
   }
 
-  async validateCim(file: File): Promise<ApiResponse> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await this.client.post<ApiResponse>('/cim/validate', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  }
-
   async clearGraph(): Promise<ApiResponse> {
     const response = await this.client.delete<ApiResponse>('/cim/clear');
-    return response.data;
-  }
-
-  async getSupportedFormats(): Promise<string[]> {
-    const response = await this.client.get<string[]>('/cim/formats');
     return response.data;
   }
 
@@ -96,39 +72,10 @@ class ApiService {
     return response.data;
   }
 
-  async executeSparqlUpdate(query: string): Promise<ApiResponse> {
-    const response = await this.client.post<ApiResponse>('/sparql/update', { query });
-    return response.data;
-  }
-
-  async executeSparqlAsk(query: string): Promise<boolean> {
-    const response = await this.client.post<boolean>('/sparql/ask', { query });
-    return response.data;
-  }
-
-  async getSampleQueries(): Promise<any[]> {
-    const response = await this.client.get<any[]>('/sparql/samples');
-    return response.data;
-  }
-
-  async validateSparqlQuery(query: string): Promise<ApiResponse> {
-    const response = await this.client.post<ApiResponse>('/sparql/validate', { query });
-    return response.data;
-  }
-
-  // GraphRAG APIs
-  async askGraphRAG(question: string, sessionId?: string): Promise<GraphRAGResponse> {
-    const response = await this.client.post<GraphRAGResponse>('/graphrag/ask', {
-      question,
-      sessionId
-    });
-    return response.data;
-  }
-
   async getLlmProviders(): Promise<
     { id: string; label: string; model: string; available: boolean; isDefault: boolean }[]
   > {
-    const res = await this.client.get('/graphrag/providers');
+    const res = await this.client.get('/graphrag/providers', { timeout: 5000 });
     return res.data?.providers ?? [];
   }
 
@@ -200,21 +147,11 @@ class ApiService {
 
   async checkBackendHealth(): Promise<boolean> {
     try {
-      await this.client.get('/cim/health', { timeout: 3000 });
-      return true;
+      const response = await this.client.get<{ status: string }>('/actuator/health', { timeout: 3000 });
+      return response.data?.status === 'UP';
     } catch {
       return false;
     }
-  }
-
-  async analyzeImpact(equipmentId: string): Promise<GraphRAGResponse> {
-    const response = await this.client.post<GraphRAGResponse>('/graphrag/impact', { equipmentId });
-    return response.data;
-  }
-
-  async verifyConsistency(): Promise<GraphRAGResponse> {
-    const response = await this.client.post<GraphRAGResponse>('/graphrag/verify');
-    return response.data;
   }
 
   // Chat History APIs
@@ -223,24 +160,8 @@ class ApiService {
     return response.data;
   }
 
-  async getAllChatHistory(): Promise<any[]> {
-    const response = await this.client.get('/graphrag/history');
-    return response.data;
-  }
-
-  async deleteChatHistory(id: string): Promise<ApiResponse> {
-    const response = await this.client.delete(`/graphrag/history/${id}`);
-    return response.data;
-  }
-
   async deleteChatSession(sessionId: string): Promise<ApiResponse> {
     const response = await this.client.delete(`/graphrag/history/session/${sessionId}`);
-    return response.data;
-  }
-
-  // Health Check
-  async healthCheck(): Promise<any> {
-    const response = await this.client.get('/actuator/health');
     return response.data;
   }
 
@@ -255,50 +176,24 @@ class ApiService {
     return response.data;
   }
 
-  async getImportStatistics(): Promise<any> {
-    const response = await this.client.get('/history/statistics');
-    return response.data;
-  }
-
-  // System Metrics APIs
-  async getSystemMetrics(): Promise<any> {
-    const response = await this.client.get('/system/metrics');
-    return response.data;
-  }
-
-  async getSystemHealth(): Promise<any> {
-    const response = await this.client.get('/system/health');
+  async getSystemHealth(): Promise<{ status: string; providers?: Record<string, boolean> }> {
+    const response = await this.client.get('/system/health', { timeout: 5000 });
     return response.data;
   }
 
   // Load Flow APIs
-  async calculateLoadFlow(method: string = 'DC'): Promise<any> {
+  async calculateLoadFlow(method: CalculationMethod = 'DC'): Promise<LoadFlowResponse> {
     const response = await this.client.post(`/loadflow/calculate?method=${method}`);
     return response.data;
   }
 
-  async calculateLoadFlowForBus(busId: string, method: string = 'DC'): Promise<any> {
+  async calculateLoadFlowForBus(busId: string, method: CalculationMethod = 'DC'): Promise<LoadFlowResponse> {
     const response = await this.client.post(`/loadflow/calculate/${busId}?method=${method}`);
     return response.data;
   }
 
-  async getAvailableMethods(): Promise<any[]> {
+  async getAvailableMethods(): Promise<LoadFlowMethodInfo[]> {
     const response = await this.client.get('/loadflow/methods');
-    return response.data;
-  }
-
-  async getBusVoltage(busId: string): Promise<any> {
-    const response = await this.client.get(`/loadflow/voltage/${busId}`);
-    return response.data;
-  }
-
-  async getLoadFlowStatistics(): Promise<any> {
-    const response = await this.client.get('/loadflow/statistics');
-    return response.data;
-  }
-
-  async getLoadFlowViolations(): Promise<any> {
-    const response = await this.client.get('/loadflow/violations');
     return response.data;
   }
 
@@ -333,61 +228,15 @@ class ApiService {
     return response.data;
   }
 
-  async getExcelFormat(): Promise<any> {
-    const response = await this.client.get('/excel/format');
-    return response.data;
-  }
-
   // SHACL Validation APIs
   async validateSHACL(): Promise<any> {
     const response = await this.client.get('/shacl/validate');
     return response.data;
   }
 
-  async getSHACLShapes(): Promise<any> {
-    const response = await this.client.get('/shacl/shapes');
-    return response.data;
-  }
-
-  async validateSHACLDetailed(): Promise<any> {
-    const response = await this.client.post('/shacl/validate/detailed');
-    return response.data;
-  }
-
   // Diagnostic APIs
   async runNetworkDiagnostics(): Promise<any> {
     const response = await this.client.get('/diagnostic/network');
-    return response.data;
-  }
-
-  // Report Generation APIs
-  async generateLoadFlowReport(): Promise<Blob> {
-    const response = await this.client.get('/reports/loadflow', {
-      responseType: 'blob',
-    });
-    return response.data;
-  }
-
-  async generateDataQualityReport(issues: any[]): Promise<Blob> {
-    const response = await this.client.post('/reports/data-quality',
-      { issues },
-      { responseType: 'blob' }
-    );
-    return response.data;
-  }
-
-  async generateNetworkStatisticsReport(): Promise<Blob> {
-    const response = await this.client.get('/reports/statistics', {
-      responseType: 'blob',
-    });
-    return response.data;
-  }
-
-  async generateFullCIMReport(): Promise<Blob> {
-    const response = await this.client.get('/reports/full', {
-      responseType: 'blob',
-      timeout: 120000, // 2 min - AI generation takes time
-    });
     return response.data;
   }
 
@@ -398,7 +247,7 @@ class ApiService {
     collectionName: string;
     status: string;
   }> {
-    const response = await this.client.get('/cim/indexing-status');
+    const response = await this.client.get('/cim/indexing-status', { timeout: 5000 });
     return response.data;
   }
 
@@ -408,8 +257,12 @@ class ApiService {
   }
 
   // Powerflow health check
-  async getPowerflowHealth(): Promise<{ status: string; [key: string]: any }> {
-    const response = await this.client.get('/loadflow/health');
+  async getPowerflowHealth(): Promise<{
+    status: string;
+    dcSolver: boolean;
+    pandapowerAvailable: boolean;
+  }> {
+    const response = await this.client.get('/loadflow/health', { timeout: 5000 });
     return response.data;
   }
 
@@ -421,50 +274,14 @@ class ApiService {
     results: Array<{ id: string; description: string; category: string; status: string; error: string | null; appliedAt: string | null }>;
   }> {
     const response = await this.client.post('/fixer/apply', fixes);
+    if (response.data.applied > 0) window.dispatchEvent(new Event('cim_data_imported'));
     return response.data;
   }
 
   // Import rollback
   async rollbackImport(id: string): Promise<{ status: string; message: string; graphUri?: string }> {
     const response = await this.client.post(`/history/${id}/rollback`);
-    return response.data;
-  }
-
-  // Network Analysis APIs
-  async getAnalysisSummary(): Promise<{
-    statistics: Record<string, number>;
-    health: {
-      status: string;
-      message: string;
-      totalTriples: number;
-      busCount: number;
-      branchCount: number;
-      connectedBranchCount: number;
-      generatorCount: number;
-      connectedGeneratorCount: number;
-      loadCount: number;
-      connectedLoadCount: number;
-      totalGenerationMw: number;
-      totalLoadMw: number;
-      errors: Array<{ code: string; message: string }>;
-      warnings: Array<{ code: string; message: string }>;
-    };
-    qualityChecks: Array<{ name: string; category: string; severity: string; count: number; description: string }>;
-    qualityScore: number;
-    topConnectedEntities: Array<{ uri: string; name: string; type: string; connections: number }>;
-    computedAt: number;
-  }> {
-    const response = await this.client.get('/analysis/summary');
-    return response.data;
-  }
-
-  async previewFixes(fixes: Array<{ id: string; description: string; category: string; sparqlQuery: string }>): Promise<{
-    applied: number;
-    failed: number;
-    blocked: number;
-    results: Array<{ id: string; description: string; category: string; status: string; error: string | null; appliedAt: string | null }>;
-  }> {
-    const response = await this.client.post('/fixer/preview', fixes);
+    window.dispatchEvent(new Event('cim_data_imported'));
     return response.data;
   }
 }

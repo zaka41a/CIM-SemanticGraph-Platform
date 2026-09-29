@@ -14,7 +14,6 @@ import DataFixer from './pages/DataFixer';
 import Validation from './pages/Validation';
 import Diagnostics from './pages/Diagnostics';
 import Statistics from './pages/Statistics';
-import Reports from './pages/Reports';
 
 function App() {
   return (
@@ -32,7 +31,6 @@ function App() {
           <Route path="validation"  element={<ErrorBoundary><Validation /></ErrorBoundary>} />
           <Route path="diagnostics" element={<ErrorBoundary><Diagnostics /></ErrorBoundary>} />
           <Route path="history"     element={<ErrorBoundary><History /></ErrorBoundary>} />
-          <Route path="reports"     element={<ErrorBoundary><Reports /></ErrorBoundary>} />
           <Route path="settings"    element={<ErrorBoundary><Settings /></ErrorBoundary>} />
         </Route>
       </Routes>

@@ -47,11 +47,8 @@ public class LoadFlowService {
 
     public LoadFlowResponse calculateLoadFlow(String targetBusId, CalculationMethod method) {
         long startTime = System.currentTimeMillis();
-
-            log.info("═══════════════════════════════════════════════════════════");
             log.info("Starting Load Flow Calculation{}",
                     targetBusId != null ? " for bus: " + targetBusId : "");
-            log.info("═══════════════════════════════════════════════════════════");
 
         try {
             Model cimModel = jenaService.getModelCopy();
@@ -142,11 +139,9 @@ public class LoadFlowService {
                     response = pandapowerService.calculate(network, method.name());
                     response.setTargetBusId(targetBusId);
                 } else {
-                    log.warn("══════════════════════════════════════════════════════");
                     log.warn("Pandapower service is NOT available at configured URL.");
                     log.warn("Requested method: {} - Falling back to simplified DC solver.", method);
                     log.warn("Results may be less accurate. Start the powerflow-service for full AC/OPF support.");
-                    log.warn("══════════════════════════════════════════════════════");
                     SimplifiedLoadFlowSolver.LoadFlowResult solverResult = loadFlowSolver.solve(network);
                     response = buildResponse(network, solverResult, targetBusId);
                     response.setCalculationMethod("SIMPLIFIED_DC (fallback - pandapower unavailable, requested: " + method + ")");
@@ -419,7 +414,7 @@ public class LoadFlowService {
                 .tolerance(0.0)
                 .executionTimeMs(0)
                 .timestamp(LocalDateTime.now())
-                .calculationMethod("SIMPLIFIED_DC")
+                .calculationMethod("NOT_CALCULATED")
                 .busResults(new ArrayList<>())
                 .branchResults(new ArrayList<>())
                 .statistics(createEmptyStatistics())

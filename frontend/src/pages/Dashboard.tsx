@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, Database, Zap, Network, TrendingUp, RefreshCw, Trash2, AlertTriangle, FileText, Loader2, Search, Cpu, GitBranch, Layers, RotateCcw, Home, LayoutDashboard } from 'lucide-react';
+import { Activity, Database, Zap, Network, TrendingUp, RefreshCw, Trash2, AlertTriangle, FileText, Search, Cpu, GitBranch, Layers, RotateCcw, Home, LayoutDashboard } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { useStatistics } from '@/hooks/useStatistics';
@@ -142,9 +142,8 @@ const ServiceStatusCard = ({
 const Dashboard = () => {
   const navigate = useNavigate();
   const { stats, loading, error, refresh } = useStatistics(true, 10000);
-  const { success: toastSuccess, error: toastError, info: toastInfo } = useToast();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [clearing, setClearing] = useState(false);
-  const [exportingPDF, setExportingPDF] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [serviceStatus, setServiceStatus] = useState<ServiceStatus | null>(null);
   const [reindexing, setReindexing] = useState(false);
@@ -179,14 +178,15 @@ const Dashboard = () => {
       setExternalHealth(prev => ({ ...prev, pandapower: 'DOWN', pandapowerDetail: 'Service unreachable' }));
     }
 
-    // LLM - proxy via system health
+    // Provider configuration uses the same endpoint as the chat selector.
     try {
-      const sys = await apiService.getSystemHealth();
-      const llmUp = sys?.status === 'healthy' || sys?.status === 'degraded';
+      const providers = await apiService.getLlmProviders();
+      const configured = providers.find(provider => provider.isDefault && provider.available)
+        ?? providers.find(provider => provider.available);
       setExternalHealth(prev => ({
         ...prev,
-        llm: llmUp ? 'UP' : 'DOWN',
-        llmDetail: llmUp ? 'GraphRAG & Agent ready' : 'LLM service unavailable',
+        llm: configured ? 'UP' : 'DOWN',
+        llmDetail: configured ? `${configured.model} · configured` : 'No chat provider configured',
       }));
     } catch {
       setExternalHealth(prev => ({ ...prev, llm: 'DOWN', llmDetail: 'Service unreachable' }));
@@ -213,25 +213,6 @@ const Dashboard = () => {
       toastError('Re-indexing failed: ' + (e.message || 'Unknown error'));
     } finally {
       setReindexing(false);
-    }
-  };
-
-  const handleExportStatisticsPDF = async () => {
-    setExportingPDF(true);
-    toastInfo('Generating PDF report...');
-    try {
-      const blob = await apiService.generateFullCIMReport();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `CIM_Full_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-      toastSuccess('PDF report downloaded successfully');
-    } catch {
-      toastError('Failed to generate the PDF report');
-    } finally {
-      setExportingPDF(false);
     }
   };
 
@@ -298,14 +279,6 @@ const Dashboard = () => {
               className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all"
             >
               <Home size={15} /> Home
-            </button>
-            <button
-              onClick={handleExportStatisticsPDF}
-              disabled={exportingPDF || loading}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
-            >
-              {exportingPDF ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
-              {exportingPDF ? 'Generating...' : 'Export PDF'}
             </button>
             <button
               onClick={refresh}

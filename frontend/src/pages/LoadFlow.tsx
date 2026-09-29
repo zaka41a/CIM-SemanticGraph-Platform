@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, BarChart3, Activity, ArrowRight, ArrowUpDown, GitBranch, Map, Table2 } from 'lucide-react';
-import { useToast } from '@/components/Toast';
+import { AlertTriangle, BarChart3, Database, Loader2, ArrowRight, ArrowUpDown, GitBranch, Map, Table2 } from 'lucide-react';
 import { LoadFlowHeader } from '@/components/loadflow/LoadFlowHeader';
 import { CalculationInfo } from '@/components/loadflow/CalculationInfo';
 import { LoadFlowStats } from '@/components/loadflow/LoadFlowStats';
@@ -8,28 +7,13 @@ import { BusTable } from '@/components/loadflow/BusTable';
 import { ViolationsList } from '@/components/loadflow/ViolationsList';
 import { NetworkTopologyMap } from '@/components/loadflow/NetworkTopologyMap';
 import { useLoadFlow } from '@/hooks/useLoadFlow';
-import api from '@/services/api';
+import { Link } from 'react-router-dom';
+import EmptyState from '@/components/ui/EmptyState';
+import type { LoadFlowBranchResult, LoadFlowBusResult } from '@/types';
 
-interface BranchResult {
-  branchId: string;
-  branchName: string;
-  branchType: string;
-  fromBusId: string;
-  toBusId: string;
-  fromActivePowerMw: number;
-  fromReactivePowerMvar: number;
-  toActivePowerMw: number;
-  toReactivePowerMvar: number;
-  lossActivePowerMw: number;
-  lossReactivePowerMvar: number;
-  currentMagnitude: number;
-  loadingPercentage: number;
-  overloaded: boolean;
-}
 
-// Inline BranchTable component
-const BranchTable = ({ branches }: { branches: BranchResult[] }) => {
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+const BranchTable = ({ branches }: { branches: LoadFlowBranchResult[] }) => {
+  const [sortConfig, setSortConfig] = useState<{ key: keyof LoadFlowBranchResult; direction: 'asc' | 'desc' } | null>(null);
 
   const formatNumber = (value: number | undefined, decimals: number = 2): string => {
     if (value === undefined || value === null) return 'N/A';
@@ -37,7 +21,7 @@ const BranchTable = ({ branches }: { branches: BranchResult[] }) => {
     return (value as number).toFixed(decimals);
   };
 
-  const handleSort = (key: string) => {
+  const handleSort = (key: keyof LoadFlowBranchResult) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -47,16 +31,16 @@ const BranchTable = ({ branches }: { branches: BranchResult[] }) => {
 
   const sorted = sortConfig
     ? [...branches].sort((a, b) => {
-        const aVal = (a as any)[sortConfig.key];
-        const bVal = (b as any)[sortConfig.key];
-        if (typeof aVal === 'string') {
+        const aVal = a[sortConfig.key];
+        const bVal = b[sortConfig.key];
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
           return sortConfig.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
         }
-        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+        return sortConfig.direction === 'asc' ? Number(aVal) - Number(bVal) : Number(bVal) - Number(aVal);
       })
     : branches;
 
-  const SortableHeader = ({ label, sortKey }: { label: string; sortKey: string }) => (
+  const SortableHeader = ({ label, sortKey }: { label: string; sortKey: keyof LoadFlowBranchResult }) => (
     <th
       className="px-4 py-3 text-left text-xs font-medium text-neutral-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors"
       onClick={() => handleSort(sortKey)}
@@ -182,37 +166,16 @@ const BranchTable = ({ branches }: { branches: BranchResult[] }) => {
 
 const LoadFlow = () => {
   const [sortConfig, setSortConfig] = useState<{
-    key: string;
+    key: keyof LoadFlowBusResult;
     direction: 'asc' | 'desc';
   } | null>(null);
   const [activeTab, setActiveTab] = useState<'tables' | 'topology'>('topology');
 
   const {
-    isCalculating, results, error, calculateLoadFlow,
+    isCalculating, results, error, networkStatus, calculateLoadFlow,
     selectedMethod, setSelectedMethod, availableMethods,
   } = useLoadFlow();
-  const { success: toastSuccess, error: toastError } = useToast();
-  const [exportingPDF, setExportingPDF] = useState(false);
-
-  const handleExportPDF = async () => {
-    setExportingPDF(true);
-    try {
-      const blob = await api.generateLoadFlowReport();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `LoadFlow_Report_${new Date().toISOString().split('T')[0]}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-      toastSuccess('Load flow report downloaded');
-    } catch {
-      toastError('Failed to generate the PDF report');
-    } finally {
-      setExportingPDF(false);
-    }
-  };
-
-  const handleSort = (key: string) => {
+  const handleSort = (key: keyof LoadFlowBusResult) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
@@ -223,14 +186,14 @@ const LoadFlow = () => {
   const getSortedBuses = () => {
     if (!results || !sortConfig) return results?.busResults || [];
     const sorted = [...results.busResults].sort((a, b) => {
-      const aValue = (a as any)[sortConfig.key];
-      const bValue = (b as any)[sortConfig.key];
-      if (typeof aValue === 'string') {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
         return sortConfig.direction === 'asc'
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       }
-      return sortConfig.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      return sortConfig.direction === 'asc' ? Number(aValue) - Number(bValue) : Number(bValue) - Number(aValue);
     });
     return sorted;
   };
@@ -240,9 +203,7 @@ const LoadFlow = () => {
       <LoadFlowHeader
         isCalculating={isCalculating}
         onCalculate={() => calculateLoadFlow()}
-        onExportPDF={handleExportPDF}
-        isExporting={exportingPDF}
-        hasResults={!!results}
+        canCalculate={networkStatus === 'ready' && availableMethods.some(method => method.id === selectedMethod && method.available)}
         selectedMethod={selectedMethod}
         onMethodChange={setSelectedMethod}
         availableMethods={availableMethods}
@@ -257,31 +218,30 @@ const LoadFlow = () => {
           </div>
         )}
 
-        {!results && !isCalculating && !error && (
-          <div className="card text-center py-20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-accent-500/5 rounded-full blur-3xl"></div>
-            <div className="relative">
-              <div className="w-20 h-20 bg-gradient-to-br from-accent-500/20 to-accent-600/20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-accent-500/10 animate-pulse">
-                <BarChart3 className="w-10 h-10 text-accent-400" />
-              </div>
-              <h2 className="text-xl font-semibold text-white mb-3">No Load Flow Results Yet</h2>
-              <p className="text-neutral-400 mb-2 max-w-lg mx-auto">
-                Click "Calculate Load Flow" to perform power system analysis
-              </p>
-              <div className="flex items-center justify-center gap-4 mt-4 text-sm text-neutral-500">
-                <span className="flex items-center gap-1.5">
-                  <Activity className="w-4 h-4" /> DC Power Flow
-                </span>
-                <span className="text-neutral-700">|</span>
-                <span className="flex items-center gap-1.5">
-                  <Activity className="w-4 h-4" /> AC Newton-Raphson
-                </span>
-                <span className="text-neutral-700">|</span>
-                <span className="flex items-center gap-1.5">
-                  <Activity className="w-4 h-4" /> Optimal Power Flow
-                </span>
-              </div>
-            </div>
+        {networkStatus === 'checking' && (
+          <div className="card px-6 py-12 flex justify-center items-center gap-3 text-sm text-neutral-400" role="status">
+            <Loader2 className="w-4 h-4 animate-spin" /> Checking network data…
+          </div>
+        )}
+
+        {networkStatus === 'empty' && (
+          <div className="card">
+            <EmptyState
+              icon={Database}
+              title="No network data"
+              hint="Import a CIM or Excel file before calculating power flow."
+              action={<Link to="/import" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-500 text-primary-950 text-sm font-medium hover:bg-accent-400">Import network data <ArrowRight size={15} /></Link>}
+            />
+          </div>
+        )}
+
+        {networkStatus === 'ready' && !results && !isCalculating && !error && (
+          <div className="card">
+            <EmptyState
+              icon={BarChart3}
+              title="Ready to calculate"
+              hint="Choose a method, then calculate power flow for the current network."
+            />
           </div>
         )}
 
@@ -292,7 +252,7 @@ const LoadFlow = () => {
             iterations={results.iterations}
             executionTimeMs={results.executionTimeMs}
             calculationMethod={results.calculationMethod}
-            timestamp={results.timestamp}
+            timestamp={results.timestamp ?? ''}
           />
 
           <LoadFlowStats statistics={results.statistics} />

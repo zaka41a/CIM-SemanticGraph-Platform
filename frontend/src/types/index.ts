@@ -26,41 +26,10 @@ export interface GraphStatistics {
   voltageLevels?: number;
 }
 
-// SPARQL Query Types
-export interface SparqlQueryRequest {
-  query: string;
-}
-
 export interface SparqlQueryResponse {
   results: Array<Record<string, any>>;
   count: number;
   executionTimeMs?: number;
-}
-
-// GraphRAG Types
-export interface GraphRAGRequest {
-  question: string;
-}
-
-export interface GraphRAGResponse {
-  answer: string;
-  question: string;
-  graphContext?: string;
-  sources?: string[];
-  confidence?: number;
-  triplesRetrieved?: number;
-  executionTimeMs?: number;
-  llmModel?: string;
-}
-
-export interface ImpactAnalysisRequest {
-  equipmentId: string;
-}
-
-// CIM Import Types
-export interface CimImportRequest {
-  file: File;
-  format: 'CIM/XML' | 'CIM/RDF' | 'RDF/XML' | 'TURTLE';
 }
 
 export interface CimImportResponse {
@@ -73,36 +42,10 @@ export interface CimImportResponse {
   };
 }
 
-// Graph Node/Edge Types for Visualization
-export interface GraphNode {
-  id: string;
-  label: string;
-  type: string;
-  properties?: Record<string, any>;
-}
-
-export interface GraphEdge {
-  id: string;
-  source: string;
-  target: string;
-  label: string;
-  properties?: Record<string, any>;
-}
-
-export interface GraphData {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-}
-
 // Chat Message Types
 export interface ToolCallEvent {
   tool: string;
   input: Record<string, any>;
-}
-
-export interface ToolResultEvent {
-  tool: string;
-  chars: number;
 }
 
 export interface ChatMessage {
@@ -118,14 +61,6 @@ export interface ChatMessage {
   toolResults?: Record<string, number>;
   feedback?: 'up' | 'down' | null;
   followUpSuggestions?: string[];
-}
-
-// Sample Query Type
-export interface SampleQuery {
-  name: string;
-  description: string;
-  query: string;
-  category: 'basic' | 'advanced' | 'graphrag';
 }
 
 // Load Flow Types

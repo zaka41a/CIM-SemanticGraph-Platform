@@ -12,7 +12,6 @@ import {
   Activity,
   Wrench,
   BarChart3,
-  FileText,
   ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
@@ -54,7 +53,6 @@ const SECTIONS: NavSection[] = [
     items: [
       { path: '/statistics', icon: BarChart3, label: 'Statistics' },
       { path: '/load-flow',  icon: Zap,       label: 'Load Flow' },
-      { path: '/reports',    icon: FileText,  label: 'Reports' },
     ],
   },
   {
@@ -77,7 +75,7 @@ const StatusDot = ({ status, label }: { status: ServiceStatus; label: string }) 
     checking: 'bg-neutral-500 animate-pulse',
   };
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5" title={`${label}: ${status === 'ok' ? label === 'LLM' ? 'Provider configured' : 'Available' : status === 'checking' ? 'Checking' : 'Unavailable'}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${color[status]}`} />
       <span className="text-xs text-neutral-500">{label}</span>
     </div>
@@ -126,33 +124,23 @@ const Sidebar = () => {
   }, [openSections]);
 
   useEffect(() => {
+    let mounted = true;
     const check = async () => {
-      try {
-        const health = await apiService.getSystemHealth();
-        setServices(prev => ({
-          ...prev,
-          backend: health?.status === 'healthy' || health?.status === 'degraded' ? 'ok' : 'error',
-        }));
-      } catch {
-        setServices(prev => ({ ...prev, backend: 'error', fuseki: 'error' }));
-        return;
-      }
-      try {
-        await apiService.getStatistics();
-        setServices(prev => ({ ...prev, fuseki: 'ok' }));
-      } catch {
-        setServices(prev => ({ ...prev, fuseki: 'error' }));
-      }
-      try {
-        await apiService.getIndexingStatus();
-        setServices(prev => ({ ...prev, llm: 'ok' }));
-      } catch {
-        setServices(prev => ({ ...prev, llm: 'error' }));
-      }
+      const [backend, graph, models] = await Promise.allSettled([
+        apiService.checkBackendHealth(),
+        apiService.getStatistics(),
+        apiService.getLlmProviders(),
+      ]);
+      if (!mounted) return;
+      setServices({
+        backend: backend.status === 'fulfilled' && backend.value ? 'ok' : 'error',
+        fuseki: graph.status === 'fulfilled' ? 'ok' : 'error',
+        llm: models.status === 'fulfilled' && models.value.some(model => model.available) ? 'ok' : 'error',
+      });
     };
-    check();
-    const interval = setInterval(check, 30_000);
-    return () => clearInterval(interval);
+    void check();
+    const interval = setInterval(check, 15000);
+    return () => { mounted = false; clearInterval(interval); };
   }, []);
 
   const toggleSection = (label: string) =>
@@ -175,7 +163,7 @@ const Sidebar = () => {
       <div className={`flex items-center h-14 border-b border-primary-700/40 ${collapsed ? 'justify-center px-0' : 'justify-between px-4'}`}>
         {!collapsed && (
           <div className="flex items-center gap-2.5 min-w-0">
-            <img src="/logo.svg" alt="CIM Platform" className="w-8 h-8 object-contain shrink-0" />
+            <img src="/logo.svg" alt="" className="w-8 h-8 object-contain shrink-0" />
             <div className="min-w-0">
               <h1 className="text-sm font-bold text-white leading-tight truncate">
                 CIM <span className="text-accent-500">Platform</span>

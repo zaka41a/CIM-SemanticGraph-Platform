@@ -52,6 +52,10 @@ class LoadFlowServiceTest {
         
         assertNotNull(result, "Result should not be null");
         assertFalse(result.isConverged(), "Should not converge with empty model");
+        assertEquals("NOT_CALCULATED", result.getCalculationMethod());
+        assertTrue(result.getBusResults().isEmpty());
+        assertEquals("DATA_ERROR", result.getViolations().get(0).getType());
+        verifyNoInteractions(networkExtractor, loadFlowSolver, pandapowerService);
     }
 
     @Test
@@ -78,6 +82,7 @@ class LoadFlowServiceTest {
         var result = loadFlowService.calculateLoadFlow();
         
         assertNotNull(result, "Result should not be null");
+        assertEquals("SIMPLIFIED_DC", result.getCalculationMethod());
     }
 
     @Test

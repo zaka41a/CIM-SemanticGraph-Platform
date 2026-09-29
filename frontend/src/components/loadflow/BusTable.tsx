@@ -1,26 +1,11 @@
 import { ArrowUpDown, Zap, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 
-interface BusResult {
-  busId: string;
-  busName: string;
-  busType: string;
-  voltageMagnitude: number;
-  voltageAngle: number;
-  voltageKv: number;
-  activePowerMw: number;
-  reactivePowerMvar: number;
-  generationMw: number;
-  generationMvar: number;
-  loadMw: number;
-  loadMvar: number;
-  withinLimits: boolean;
-  voltagePercentage: number;
-}
+import type { LoadFlowBusResult } from '@/types';
 
 interface BusTableProps {
-  buses: BusResult[];
-  sortConfig: { key: string; direction: 'asc' | 'desc' } | null;
-  onSort: (key: string) => void;
+  buses: LoadFlowBusResult[];
+  sortConfig: { key: keyof LoadFlowBusResult; direction: 'asc' | 'desc' } | null;
+  onSort: (key: keyof LoadFlowBusResult) => void;
 }
 
 export const BusTable = ({ buses, sortConfig, onSort }: BusTableProps) => {
@@ -45,7 +30,7 @@ export const BusTable = ({ buses, sortConfig, onSort }: BusTableProps) => {
     return ((clamped - 0.85) / 0.3) * 100;
   };
 
-  const SortableHeader = ({ label, sortKey }: { label: string; sortKey: string }) => (
+  const SortableHeader = ({ label, sortKey }: { label: string; sortKey: keyof LoadFlowBusResult }) => (
     <th
       className="px-4 py-3 text-left text-xs font-medium text-neutral-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors"
       onClick={() => onSort(sortKey)}

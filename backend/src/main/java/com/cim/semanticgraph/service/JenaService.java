@@ -40,8 +40,6 @@ public class JenaService {
         this.rdfConnection = rdfConnection;
     }
 
-    // ── Write ──────────────────────────────────────────────────────────────────
-
     public void addModel(Model model) {
         log.info("Loading {} triples to Fuseki", model.size());
         try {
@@ -145,8 +143,6 @@ public class JenaService {
         }
     }
 
-    // ── Read ───────────────────────────────────────────────────────────────────
-
     public List<Map<String, String>> executeSparqlSelect(String sparqlQuery) {
         log.debug("Executing SPARQL SELECT via Fuseki");
         List<Map<String, String>> results = new ArrayList<>();
@@ -221,16 +217,7 @@ public class JenaService {
     }
 
     public long getTripleCount() {
-        try {
-            List<Map<String, String>> results = executeSparqlSelect(
-                    "SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }");
-            if (!results.isEmpty() && results.get(0).containsKey("count")) {
-                return parseCountValue(results.get(0).get("count"));
-            }
-        } catch (Exception e) {
-            log.error("Error getting triple count from Fuseki", e);
-        }
-        return 0;
+        return countFuseki("SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }");
     }
 
     public List<Map<String, String>> getResourceTriples(String resourceUri) {
@@ -266,18 +253,12 @@ public class JenaService {
         return stats;
     }
 
-    // ── Helpers ────────────────────────────────────────────────────────────────
-
     private long countFuseki(String queryString) {
-        try {
-            List<Map<String, String>> results = executeSparqlSelect(queryString);
-            if (!results.isEmpty() && results.get(0).containsKey("count")) {
-                return parseCountValue(results.get(0).get("count"));
-            }
-        } catch (Exception e) {
-            log.error("Count query failed: {}", e.getMessage());
+        List<Map<String, String>> results = executeSparqlSelect(queryString);
+        if (!results.isEmpty() && results.get(0).containsKey("count")) {
+            return parseCountValue(results.get(0).get("count"));
         }
-        return 0;
+        throw new IllegalStateException("Fuseki did not return a count for the requested statistics");
     }
 
     /**

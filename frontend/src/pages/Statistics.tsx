@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import {
-  Database, RefreshCw, FileText, Loader2, BarChart3,
+  Database, RefreshCw, BarChart3,
   Zap, Cable, Factory, GitBranch, CircleDot, Activity,
   ToggleRight, Plug, Layers, Network, TrendingUp, Gauge
 } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
-import { useToast } from '@/components/Toast';
 import { useStatistics } from '@/hooks/useStatistics';
-import { apiService } from '@/services/api';
 
 const AnimatedNumber = ({ value }: { value: number }) => {
   const [displayed, setDisplayed] = useState(0);
@@ -185,8 +183,6 @@ const ProgressRing = ({ value, max, label }: {
 
 const Statistics = () => {
   const { stats, loading, error, refresh } = useStatistics(true, 10000);
-  const { success: toastSuccess, error: toastError } = useToast();
-  const [exportingPDF, setExportingPDF] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
   useEffect(() => {
@@ -194,24 +190,6 @@ const Statistics = () => {
       setLastUpdate(new Date());
     }
   }, [stats]);
-
-  const handleExportPDF = async () => {
-    setExportingPDF(true);
-    try {
-      const blob = await apiService.generateNetworkStatisticsReport();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `CIM_Statistics_${new Date().toISOString().split('T')[0]}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-      toastSuccess('Statistics report downloaded');
-    } catch {
-      toastError('Failed to generate the statistics report');
-    } finally {
-      setExportingPDF(false);
-    }
-  };
 
   const totalEquipment = (stats?.substations || 0) + (stats?.transmissionLines || 0) +
     (stats?.transformers || 0) + (stats?.breakers || 0) + (stats?.generators || 0) +
@@ -229,14 +207,6 @@ const Statistics = () => {
         subtitle="Real-time overview of your CIM Knowledge Graph"
         actions={
           <>
-            <button
-              onClick={handleExportPDF}
-              disabled={exportingPDF || loading}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
-            >
-              {exportingPDF ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />}
-              {exportingPDF ? 'Generating...' : 'Export PDF'}
-            </button>
             <button
               onClick={refresh}
               disabled={loading}
