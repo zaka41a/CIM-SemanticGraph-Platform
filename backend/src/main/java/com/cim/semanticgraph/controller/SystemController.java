@@ -30,6 +30,9 @@ public class SystemController {
     @Value("${groq.api.key:}")
     private String groqApiKey;
 
+    @Value("${kiconnect.api.key:}")
+    private String kiConnectApiKey;
+
     @GetMapping("/metrics")
     @Operation(summary = "Get system metrics", description = "Get CPU, memory, and system metrics")
     public ResponseEntity<Map<String, Object>> getSystemMetrics() {
@@ -111,6 +114,7 @@ public class SystemController {
             providers.put("claude", isConfigured(claudeApiKey));
             providers.put("openai", isConfigured(openaiApiKey));
             providers.put("groq", isConfigured(groqApiKey));
+            providers.put("kiconnect", isConfigured(kiConnectApiKey));
             health.put("providers", providers);
 
             return ResponseEntity.ok(health);
@@ -123,6 +127,6 @@ public class SystemController {
     }
 
     private static boolean isConfigured(String key) {
-        return key != null && !key.isBlank();
+        return key != null && !key.isBlank() && !key.startsWith("your-");
     }
 }

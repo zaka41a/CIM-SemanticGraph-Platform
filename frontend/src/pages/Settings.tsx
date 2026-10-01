@@ -1,573 +1,193 @@
-import { useState, useEffect, useCallback } from 'react';
-import {
-  Settings as SettingsIcon,
-  Server,
-  Database,
-  CheckCircle2,
-  AlertTriangle,
-  RefreshCw,
-  Zap,
-  Search,
-  Brain,
-  Download,
-  ChevronRight,
-  Eye,
-  EyeOff,
-  Loader2,
-  FlaskConical,
-  Sparkles,
-  Shield,
-  Clock,
-} from 'lucide-react';
-import { apiService } from '@/services/api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Brain, Database, Download, Loader2, RefreshCw, Search, Server, Settings as SettingsIcon, Sparkles, Zap, type LucideIcon } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { useToast } from '@/components/Toast';
+import { API_BASE_URL, apiService } from '@/services/api';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface ServiceCheck {
+type Probe<T> = { value: T | null; elapsedMs: number };
+type Status = 'checking' | 'available' | 'limited' | 'unavailable' | 'configured' | 'missing' | 'unknown';
+interface ServiceRowProps {
   name: string;
-  label: string;
-  icon: React.ElementType;
-  status: 'UP' | 'DOWN' | 'LOADING' | 'DEGRADED';
   detail: string;
-  extra?: string;
-  ping?: number;
+  icon: LucideIcon;
+  status: Status;
+  elapsedMs?: number;
 }
 
-interface GraphStats {
-  totalTriples: number;
-  totalSubjects: number;
-  totalClasses: number;
-  totalPredicates: number;
-  substations: number;
-  generators: number;
-  transmissionLines: number;
-  transformers: number;
-  loads: number;
-  busbarSections: number;
-  connectivityNodes: number;
-  baseVoltages: number;
-  voltageLevels: number;
+const STATUS_STYLE: Record<Status, { label: string; className: string }> = {
+  checking: { label: 'Checking', className: 'text-neutral-400 bg-white/5' },
+  available: { label: 'Available', className: 'text-emerald-400 bg-emerald-500/10' },
+  limited: { label: 'DC only', className: 'text-accent-400 bg-accent-500/10' },
+  unavailable: { label: 'Unavailable', className: 'text-red-400 bg-red-500/10' },
+  configured: { label: 'Configured', className: 'text-emerald-400 bg-emerald-500/10' },
+  missing: { label: 'Not configured', className: 'text-neutral-400 bg-white/5' },
+  unknown: { label: 'Unknown', className: 'text-neutral-400 bg-white/5' },
+};
+
+async function probe<T>(request: () => Promise<T>): Promise<Probe<T>> {
+  const start = performance.now();
+  try {
+    return { value: await request(), elapsedMs: Math.round(performance.now() - start) };
+  } catch {
+    return { value: null, elapsedMs: Math.round(performance.now() - start) };
+  }
 }
 
-interface IndexingStatus {
-  qdrantAvailable: boolean;
-  indexedEntities: number;
-  collectionName: string;
-  status: string;
+async function readStatus() {
+  const [backend, graph, index, powerflow, models, system] = await Promise.all([
+    probe(() => apiService.checkBackendHealth()),
+    probe(() => apiService.getStatistics()),
+    probe(() => apiService.getIndexingStatus()),
+    probe(() => apiService.getPowerflowHealth()),
+    probe(() => apiService.getLlmProviders()),
+    probe(() => apiService.getSystemHealth()),
+  ]);
+  return { backend, graph, index, powerflow, models, system };
 }
 
-interface ProviderKeys {
-  claude: boolean;
-  openai: boolean;
-  groq: boolean;
-}
-
-interface SystemHealth {
-  status: string;
-  providers?: ProviderKeys;
-}
-
-interface PowerflowHealth {
-  status: string;
-  pandapowerAvailable?: boolean;
-}
-
-// ─── Sub-components ────────────────────────────────────────────────────────────
-
-const SectionHeader = ({ icon: Icon, title, subtitle, badge }: {
-  icon: React.ElementType; title: string; subtitle: string; badge?: string;
-}) => (
-  <div className="px-6 py-4 border-b border-primary-700/30 bg-gradient-to-r from-primary-800/40 to-transparent">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-accent-500/20 rounded-lg">
-          <Icon size={18} className="text-accent-400" />
+function ServiceRow({ name, detail, icon: Icon, status, elapsedMs }: ServiceRowProps) {
+  const badge = STATUS_STYLE[status];
+  return (
+    <div className="flex items-start gap-3 py-4 border-b border-primary-700/30 last:border-0">
+      <Icon size={18} className="text-neutral-400 mt-1 shrink-0" aria-hidden="true" />
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <h3 className="text-sm font-medium text-white">{name}</h3>
+          <span className={`text-[11px] font-medium rounded-md px-2 py-0.5 ${badge.className}`}>{badge.label}</span>
         </div>
-        <div>
-          <h2 className="font-bold text-white">{title}</h2>
-          <p className="text-xs text-neutral-400">{subtitle}</p>
-        </div>
+        <p className="mt-1.5 text-xs text-neutral-400 leading-relaxed break-words">{detail}</p>
       </div>
-      {badge && (
-        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-accent-500/20 text-accent-400 border border-accent-500/30">
-          {badge}
+      {elapsedMs !== undefined && (
+        <span className="text-xs text-neutral-500 tabular-nums whitespace-nowrap mt-1" title="Measured response time through the backend API">
+          {elapsedMs} ms
         </span>
       )}
     </div>
-  </div>
-);
-
-const StatusDot = ({ status }: { status: ServiceCheck['status'] }) => (
-  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-    status === 'UP' ? 'bg-emerald-400 shadow-[0_0_6px_#10b981] animate-pulse' :
-    status === 'DEGRADED' ? 'bg-yellow-400 shadow-[0_0_6px_#f59e0b]' :
-    status === 'LOADING' ? 'bg-neutral-400 animate-pulse' :
-    'bg-red-400 shadow-[0_0_6px_#ef4444]'
-  }`} />
-);
-
-const StatusBadge = ({ status }: { status: ServiceCheck['status'] }) => (
-  <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
-    status === 'UP' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
-    status === 'DEGRADED' ? 'bg-yellow-500/15 text-accent-500 border-yellow-500/30' :
-    status === 'LOADING' ? 'bg-neutral-500/15 text-neutral-400 border-neutral-500/30' :
-    'bg-red-500/15 text-red-400 border-red-500/30'
-  }`}>
-    {status === 'LOADING' ? '...' : status}
-  </span>
-);
-
-const ServiceRow = ({ service }: { service: ServiceCheck }) => {
-  const Icon = service.icon;
-  return (
-    <div className="flex items-center gap-4 px-6 py-4 hover:bg-primary-800/20 transition-colors border-b border-primary-700/20 last:border-0">
-      <div className={`p-2.5 rounded-xl ${
-        service.status === 'UP' ? 'bg-emerald-500/15' :
-        service.status === 'DEGRADED' ? 'bg-yellow-500/15' :
-        service.status === 'DOWN' ? 'bg-red-500/15' : 'bg-neutral-500/15'
-      }`}>
-        <Icon size={18} className={
-          service.status === 'UP' ? 'text-emerald-400' :
-          service.status === 'DEGRADED' ? 'text-accent-500' :
-          service.status === 'DOWN' ? 'text-red-400' : 'text-neutral-400'
-        } />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="font-semibold text-white text-sm">{service.name}</span>
-          <StatusBadge status={service.status} />
-        </div>
-        <p className="text-xs text-neutral-400 truncate">{service.detail}</p>
-        {service.extra && <p className="text-xs text-neutral-500">{service.extra}</p>}
-      </div>
-      <div className="flex items-center gap-3 flex-shrink-0">
-        {service.ping !== undefined && (
-          <div className="text-right">
-            <p className="text-xs text-neutral-500">Response</p>
-            <p className={`text-xs font-mono font-bold ${service.ping < 100 ? 'text-emerald-400' : service.ping < 500 ? 'text-accent-500' : 'text-red-400'}`}>
-              {service.ping}ms
-            </p>
-          </div>
-        )}
-        <StatusDot status={service.status} />
-      </div>
-    </div>
   );
-};
+}
 
-const StatItem = ({ label, value, color = 'text-white' }: { label: string; value: number | string; color?: string }) => (
-  <div className="flex items-center justify-between py-2.5 border-b border-primary-700/20 last:border-0">
-    <span className="text-sm text-neutral-400">{label}</span>
-    <span className={`text-sm font-bold font-mono ${color}`}>
-      {typeof value === 'number' ? value.toLocaleString() : value}
-    </span>
-  </div>
-);
-
-const ActionButton = ({ icon: Icon, label, description, variant = 'default', onClick, loading, disabled }: {
-  icon: React.ElementType; label: string; description: string;
-  variant?: 'default' | 'danger' | 'accent' | 'success';
-  onClick?: () => void; loading?: boolean; disabled?: boolean;
-}) => {
-  const colors = {
-    default: 'bg-primary-700/40 hover:bg-primary-600/40 border-primary-600/40 hover:border-primary-500/60 text-neutral-300 hover:text-white',
-    accent: 'bg-accent-500/15 hover:bg-accent-500/25 border-accent-500/30 hover:border-accent-500/50 text-accent-400 hover:text-accent-300',
-    success: 'bg-emerald-500/15 hover:bg-emerald-500/25 border-emerald-500/30 hover:border-emerald-500/50 text-emerald-400 hover:text-emerald-300',
-    danger: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/20 hover:border-red-500/40 text-red-400 hover:text-red-300',
-  };
-  return (
-    <button
-      onClick={onClick}
-      disabled={loading || disabled}
-      className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 text-left group disabled:opacity-50 disabled:cursor-not-allowed ${colors[variant]}`}
-    >
-      <div className="p-2 rounded-lg bg-current/10 flex-shrink-0">
-        {loading ? <Loader2 size={18} className="animate-spin" /> : <Icon size={18} />}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm">{label}</p>
-        <p className="text-xs opacity-60">{description}</p>
-      </div>
-      <ChevronRight size={16} className="opacity-40 group-hover:opacity-70 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-    </button>
-  );
-};
-
-// ─── Config item with masked secret value ─────────────────────────────────────
-const ConfigEntry = ({ label, value, secret = false, status }: {
-  label: string; value: string; secret?: boolean; status?: 'ok' | 'missing';
-}) => {
-  const [revealed, setRevealed] = useState(false);
-  return (
-    <div className="flex items-center justify-between py-3 border-b border-primary-700/20 last:border-0 gap-4">
-      <span className="text-sm text-neutral-400 flex-shrink-0">{label}</span>
-      <div className="flex items-center gap-2 min-w-0">
-        {status && (
-          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${status === 'ok' ? 'bg-emerald-400' : 'bg-red-400'}`} />
-        )}
-        <span className="text-sm font-mono text-neutral-200 truncate">
-          {secret && !revealed ? '••••••••••••••••' : value}
-        </span>
-        {secret && (
-          <button
-            onClick={() => setRevealed(r => !r)}
-            className="text-neutral-500 hover:text-neutral-300 transition-colors flex-shrink-0"
-          >
-            {revealed ? <EyeOff size={14} /> : <Eye size={14} />}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ─── Main Settings page ────────────────────────────────────────────────────────
-
-const Settings = () => {
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [graphStats, setGraphStats] = useState<GraphStats | null>(null);
-  const [indexingStatus, setIndexingStatus] = useState<IndexingStatus | null>(null);
-  const [providers, setProviders] = useState<ProviderKeys | null>(null);
-  const [services, setServices] = useState<ServiceCheck[]>([]);
-  const [lastRefresh, setLastRefresh] = useState(new Date());
+export default function Settings() {
+  const [snapshot, setSnapshot] = useState<Awaited<ReturnType<typeof readStatus>> | null>(null);
+  const [refreshing, setRefreshing] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [exporting, setExporting] = useState(false);
+  const mounted = useRef(false);
+  const pending = useRef(false);
   const { success: toastSuccess, error: toastError } = useToast();
 
-  const fetchAll = useCallback(async () => {
+  const refresh = useCallback(async () => {
+    if (pending.current) return;
+    pending.current = true;
     setRefreshing(true);
-    try {
-      const t0 = Date.now();
-      const [stats, qdrant, lf, sys] = await Promise.allSettled([
-        apiService.getStatistics(),
-        apiService.getIndexingStatus(),
-        apiService.getPowerflowHealth(),
-        apiService.getSystemHealth(),
-      ]);
-      const pingMs = Date.now() - t0;
-
-      const g = stats.status === 'fulfilled' ? stats.value as GraphStats : null;
-      const q = qdrant.status === 'fulfilled' ? qdrant.value : null;
-      const l = lf.status === 'fulfilled' ? lf.value as PowerflowHealth : null;
-      const s = sys.status === 'fulfilled' ? sys.value as SystemHealth : null;
-      const keys = s?.providers ?? null;
-
-      setGraphStats(g);
-      setIndexingStatus(q);
-      setProviders(keys);
-      setLastRefresh(new Date());
-
-      setServices([
-        {
-          name: 'Spring Boot API',
-          label: 'backend',
-          icon: Server,
-          status: g ? 'UP' : 'DOWN',
-          detail: g ? `${(g.totalTriples || 0).toLocaleString()} triples in knowledge graph` : 'Backend unreachable',
-          extra: 'Port 8080 · /api context path',
-          ping: pingMs,
-        },
-        {
-          name: 'Apache Fuseki (SPARQL)',
-          label: 'fuseki',
-          icon: Database,
-          status: g ? 'UP' : 'DOWN',
-          detail: g ? `TDB2 storage · OWL reasoning enabled` : 'Fuseki not responding',
-          extra: 'http://localhost:3030/cim',
-          ping: g ? Math.round(pingMs * 0.4) : undefined,
-        },
-        {
-          name: 'Qdrant Vector DB',
-          label: 'qdrant',
-          icon: Search,
-          status: q?.qdrantAvailable ? 'UP' : 'DOWN',
-          detail: q?.qdrantAvailable
-            ? `Collection "${q.collectionName}" · ${q.indexedEntities.toLocaleString()} vectors indexed`
-            : 'Qdrant not available · keyword fallback active',
-          extra: 'http://localhost:6333 · cosine distance · 1536 dim',
-          ping: q?.qdrantAvailable ? Math.round(pingMs * 0.3) : undefined,
-        },
-        {
-          name: 'Pandapower Engine',
-          label: 'pandapower',
-          icon: Zap,
-          status: l?.pandapowerAvailable ? 'UP' : (l ? 'DEGRADED' : 'DOWN'),
-          detail: l?.pandapowerAvailable
-            ? 'AC Newton-Raphson & OPF available'
-            : l ? 'DC solver only (pandapower unavailable)' : 'Load flow service unreachable',
-          extra: 'Python FastAPI · Port 8000',
-          ping: l ? Math.round(pingMs * 0.5) : undefined,
-        },
-        {
-          name: 'GPT-5.5 (KI Connect NRW)',
-          label: 'llm',
-          icon: Brain,
-          status: keys === null ? 'LOADING' : keys.groq ? 'UP' : 'DOWN',
-          detail: keys?.groq
-            ? 'gpt-5.5 · OpenAI-compatible · GraphRAG answers'
-            : 'LLM API key not configured',
-          extra: 'chat.kiconnect.nrw · SSE streaming',
-        },
-        {
-          name: 'Claude Agent (optional)',
-          label: 'claude',
-          icon: Sparkles,
-          status: keys === null ? 'LOADING' : keys.claude ? 'UP' : 'DEGRADED',
-          detail: keys?.claude
-            ? 'Anthropic native tool-calling agent enabled'
-            : 'Not configured (optional Anthropic tool-calling agent)',
-          extra: 'Enable by setting CLAUDE_API_KEY',
-        },
-        {
-          name: 'OpenAI Embeddings',
-          label: 'openai',
-          icon: FlaskConical,
-          status: keys === null ? 'LOADING' : keys.openai ? 'UP' : 'DEGRADED',
-          detail: keys?.openai
-            ? `text-embedding-3-small · 1536 dim${(q?.indexedEntities ?? 0) > 0 ? ` · ${q?.indexedEntities} vectors` : ''}`
-            : 'API key not configured · keyword SPARQL fallback active',
-          extra: 'Used for semantic search · falls back to keyword SPARQL',
-        },
-      ]);
-    } catch (e) {
-      console.error('Settings fetch error:', e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    const next = await readStatus();
+    pending.current = false;
+    if (!mounted.current) return;
+    setSnapshot(next);
+    setLastRefresh(new Date());
+    setRefreshing(false);
   }, []);
 
   useEffect(() => {
-    fetchAll();
-    const iv = setInterval(fetchAll, 30000);
-    return () => clearInterval(iv);
-  }, [fetchAll]);
+    mounted.current = true;
+    void refresh();
+    const timer = setInterval(() => { void refresh(); }, 15000);
+    return () => { mounted.current = false; clearInterval(timer); };
+  }, [refresh]);
 
-  const handleExport = async () => {
+  const graph = snapshot?.graph.value;
+  const index = snapshot?.index.value;
+  const powerflow = snapshot?.powerflow.value;
+  const models = snapshot?.models.value;
+  const keys = snapshot?.system.value?.providers;
+  const status = (available: boolean | undefined): Status => snapshot === null ? 'checking' : available ? 'available' : 'unavailable';
+  const keyStatus = (configured: boolean | undefined): Status => snapshot === null ? 'checking'
+    : configured === undefined ? 'unknown' : configured ? 'configured' : 'missing';
+  const count = (value: number | undefined) => value === undefined ? '—' : value.toLocaleString('en-US');
+
+  const exportGraph = async () => {
     setExporting(true);
     try {
       const blob = await apiService.exportGraph('RDF/XML');
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `knowledge-graph-${new Date().toISOString().split('T')[0]}.rdf`;
-      a.click();
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `knowledge-graph-${new Date().toISOString().slice(0, 10)}.rdf`;
+      link.click();
       URL.revokeObjectURL(url);
-      toastSuccess('Knowledge graph exported as RDF/XML');
-    } catch (e) {
-      toastError(e instanceof Error ? e.message : 'Export failed');
+      toastSuccess('Knowledge graph exported');
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Export failed');
     } finally {
       setExporting(false);
     }
   };
 
-  const healthyCount = services.filter(s => s.status === 'UP').length;
-  const overallStatus = services.length === 0 ? 'LOADING' :
-    healthyCount === services.length ? 'UP' :
-    services.some(s => s.status === 'DOWN') ? 'DEGRADED' : 'DEGRADED';
-
   return (
     <div className="space-y-6 animate-fade-in">
-
       <PageHeader
         icon={SettingsIcon}
         iconColor="text-neutral-400"
         title="Platform Settings"
-        subtitle="Infrastructure · AI services · Vector DB · Knowledge graph"
-        actions={
-          <>
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-semibold ${
-              overallStatus === 'UP' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
-              overallStatus === 'LOADING' ? 'bg-neutral-500/10 border-neutral-500/30 text-neutral-400' :
-              'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
-            }`}>
-              {overallStatus === 'UP' ? <CheckCircle2 size={14} /> :
-               overallStatus === 'LOADING' ? <Loader2 size={14} className="animate-spin" /> :
-               <AlertTriangle size={14} />}
-              {overallStatus === 'LOADING' ? 'Checking...' :
-               overallStatus === 'UP' ? `All ${services.length} UP` :
-               `${healthyCount}/${services.length} UP`}
-            </div>
-            <div className="flex items-center gap-1 text-xs text-neutral-500">
-              <Clock size={12} />
-              {lastRefresh.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
-            </div>
-            <button
-              onClick={fetchAll}
-              disabled={refreshing}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-800 hover:bg-primary-700 border border-primary-600/50 rounded-lg text-sm text-neutral-300 transition-all disabled:opacity-50"
-            >
-              <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} /> Refresh
-            </button>
-          </>
-        }
+        subtitle="Service availability, model configuration and current dataset"
+        actions={<button onClick={() => { void refresh(); }} disabled={refreshing} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-600/50 bg-primary-800 text-sm text-neutral-300 hover:bg-primary-700 disabled:opacity-50">
+          <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} /> Refresh
+        </button>}
       />
 
-      {/* ── Graph export ─────────────────────────────────────────────────────── */}
-      <ActionButton
-        icon={Download}
-        label="Export knowledge graph"
-        description="Download the full RDF/XML serialisation of the graph"
-        variant="accent"
-        onClick={handleExport}
-        loading={exporting}
-      />
-
-      {/* ── Main grid ────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-        {/* LEFT - Services + Configuration */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         <div className="xl:col-span-2 space-y-6">
-
-          {/* Infrastructure Services */}
-          <div className="card overflow-hidden">
-            <SectionHeader
-              icon={Server}
-              title="Infrastructure & AI Services"
-              subtitle={`${healthyCount} / ${services.length} services operational`}
-              badge="LIVE"
-            />
-            {loading ? (
-              <div className="flex items-center justify-center py-12 gap-3 text-neutral-400">
-                <Loader2 size={20} className="animate-spin" /> Checking services...
-              </div>
-            ) : (
-              <div>
-                {services.map(s => <ServiceRow key={s.label} service={s} />)}
-              </div>
-            )}
-          </div>
-
-          {/* Platform Configuration */}
-          <div className="card overflow-hidden">
-            <SectionHeader
-              icon={Shield}
-              title="Platform Configuration"
-              subtitle="Active settings and API endpoints"
-            />
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">Backend</h3>
-                <ConfigEntry label="API Base URL" value="http://localhost:8080/api" />
-                <ConfigEntry label="SPARQL Endpoint" value="http://localhost:3030/cim" />
-                <ConfigEntry label="Storage Mode" value="Remote Fuseki (TDB2)" />
-                <ConfigEntry label="Reasoning" value="OWL_MEM_RULE_INF" />
-                <ConfigEntry label="Query Timeout" value="60 000 ms" />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">AI & Vector</h3>
-                <ConfigEntry label="LLM Model" value="gpt-5.5" />
-                <ConfigEntry label="LLM Endpoint" value="chat.kiconnect.nrw" />
-                <ConfigEntry label="Embedding Model" value="text-embedding-3-small" />
-                <ConfigEntry label="Vector Dimensions" value="1536" />
-                <ConfigEntry label="Similarity Threshold" value="0.35" />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">API Keys Status</h3>
-                <ConfigEntry
-                  label="LLM Key (KI Connect)"
-                  value={providers === null ? 'Checking…' : providers.groq ? 'Configured' : 'Not configured'}
-                  status={providers?.groq ? 'ok' : 'missing'}
-                />
-                <ConfigEntry
-                  label="OpenAI Key (embeddings)"
-                  value={providers === null ? 'Checking…' : providers.openai ? 'Configured' : 'Not configured'}
-                  status={providers?.openai ? 'ok' : 'missing'}
-                />
-                <ConfigEntry
-                  label="Claude Key (optional)"
-                  value={providers === null ? 'Checking…' : providers.claude ? 'Configured' : 'Not set'}
-                  status={providers?.claude ? 'ok' : 'missing'}
-                />
-              </div>
-              <div>
-                <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">GraphRAG</h3>
-                <ConfigEntry label="Top-K Results" value="10" />
-                <ConfigEntry label="Max Traversal Depth" value="3 hops" />
-                <ConfigEntry label="Max Context Triples" value="500" />
-                <ConfigEntry label="Tool Call Rounds" value="5 max" />
-                <ConfigEntry label="Traversal Strategy" value="BIDIRECTIONAL" />
-              </div>
+          <section className="rounded-xl border border-primary-700/40 bg-primary-900/50 px-5 py-2" aria-labelledby="infrastructure-title">
+            <div className="py-3 border-b border-primary-700/40 flex flex-wrap items-center justify-between gap-2">
+              <h2 id="infrastructure-title" className="font-semibold text-white">Infrastructure</h2>
+              {lastRefresh && <span className="text-xs text-neutral-500">Checked {lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
             </div>
-          </div>
+            <ServiceRow name="Backend API" icon={Server} status={status(snapshot?.backend.value === true)} detail="Application endpoints and service checks" elapsedMs={snapshot?.backend.value ? snapshot.backend.elapsedMs : undefined} />
+            <ServiceRow name="Knowledge graph" icon={Database} status={status(!!graph)} detail={graph ? `${count(graph.totalTriples)} RDF triples in Fuseki` : snapshot ? 'The current graph could not be read from Fuseki.' : 'Reading the current graph through the backend'} elapsedMs={graph ? snapshot?.graph.elapsedMs : undefined} />
+            <ServiceRow name="Vector index" icon={Search} status={status(index?.qdrantAvailable)} detail={index?.qdrantAvailable ? `${count(index.indexedEntities)} indexed entities · ${index.collectionName}` : 'Qdrant is required for semantic vector retrieval'} elapsedMs={index ? snapshot?.index.elapsedMs : undefined} />
+            <ServiceRow name="Power flow" icon={Zap} status={powerflow?.dcSolver && !powerflow.pandapowerAvailable ? 'limited' : status(powerflow?.pandapowerAvailable)} detail={powerflow?.pandapowerAvailable ? 'DC, AC Newton-Raphson and OPF available' : powerflow?.dcSolver ? 'DC is available. Start the Python service for AC and OPF.' : 'Checking the calculation services'} elapsedMs={powerflow ? snapshot?.powerflow.elapsedMs : undefined} />
+          </section>
+
+          <section className="rounded-xl border border-primary-700/40 bg-primary-900/50 px-5 py-2" aria-labelledby="models-title">
+            <div className="py-3 border-b border-primary-700/40">
+              <h2 id="models-title" className="font-semibold text-white">AI configuration</h2>
+              <p className="mt-1 text-xs text-neutral-400">Configured means a key is present. Test model responses in Chat.</p>
+            </div>
+            {models?.map(model => <ServiceRow key={model.id} name={model.label} icon={Brain} status={keyStatus(model.available)} detail={`${model.model}${model.isDefault ? ' · Default chat provider' : ' · Alternate chat provider'}`} />)}
+            {!models?.length && <ServiceRow name="Chat providers" icon={Brain} status={snapshot === null ? 'checking' : models ? 'missing' : 'unknown'} detail={models ? 'No chat providers are configured.' : 'Provider configuration could not be loaded.'} />}
+            <ServiceRow name="Claude agent" icon={Sparkles} status={keyStatus(keys?.claude)} detail="Optional agent with graph and calculation tools" />
+            <ServiceRow name="OpenAI embeddings" icon={Search} status={keyStatus(keys?.openai)} detail="Creates entity vectors for semantic search" />
+          </section>
         </div>
 
-        {/* RIGHT - Stats + Actions */}
-        <div className="space-y-6">
-
-          {/* Knowledge Graph Stats */}
-          <div className="card overflow-hidden">
-            <SectionHeader
-              icon={Database}
-              title="Knowledge Graph"
-              subtitle="Apache Jena · Fuseki TDB2"
-            />
-            <div className="p-5">
-              {/* Triple count hero */}
-              <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-accent-500/10 to-accent-600/5 border border-accent-500/20">
-                <p className="text-xs text-neutral-500 mb-1">Total RDF Triples</p>
-                <p className="text-4xl font-black text-white tracking-tight">
-                  {graphStats?.totalTriples?.toLocaleString() ?? '-'}
-                </p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-xs text-emerald-400">Live from Fuseki</span>
-                </div>
-              </div>
-
-              <div className="space-y-0 divide-y divide-primary-700/20">
-                <StatItem label="Subjects" value={graphStats?.totalSubjects ?? 0} color="text-accent-400" />
-                <StatItem label="Predicates" value={graphStats?.totalPredicates ?? 0} />
-                <StatItem label="Classes" value={graphStats?.totalClasses ?? 0} />
-                <StatItem label="Substations" value={graphStats?.substations ?? 0} color="text-sky-400" />
-                <StatItem label="Generators" value={graphStats?.generators ?? 0} color="text-emerald-400" />
-                <StatItem label="Transmission Lines" value={graphStats?.transmissionLines ?? 0} color="text-sky-400" />
-                <StatItem label="Transformers" value={graphStats?.transformers ?? 0} color="text-sky-400" />
-                <StatItem label="Loads" value={graphStats?.loads ?? 0} color="text-sky-400" />
-                <StatItem label="Bus Sections" value={graphStats?.busbarSections ?? 0} />
-                <StatItem label="Connectivity Nodes" value={graphStats?.connectivityNodes ?? 0} />
-                <StatItem label="Voltage Levels" value={graphStats?.voltageLevels ?? 0} />
-                <StatItem label="Base Voltages" value={graphStats?.baseVoltages ?? 0} />
-              </div>
-            </div>
-          </div>
-
-          {/* Vector DB Stats */}
-          <div className="card overflow-hidden">
-            <SectionHeader
-              icon={Search}
-              title="Vector Database"
-              subtitle="Qdrant · OpenAI text-embedding-3-small"
-              badge={indexingStatus?.qdrantAvailable ? 'CONNECTED' : 'OFFLINE'}
-            />
-            <div className="p-5">
-              <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-sky-500/10 to-sky-600/5 border border-sky-500/20">
-                <p className="text-xs text-neutral-500 mb-1">Indexed Entities</p>
-                <p className="text-4xl font-black text-white tracking-tight">
-                  {indexingStatus?.indexedEntities?.toLocaleString() ?? '-'}
-                </p>
-                <p className="text-xs text-neutral-400 mt-1.5">
-                  {indexingStatus?.collectionName ?? 'cim_entities'} · cosine distance
-                </p>
-              </div>
-              <StatItem label="Vector Dimensions" value="1 536" color="text-sky-400" />
-              <StatItem label="Similarity Threshold" value="0.35" />
-              <StatItem label="Batch Size" value="100 pts/req" />
-              <StatItem
-                label="Status"
-                value={indexingStatus?.status ?? '-'}
-                color={indexingStatus?.qdrantAvailable ? 'text-emerald-400' : 'text-red-400'}
-              />
-            </div>
-          </div>
-
-        </div>
+        <aside className="space-y-5">
+          <section className="rounded-xl border border-primary-700/40 bg-primary-900/50 p-5">
+            <h2 className="font-semibold text-white">Current dataset</h2>
+            <p className="text-3xl font-semibold text-white tabular-nums mt-6">{count(graph?.totalTriples)}</p>
+            <p className="text-xs text-neutral-400 mt-1">RDF triples</p>
+            <dl className="mt-5 divide-y divide-primary-700/30 text-sm">
+              {([
+                ['Subjects', graph?.totalSubjects],
+                ['Classes', graph?.totalClasses],
+                ['Indexed entities', index?.qdrantAvailable ? index.indexedEntities : undefined],
+              ] as const).map(([label, value]) => <div key={label} className="flex items-center justify-between gap-3 py-3"><dt className="text-neutral-400">{label}</dt><dd className="text-neutral-200 tabular-nums">{count(value)}</dd></div>)}
+            </dl>
+            {graph?.totalTriples === 0 && <div className="mt-4 pt-4 border-t border-primary-700/30">
+              <p className="text-sm text-neutral-400">Your graph is empty. Import a network to begin.</p>
+              <Link to="/import" className="inline-flex items-center gap-2 mt-3 text-sm font-medium text-accent-400 hover:text-accent-300">Import network data <ArrowRight size={14} /></Link>
+            </div>}
+            <button onClick={() => { void exportGraph(); }} disabled={exporting || !graph?.totalTriples} className="mt-5 w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-primary-600/50 text-sm text-neutral-300 hover:bg-primary-800 disabled:opacity-40 disabled:cursor-not-allowed">
+              {exporting ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} Export RDF/XML
+            </button>
+          </section>
+          <details className="rounded-xl border border-primary-700/40 bg-primary-900/50 p-5 text-sm">
+            <summary className="cursor-pointer font-medium text-neutral-300">Connection details</summary>
+            <p className="mt-4 text-xs text-neutral-500">Backend API</p>
+            <p className="mt-1 text-xs text-neutral-300 break-all font-mono">{API_BASE_URL}</p>
+            <p className="mt-4 text-xs leading-relaxed text-neutral-400">Provider credentials and service addresses are managed in the backend configuration.</p>
+          </details>
+        </aside>
       </div>
-
     </div>
   );
-};
-
-export default Settings;
+}
