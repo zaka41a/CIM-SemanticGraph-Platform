@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { ChatMessage as ChatMessageType } from '@/types';
 
-// ── CIM URI → human-readable label ────────────────────────────────────────────
 const TYPE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Substation: Database,
   GeneratingUnit: Zap,
@@ -32,7 +31,6 @@ function parseSource(uri: string): { label: string; type: string } {
   return { label: fragment.replace(/_/g, ' ').substring(0, 40), type: 'Entity' };
 }
 
-// ── Tool call accordion item ───────────────────────────────────────────────────
 const TOOL_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   semantic_search: Search,
   sparql_query: Database,
@@ -75,12 +73,10 @@ function ToolCallItem({
   );
 }
 
-// ── Streaming cursor ───────────────────────────────────────────────────────────
 const StreamingCursor = () => (
   <span className="inline-block w-0.5 h-4 bg-accent-400 ml-0.5 animate-pulse align-middle" />
 );
 
-// ── Main component ─────────────────────────────────────────────────────────────
 interface ChatMessageProps {
   message: ChatMessageType;
   onFeedback?: (id: string, feedback: 'up' | 'down') => void;
@@ -178,19 +174,19 @@ export const ChatMessage = ({ message, onFeedback, onFollowUpClick }: ChatMessag
         </div>
 
         {/* Confidence bar */}
-        {!isUser && message.confidence !== undefined && !message.streaming && (
+        {!isUser && (message.confidence ?? 0) > 0 && !message.streaming && (
           <div className="mt-1 flex items-center gap-2 text-xs text-neutral-500 px-1">
             <span>Confidence</span>
             <div className="w-20 h-1.5 bg-primary-700 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-500 ${
-                  message.confidence > 0.7 ? 'bg-emerald-500' :
-                  message.confidence > 0.4 ? 'bg-yellow-500' : 'bg-red-500'
+                  message.confidence! > 0.7 ? 'bg-emerald-500' :
+                  message.confidence! > 0.4 ? 'bg-yellow-500' : 'bg-red-500'
                 }`}
-                style={{ width: `${(message.confidence) * 100}%` }}
+                style={{ width: `${message.confidence! * 100}%` }}
               />
             </div>
-            <span>{Math.round(message.confidence * 100)}%</span>
+            <span>{Math.round(message.confidence! * 100)}%</span>
           </div>
         )}
 

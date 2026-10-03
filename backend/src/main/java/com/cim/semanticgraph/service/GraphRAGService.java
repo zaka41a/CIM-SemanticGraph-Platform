@@ -70,6 +70,23 @@ public class GraphRAGService {
         long startTime = System.currentTimeMillis();
 
         try {
+            if (jenaService.getTripleCount() == 0) {
+                GraphRAGResponse response = GraphRAGResponse.builder()
+                        .answer("No network data is loaded. Import a CIM or Excel file in [Data Import](/import), "
+                                + "then ask your question again.")
+                        .question(question)
+                        .sources(List.of())
+                        .triplesRetrieved(0)
+                        .executionTimeMs(System.currentTimeMillis() - startTime)
+                        .llmModel("None")
+                        .inferenceUsed(false)
+                        .confidence(0.0)
+                        .timestamp(LocalDateTime.now())
+                        .build();
+                conversationMemoryService.remember(sessionId, response);
+                return response;
+            }
+
             List<ConversationMemoryService.Turn> conversation =
                     conversationMemoryService.getRecentTurns(sessionId);
             String retrievalQuestion = conversationMemoryService.contextualizeQuery(question, conversation);
@@ -1074,6 +1091,27 @@ public class GraphRAGService {
             com.cim.semanticgraph.dto.LoadFlowResponse lfResult = targetBusId != null
                     ? loadFlowService.calculateLoadFlow(targetBusId, CalculationMethod.AC_NEWTON_RAPHSON)
                     : loadFlowService.calculateLoadFlow(null, CalculationMethod.AC_NEWTON_RAPHSON);
+
+            if (lfResult.getBusResults() == null || lfResult.getBusResults().isEmpty()) {
+                String reason = lfResult.getViolations() == null ? "No calculable network was found."
+                        : lfResult.getViolations().stream()
+                                .map(com.cim.semanticgraph.dto.LoadFlowResponse.Violation::getDescription)
+                                .filter(Objects::nonNull)
+                                .findFirst().orElse("No calculable network was found.");
+                GraphRAGResponse response = GraphRAGResponse.builder()
+                        .answer("Power flow could not be calculated. " + reason)
+                        .question(question)
+                        .sources(List.of())
+                        .triplesRetrieved(0)
+                        .executionTimeMs(System.currentTimeMillis() - startTime)
+                        .llmModel("None")
+                        .inferenceUsed(false)
+                        .confidence(0.0)
+                        .timestamp(LocalDateTime.now())
+                        .build();
+                conversationMemoryService.remember(sessionId, response);
+                return response;
+            }
 
             StringBuilder answer = new StringBuilder();
 

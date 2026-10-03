@@ -155,7 +155,7 @@ export const useChatMessages = (sessionId: string, provider: string = '') => {
         setMessages(prev => {
           const updated = prev.map(m => {
             if (m.id !== assistantId) return m;
-            const followUpSuggestions = inferFollowUps(question, m.content);
+            const followUpSuggestions = confidence > 0 ? inferFollowUps(question, m.content) : [];
             return { ...m, streaming: false, sources, confidence, executionTimeMs, followUpSuggestions };
           });
           saveChatHistory(sessionId, updated);
