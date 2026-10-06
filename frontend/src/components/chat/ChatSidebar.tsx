@@ -97,7 +97,7 @@ export const ChatSidebar = ({
       <div className="p-4 border-t border-primary-700/30 text-xs text-neutral-500">
         <div className="flex items-center gap-2">
           <Sparkles className="w-3 h-3 text-accent-400" />
-          Claude Agent + GraphRAG
+          CIM network conversations
         </div>
       </div>
     </div>
