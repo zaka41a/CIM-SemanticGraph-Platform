@@ -29,8 +29,6 @@ public class ExcelController {
     private final ImportHistoryService importHistoryService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // ─── Analyze Excel structure without importing ─────────────────────────────
-
     @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Analyze Excel file",
                description = "Returns sheet structure, detected types, and unrecognized columns - without importing")
@@ -45,8 +43,6 @@ public class ExcelController {
                     .body(Map.of("error", "Analysis failed: " + e.getMessage()));
         }
     }
-
-    // ─── Import with user-provided column mapping ──────────────────────────────
 
     @PostMapping(value = "/import-with-mapping", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Import Excel with custom column mapping",

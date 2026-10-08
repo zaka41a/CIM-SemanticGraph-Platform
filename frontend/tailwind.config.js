@@ -7,7 +7,6 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Professional Dark Blue/Navy - matching new design
         primary: {
           50: '#f0f4f8',
           100: '#d9e2ec',
@@ -35,7 +34,6 @@ export default {
           900: '#78350f',
           950: '#451a03',
         },
-        // Neutral grays for professional look
         neutral: {
           50: '#fafafa',
           100: '#f5f5f5',

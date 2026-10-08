@@ -2,23 +2,19 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from enum import Enum
 
-
 class BusType(str, Enum):
     SLACK = "SLACK"
     PV = "PV"
     PQ = "PQ"
 
-
 class BranchType(str, Enum):
     LINE = "LINE"
     TRANSFORMER = "TRANSFORMER"
-
 
 class CalculationMethod(str, Enum):
     DC = "DC"
     AC_NEWTON_RAPHSON = "AC_NEWTON_RAPHSON"
     OPF = "OPF"
-
 
 # --- Request Models ---
 
@@ -42,7 +38,6 @@ class BusInput(BaseModel):
 
     model_config = {"populate_by_name": True}
 
-
 class BranchInput(BaseModel):
     id: str
     name: str
@@ -59,7 +54,6 @@ class BranchInput(BaseModel):
 
     model_config = {"populate_by_name": True}
 
-
 class NetworkInput(BaseModel):
     networkId: str = Field(alias="networkId")
     name: str = "CIM Network"
@@ -69,7 +63,6 @@ class NetworkInput(BaseModel):
 
     model_config = {"populate_by_name": True}
 
-
 class PowerFlowRequest(BaseModel):
     network: NetworkInput
     method: CalculationMethod = CalculationMethod.AC_NEWTON_RAPHSON
@@ -77,7 +70,6 @@ class PowerFlowRequest(BaseModel):
     tolerance: float = 1e-6
 
     model_config = {"populate_by_name": True}
-
 
 # --- Response Models ---
 
@@ -97,7 +89,6 @@ class BusResult(BaseModel):
     withinLimits: bool
     voltagePercentage: float
 
-
 class BranchResult(BaseModel):
     branchId: str
     branchName: str
@@ -113,7 +104,6 @@ class BranchResult(BaseModel):
     currentMagnitude: float
     loadingPercentage: float
     overloaded: bool
-
 
 class SystemStatistics(BaseModel):
     totalBuses: int
@@ -134,7 +124,6 @@ class SystemStatistics(BaseModel):
     minVoltageBus: str
     maxVoltageBus: str
 
-
 class Violation(BaseModel):
     type: str
     severity: str
@@ -144,7 +133,6 @@ class Violation(BaseModel):
     limitValue: float = 0.0
     violationPercentage: float = 0.0
     description: str
-
 
 class PowerFlowResponse(BaseModel):
     converged: bool
@@ -159,12 +147,10 @@ class PowerFlowResponse(BaseModel):
     targetBusId: Optional[str] = None
     networkId: str
 
-
 # --- Semantic Bus Search Models ---
 
 class BusSearchRequest(BaseModel):
     question: str = Field(..., description="Natural language query, e.g. 'voltage at Berlin 380kV'")
-
 
 class BusSearchResponse(BaseModel):
     found: bool

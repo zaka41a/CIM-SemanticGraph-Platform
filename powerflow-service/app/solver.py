@@ -5,7 +5,6 @@ from .models import CalculationMethod
 
 logger = logging.getLogger(__name__)
 
-
 def run_power_flow(
     net: pp.pandapowerNet,
     method: CalculationMethod,
@@ -64,7 +63,6 @@ def run_power_flow(
 
     return converged, iterations, execution_time_ms
 
-
 def _log_voltage_profile(net: pp.pandapowerNet, converged: bool) -> None:
     """
     Report the solved voltage spread.
@@ -86,7 +84,6 @@ def _log_voltage_profile(net: pp.pandapowerNet, converged: bool) -> None:
         )
     except Exception as e:
         logger.warning(f"Could not summarise voltage profile: {e}")
-
 
 def _run_ac_robust(net: pp.pandapowerNet, max_iterations: int, tolerance: float) -> tuple[bool, int]:
     """
@@ -134,7 +131,6 @@ def _run_ac_robust(net: pp.pandapowerNet, max_iterations: int, tolerance: float)
 
     logger.error("All AC power flow strategies failed")
     return False, max_iterations
-
 
 def _get_iterations(net: pp.pandapowerNet, max_iterations: int) -> int:
     """Extract iteration count from pandapower internal data."""

@@ -1,8 +1,6 @@
 import { createContext, useContext, useState, useCallback, useRef, useMemo } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 interface Toast {
@@ -20,11 +18,7 @@ interface ToastContextValue {
   info:    (message: string, duration?: number) => void;
 }
 
-// ── Context ───────────────────────────────────────────────────────────────────
-
 const ToastContext = createContext<ToastContextValue | null>(null);
-
-// ── Toast item component ──────────────────────────────────────────────────────
 
 const ICONS: Record<ToastType, React.ElementType> = {
   success: CheckCircle2,
@@ -69,8 +63,6 @@ const ToastItem = ({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
   );
 };
 
-// ── Provider ──────────────────────────────────────────────────────────────────
-
 export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -113,8 +105,6 @@ export const ToastProvider = ({ children }: { children: React.ReactNode }) => {
     </ToastContext.Provider>
   );
 };
-
-// ── Hook ──────────────────────────────────────────────────────────────────────
 
 // The hook stays next to its provider so both share the context instance. This costs
 // fast refresh for this file only, which is an acceptable trade for a single module.

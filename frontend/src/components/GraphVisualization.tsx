@@ -22,7 +22,6 @@ interface LoadFlowData {
   branchResults: { branchId: string; fromBusId: string; toBusId: string; fromActivePowerMw: number; toActivePowerMw: number; loadingPercentage: number; overloaded: boolean }[];
 }
 
-// ── Node type config ────────────────────────────────────────────────────────
 const NODE_TYPES: Record<string, { label: string; color: string; shape: string; size: number }> = {
   substation:  { label: 'Substation',       color: '#334e68', shape: 'rectangle', size: 72 },
   generator:   { label: 'Generator',        color: '#f39c12', shape: 'diamond',   size: 72 },
@@ -52,7 +51,6 @@ const getNodeType = (id: string, typeUri?: string): string => {
   return 'equipment';
 };
 
-// ── Stylesheet ───────────────────────────────────────────────────────────────
 const buildStylesheet = () => [
   {
     selector: 'node',
@@ -127,7 +125,6 @@ const buildStylesheet = () => [
   },
 ];
 
-// ── Node Info Panel ──────────────────────────────────────────────────────────
 const NodeInfoPanel = ({ node, onClose, loadFlowMode }: {
   node: any; onClose: () => void; loadFlowMode: boolean;
 }) => {
@@ -180,7 +177,6 @@ const NodeInfoPanel = ({ node, onClose, loadFlowMode }: {
   );
 };
 
-// ── Main Component ───────────────────────────────────────────────────────────
 const GraphVisualization = () => {
   const [elements, setElements]         = useState<any[]>([]);
   const [loading, setLoading]           = useState(true);
@@ -212,7 +208,6 @@ const GraphVisualization = () => {
     return counts;
   }, [elements]);
 
-  // ── Search & filter effects ────────────────────────────────────────────────
   useEffect(() => {
     if (!cyRef.current || elements.length === 0) return;
     const cy = cyRef.current;
@@ -246,7 +241,6 @@ const GraphVisualization = () => {
     });
   }, [hiddenTypes, elements]);
 
-  // ── Load Flow ──────────────────────────────────────────────────────────────
   const [loadFlowLoading, setLoadFlowLoading] = useState(false);
 
   const fetchLoadFlowData = useCallback(async () => {
@@ -326,7 +320,6 @@ const GraphVisualization = () => {
     }
   }, [loadFlowMode, loadFlowData, elements.length]);
 
-  // ── Fetch graph data ───────────────────────────────────────────────────────
   const fetchGraphData = useCallback(async () => {
     try {
       setLoading(true);
@@ -425,7 +418,6 @@ const GraphVisualization = () => {
     };
   }, []);
 
-  // ── Layout helpers ─────────────────────────────────────────────────────────
   const LAYOUT_CFG: Record<string, any> = {
     dagre:  { name: 'dagre', rankDir: 'LR', nodeSep: 100, rankSep: 160, animate: false },
     circle: { name: 'circle', animate: false },
@@ -469,7 +461,6 @@ const GraphVisualization = () => {
     });
   };
 
-  // ── Loading / error states ────────────────────────────────────────────────
   if (loading && elements.length === 0) {
     return (
       <div className="flex items-center justify-center h-96 card">
@@ -506,11 +497,9 @@ const GraphVisualization = () => {
     );
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div ref={containerRef} className={`card overflow-hidden ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : ''}`}>
 
-      {/* ── Toolbar ── */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-primary-700/30 bg-primary-800/30 flex-wrap">
 
         {/* Left: stats */}
@@ -663,7 +652,6 @@ const GraphVisualization = () => {
         </button>
       </div>
 
-      {/* ── Graph Canvas ── */}
       <div className="relative bg-primary-950/60">
         <CytoscapeComponent
           elements={elements}
@@ -694,7 +682,6 @@ const GraphVisualization = () => {
         )}
       </div>
 
-      {/* ── Legend ── */}
       {loadFlowMode ? (
         <LoadFlowLegend mode="voltage" />
       ) : (

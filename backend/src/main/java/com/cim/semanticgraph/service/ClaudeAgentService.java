@@ -76,9 +76,7 @@ public class ClaudeAgentService {
     private WebClient webClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // ─────────────────────────────────────────────────────────────────────
     // System prompt - expert power systems persona
-    // ─────────────────────────────────────────────────────────────────────
     private static final String SYSTEM_PROMPT = """
             You are an expert power systems engineer and CIM (Common Information Model) analyst \
             with deep knowledge of IEC 61970/61968 standards.
@@ -129,9 +127,7 @@ public class ClaudeAgentService {
                 && !claudeApiKey.equals("your-claude-api-key-here");
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Streaming entry point (SSE)
-    // ─────────────────────────────────────────────────────────────────────
 
     public Flux<String> processQueryStreaming(String question, String sessionId) {
         String ctx = buildDataContext();
@@ -201,9 +197,7 @@ public class ClaudeAgentService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Blocking entry point (for existing /ask endpoint)
-    // ─────────────────────────────────────────────────────────────────────
 
     public GraphRAGResponse processQuery(String question, String sessionId) {
         long startTime = System.currentTimeMillis();
@@ -269,9 +263,7 @@ public class ClaudeAgentService {
                 .build();
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Agent loop
-    // ─────────────────────────────────────────────────────────────────────
 
     private void runAgentLoop(
             String question,
@@ -421,9 +413,7 @@ public class ClaudeAgentService {
         )));
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Claude API call (blocking)
-    // ─────────────────────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> callClaude(List<Map<String, Object>> messages) {
@@ -517,9 +507,7 @@ public class ClaudeAgentService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Tool execution dispatcher
-    // ─────────────────────────────────────────────────────────────────────
 
     private String executeTool(String name, Map<String, Object> input, List<String> sourceUris) {
         try {
@@ -537,9 +525,7 @@ public class ClaudeAgentService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Tool implementations
-    // ─────────────────────────────────────────────────────────────────────
 
     private String toolSemanticSearch(Map<String, Object> input, List<String> sourceUris) {
         String query = stringParam(input, "query");
@@ -721,9 +707,7 @@ public class ClaudeAgentService {
                 uri, depth, subgraph.size(), context);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Tool definitions (JSON schemas for Claude)
-    // ─────────────────────────────────────────────────────────────────────
 
     private List<Map<String, Object>> buildTools() {
         return List.of(
@@ -789,9 +773,7 @@ public class ClaudeAgentService {
         return Map.of("name", name, "description", description, "input_schema", schema);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Helpers
-    // ─────────────────────────────────────────────────────────────────────
 
     private String sseEvent(String type, Map<String, Object> data) {
         try {

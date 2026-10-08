@@ -37,9 +37,7 @@ public class CIMNetworkExtractor {
      * Extract network model from CIM RDF graph
      */
     public NetworkModel extractNetwork(Model cimModel) {
-        log.info("═══════════════════════════════════════════════════════════");
         log.info("Starting CIM Network Extraction");
-        log.info("═══════════════════════════════════════════════════════════");
         
         if (cimModel == null || cimModel.isEmpty()) {
             log.error("CIM model is null or empty!");
@@ -108,7 +106,6 @@ public class CIMNetworkExtractor {
             log.info("Slack bus: {}", network.getSlackBus() != null ? network.getSlackBus().getId() : "NONE");
 
             // Final validation
-            log.info("═══════════════════════════════════════════════════════════");
             log.info("Network Extraction Summary:");
             log.info("  - Buses: {} ({} PQ, {} PV, {} Slack)", 
                     network.getBusCount(),
@@ -118,7 +115,6 @@ public class CIMNetworkExtractor {
             log.info("  - Branches: {}", network.getBranchCount());
             log.info("  - Total Generation: {} MW / {} MVAr", totalGenP, totalGenQ);
             log.info("  - Total Load: {} MW / {} MVAr", totalLoadP, totalLoadQ);
-            log.info("═══════════════════════════════════════════════════════════");
 
             // Validation warnings
             if (totalGenP == 0.0 && totalLoadP > 0.0) {

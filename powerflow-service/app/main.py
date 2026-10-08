@@ -23,15 +23,12 @@ from . import semantic_bus_finder
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ── Simple in-process result cache (keyed by MD5 of network JSON + method) ─────
 _result_cache: dict[str, "PowerFlowResponse"] = {}
 _MAX_CACHE = 20  # evict oldest when full
-
 
 def _cache_key(request: "PowerFlowRequest") -> str:
     payload = request.network.model_dump_json() + request.method.value
     return hashlib.md5(payload.encode()).hexdigest()
-
 
 def _cache_put(key: str, value: "PowerFlowResponse") -> None:
     if len(_result_cache) >= _MAX_CACHE:
@@ -39,13 +36,11 @@ def _cache_put(key: str, value: "PowerFlowResponse") -> None:
         del _result_cache[oldest]
     _result_cache[key] = value
 
-
 app = FastAPI(
     title="CIM Power Flow Service",
     description="pandapower-based power flow calculation service for CIM networks",
     version="1.0.0",
 )
-
 
 @app.get("/health")
 async def health():
@@ -55,7 +50,6 @@ async def health():
         "pandapower_version": pp.__version__,
         "semantic_search": semantic_bus_finder.is_available(),
     }
-
 
 @app.post("/find-bus", response_model=BusSearchResponse)
 async def find_bus(request: BusSearchRequest):
@@ -100,7 +94,6 @@ async def find_bus(request: BusSearchRequest):
         question=request.question,
         message=message,
     )
-
 
 @app.post("/calculate", response_model=PowerFlowResponse)
 async def calculate(request: PowerFlowRequest):
@@ -148,13 +141,11 @@ async def calculate(request: PowerFlowRequest):
         logger.error(f"Power flow calculation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Calculation failed: {str(e)}")
 
-
 @app.delete("/cache", status_code=204)
 async def clear_cache():
     """Invalidate the power flow result cache (call after network data changes)."""
     _result_cache.clear()
     logger.info("Power flow cache cleared")
-
 
 @app.post("/calculate/{bus_id}", response_model=PowerFlowResponse)
 async def calculate_for_bus(bus_id: str, request: PowerFlowRequest):
@@ -162,7 +153,6 @@ async def calculate_for_bus(bus_id: str, request: PowerFlowRequest):
     response = await calculate(request)
     response.targetBusId = bus_id
     return response
-
 
 def build_response(
     net: pp.pandapowerNet,
@@ -392,7 +382,6 @@ def build_response(
         networkId=network_input.networkId,
     )
 
-
 def _is_missing(val) -> bool:
     """True when pandapower left a result empty, which it does for unsupplied buses."""
     if val is None:
@@ -402,7 +391,6 @@ def _is_missing(val) -> bool:
     except (ValueError, TypeError):
         return True
     return math.isnan(f) or math.isinf(f)
-
 
 def _safe_float(val, default: float = 0.0) -> float:
     """Safely convert a value to float, handling NaN and None."""

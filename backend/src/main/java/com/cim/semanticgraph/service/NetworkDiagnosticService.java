@@ -18,9 +18,7 @@ public class NetworkDiagnosticService {
     private static final String CIM_PREFIX = "http://iec.ch/TC57/CIM100#";
 
     public DiagnosticResult runDiagnostics() {
-        log.info("═══════════════════════════════════════════════════════════");
         log.info("Running Network Diagnostics");
-        log.info("═══════════════════════════════════════════════════════════");
 
         DiagnosticResult result = new DiagnosticResult();
 
@@ -41,11 +39,8 @@ public class NetworkDiagnosticService {
             checkLoads(cimModel, result);
             checkConnectivity(cimModel, result);
             assessNetwork(result);
-
-            log.info("═══════════════════════════════════════════════════════════");
             log.info("Diagnostics Complete: {} errors, {} warnings",
                     result.getErrors().size(), result.getWarnings().size());
-            log.info("═══════════════════════════════════════════════════════════");
 
         } catch (Exception e) {
             log.error("Error running diagnostics: {}", e.getMessage(), e);

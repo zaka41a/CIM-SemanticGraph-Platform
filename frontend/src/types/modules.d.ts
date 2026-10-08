@@ -26,7 +26,6 @@ declare module 'cytoscape-dagre' {
 // Vite env types
 interface ImportMetaEnv {
   readonly VITE_API_URL?: string;
-  readonly VITE_ANALYTICS_ID?: string;
 }
 
 interface ImportMeta {

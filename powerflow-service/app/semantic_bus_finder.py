@@ -25,7 +25,6 @@ BUS_CIM_TYPES = [
 SCORE_THRESHOLD = 0.30
 EMBEDDING_MODEL  = "text-embedding-3-small"
 
-
 @dataclass
 class BusMatch:
     bus_id:   str    # local name usable as bus ID in load flow
@@ -34,7 +33,6 @@ class BusMatch:
     uri:      str    # full CIM URI
     score:    float  # cosine similarity (0.0 – 1.0)
     method:   str    # "semantic"
-
 
 class SemanticBusFinder:
     """
@@ -51,9 +49,7 @@ class SemanticBusFinder:
         self._ready   = False
         self._tried   = False   # avoid retrying after a failed init
 
-    # ------------------------------------------------------------------
     # Public API
-    # ------------------------------------------------------------------
 
     def find_bus(self, question: str, top_k: int = 1) -> Optional[BusMatch]:
         """
@@ -76,9 +72,7 @@ class SemanticBusFinder:
         self._setup()
         return self._ready
 
-    # ------------------------------------------------------------------
     # Internal helpers
-    # ------------------------------------------------------------------
 
     def _setup(self) -> bool:
         """Lazy init — called once. Returns True if ready."""
@@ -191,27 +185,19 @@ class SemanticBusFinder:
             logger.warning("Semantic bus search error: %s", exc)
             return None
 
-
-# ------------------------------------------------------------------
 # Module-level singleton + convenience function
-# ------------------------------------------------------------------
 
 _finder = SemanticBusFinder()
-
 
 def find_bus(question: str) -> Optional[BusMatch]:
     """Find the best matching CIM bus for a natural language question."""
     return _finder.find_bus(question)
 
-
 def is_available() -> bool:
     """True if Qdrant + OpenAI are configured and reachable."""
     return _finder.is_available()
 
-
-# ------------------------------------------------------------------
 # Utility
-# ------------------------------------------------------------------
 
 def _extract_local_name(uri: str) -> str:
     """Extract local name from a URI (after # or last /)."""

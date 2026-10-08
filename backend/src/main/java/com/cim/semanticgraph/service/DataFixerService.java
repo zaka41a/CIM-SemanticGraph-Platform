@@ -32,8 +32,6 @@ public class DataFixerService {
             "(?i)\\b(DROP\\s+(ALL|GRAPH|DEFAULT|NAMED)|CLEAR\\s+(ALL|GRAPH|DEFAULT|NAMED))\\b"
     );
 
-    // ── Public DTOs ────────────────────────────────────────────────────────
-
     public record FixRequest(
             String id,
             String description,
@@ -56,8 +54,6 @@ public class DataFixerService {
             int blocked,
             List<FixResult> results
     ) {}
-
-    // ── Apply fixes ────────────────────────────────────────────────────────
 
     /**
      * Apply a list of fixes sequentially.
@@ -105,8 +101,6 @@ public class DataFixerService {
 
         return new ApplyResponse(ok, failed, blocked, results);
     }
-
-    // ── Internal ───────────────────────────────────────────────────────────
 
     private FixResult applyOneFix(FixRequest fix, boolean dryRun) {
         String query = fix.sparqlQuery();

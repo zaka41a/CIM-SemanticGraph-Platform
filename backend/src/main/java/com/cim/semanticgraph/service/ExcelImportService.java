@@ -917,9 +917,7 @@ public class ExcelImportService {
                 .replaceAll("^_|_$", "");
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Excel Analysis - returns sheet structure without importing
-    // ─────────────────────────────────────────────────────────────────────
 
     public ExcelAnalysis analyzeExcel(MultipartFile file) throws IOException {
         try (InputStream is = file.getInputStream();
@@ -973,9 +971,7 @@ public class ExcelImportService {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Import with custom column mapping
-    // ─────────────────────────────────────────────────────────────────────
 
     /**
      * Import Excel with user-provided column mappings.
@@ -1010,9 +1006,7 @@ public class ExcelImportService {
         return importExcelInternal(file, extraAliases, sheetTypeOverrides);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Internal import with optional extra aliases / sheet-type overrides
-    // ─────────────────────────────────────────────────────────────────────
 
     private ImportResult importExcelInternal(
             MultipartFile file,
@@ -1121,9 +1115,7 @@ public class ExcelImportService {
         return mapping;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // "With map" wrappers - importX methods that accept a pre-built colMap
-    // ─────────────────────────────────────────────────────────────────────
 
     private int importSubstationsWithMap(Sheet sheet, Model model, Map<String, Integer> columns) {
         int count = 0;
@@ -1299,9 +1291,7 @@ public class ExcelImportService {
         return count;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Shared alias map (extracted so analyzeExcel can use it too)
-    // ─────────────────────────────────────────────────────────────────────
 
     private Map<String, String> buildAliasMap() {
         Map<String, String> a = new HashMap<>();
@@ -1325,9 +1315,7 @@ public class ExcelImportService {
         return a;
     }
 
-    // ─────────────────────────────────────────────────────────────────────
     // Data classes
-    // ─────────────────────────────────────────────────────────────────────
 
     @lombok.Builder @lombok.Data
     public static class ExcelAnalysis {

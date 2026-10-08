@@ -10,7 +10,6 @@ import PageHeader from '@/components/PageHeader';
 import { apiService } from '@/services/api';
 import { storageGet, storageSet } from '@/utils/storage';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
 interface Violation {
   path: string;
   message: string;
@@ -41,7 +40,6 @@ interface HistoryEntry {
 const HISTORY_KEY = 'shacl-validation-history';
 const MAX_HISTORY = 5;
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
 function severityRank(s: string) {
   const u = s.toUpperCase();
   if (u === 'ERROR' || u === 'VIOLATION') return 0;
@@ -79,7 +77,6 @@ function relativeTime(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-// ── Compliance Gauge ───────────────────────────────────────────────────────────
 const ComplianceGauge = ({ score, onAccent = false }: { score: number; onAccent?: boolean }) => {
   const r = 52;
   const circumference = Math.PI * r; // half circle
@@ -120,7 +117,6 @@ const ComplianceGauge = ({ score, onAccent = false }: { score: number; onAccent?
   );
 };
 
-// ── Loading Stepper ────────────────────────────────────────────────────────────
 const LOADING_STEPS = [
   'Connecting to Fuseki SPARQL endpoint…',
   'Loading SHACL shapes…',
@@ -158,7 +154,6 @@ const LoadingStepper = () => {
   );
 };
 
-// ── Violation Item ─────────────────────────────────────────────────────────────
 const SEV_STYLE: Record<string, { cls: string; icon: React.ReactNode }> = {
   ERROR:     { cls: 'text-red-400 bg-red-500/10 border-red-500/30',      icon: <XCircle size={14} /> },
   VIOLATION: { cls: 'text-red-400 bg-red-500/10 border-red-500/30',      icon: <XCircle size={14} /> },
@@ -245,7 +240,6 @@ const ViolationItem = ({
   );
 };
 
-// ── Main ───────────────────────────────────────────────────────────────────────
 const Validation = () => {
   const navigate = useNavigate();
   const [isValidating, setIsValidating] = useState(false);
@@ -413,7 +407,6 @@ const Validation = () => {
         }
       />
 
-      {/* ── DataFixer cross-reference notice ──────────────────────────────── */}
       {dataFixerIssues.length > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-sm">
           <Wrench size={15} className="text-amber-400 flex-shrink-0" />
@@ -431,7 +424,6 @@ const Validation = () => {
         </div>
       )}
 
-      {/* ── History panel ─────────────────────────────────────────────────── */}
       {showHistory && history.length > 0 && (
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-primary-700/30 flex items-center justify-between">
@@ -467,7 +459,6 @@ const Validation = () => {
         </div>
       )}
 
-      {/* ── Error ─────────────────────────────────────────────────────────── */}
       {error && (
         <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-red-500/10 to-accent-500/10 border border-red-500/30 p-5">
           <div className="flex items-start gap-3">
@@ -480,10 +471,8 @@ const Validation = () => {
         </div>
       )}
 
-      {/* ── Loading ────────────────────────────────────────────────────────── */}
       {isValidating && <LoadingStepper />}
 
-      {/* ── Results ───────────────────────────────────────────────────────── */}
       {result && !isValidating && score !== null && (
         <div className="space-y-6">
 
@@ -650,7 +639,6 @@ const Validation = () => {
         </div>
       )}
 
-      {/* ── About panel (always visible when no results yet) ──────────────── */}
       {!result && !isValidating && !error && (
         <div className="grid md:grid-cols-2 gap-6">
           {/* About */}
@@ -715,7 +703,6 @@ const Validation = () => {
   );
 };
 
-// ── Path Group (grouped view) ──────────────────────────────────────────────────
 const PathGroup = ({
   path, violations, onAskClaude,
 }: {

@@ -17,7 +17,6 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from pathlib import Path
 import uuid, math
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
 SCRIPT_DIR = Path(__file__).parent
 CIM_TEST   = SCRIPT_DIR / "cim test"
 OUT_DIR    = SCRIPT_DIR / "converted"
@@ -28,7 +27,6 @@ SUBNETWORKS = {
     "4": CIM_TEST / "subnetwork_valid_4_scrambled",
 }
 
-# ── Styles ─────────────────────────────────────────────────────────────────────
 HDR_FILL  = PatternFill("solid", fgColor="1E3A5F")
 HDR_FONT  = Font(bold=True, color="FFFFFF", size=10)
 ALT_FILL  = PatternFill("solid", fgColor="EEF2FF")
@@ -46,7 +44,6 @@ def style_row(ws, row_num, n_cols):
         for c in range(1, n_cols + 1):
             ws.cell(row=row_num, column=c).fill = ALT_FILL
 
-# ── Read helper ────────────────────────────────────────────────────────────────
 def read_sheet(path):
     """Return (headers_list, rows_list_of_dicts)."""
     wb  = openpyxl.load_workbook(path, read_only=True)
@@ -63,7 +60,6 @@ def read_sheet(path):
             rows.append(d)
     return headers, rows
 
-# ── Conversion logic ───────────────────────────────────────────────────────────
 def convert_subnetwork(num: str, folder: Path):
     print(f"\n{'─'*60}")
     print(f"  Converting subnetwork {num}  ({folder.name})")
@@ -91,7 +87,6 @@ def convert_subnetwork(num: str, folder: Path):
     print(f"  Consumers: {len(consumers)}")
     print(f"  Transformers: {len(trafos)}")
 
-    # ── Build merged Excel ─────────────────────────────────────────────────────
     wb = openpyxl.Workbook()
 
     # INFO sheet
@@ -102,7 +97,6 @@ def convert_subnetwork(num: str, folder: Path):
     ws0["A3"] = "Converted from PyPSA/pandapower format for CIM-SemanticGraph-Platform"
     ws0.column_dimensions["A"].width = 65
 
-    # ── BUSES sheet ───────────────────────────────────────────────────────────
     ws_buses = wb.create_sheet("Buses")
     bus_headers = ["id", "name", "voltage (kV)", "type", "x", "y"]
     ws_buses.append(bus_headers)
@@ -122,7 +116,6 @@ def convert_subnetwork(num: str, folder: Path):
     ws_buses.column_dimensions["B"].width = 16
     ws_buses.column_dimensions["C"].width = 14
 
-    # ── LINES sheet ───────────────────────────────────────────────────────────
     ws_lines = wb.create_sheet("Lines")
     line_headers = ["id", "from", "to", "v_nom (kV)", "length (km)", "r (Ohm/km)", "s_nom (MVA)"]
     ws_lines.append(line_headers)
@@ -142,7 +135,6 @@ def convert_subnetwork(num: str, folder: Path):
     ws_lines.column_dimensions["B"].width = 16
     ws_lines.column_dimensions["C"].width = 16
 
-    # ── LOADS (consumers) sheet ───────────────────────────────────────────────
     ws_loads = wb.create_sheet("Loads")
     load_headers = ["id", "bus", "p (MW)", "q (MVAr)", "profile", "pv_kw", "sub_grid"]
     ws_loads.append(load_headers)
@@ -176,7 +168,6 @@ def convert_subnetwork(num: str, folder: Path):
     ws_loads.column_dimensions["A"].width = 40
     ws_loads.column_dimensions["B"].width = 16
 
-    # ── TRANSFORMERS sheet ────────────────────────────────────────────────────
     ws_trafos = wb.create_sheet("Transformers")
     trafo_headers = ["id", "hv_bus", "lv_bus", "v0 (kV)", "v1 (kV)", "r", "g", "b", "s_nom (MVA)"]
     ws_trafos.append(trafo_headers)
@@ -202,7 +193,6 @@ def convert_subnetwork(num: str, folder: Path):
     wb.save(out_xlsx)
     print(f"  ✓  Saved: {out_xlsx.name}  ({out_xlsx.stat().st_size // 1024} KB)")
 
-    # ── Build CIM/RDF ──────────────────────────────────────────────────────────
     CIM  = "http://iec.ch/TC57/CIM100#"
     RDF  = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
     RDFS = "http://www.w3.org/2000/01/rdf-schema#"
@@ -360,11 +350,7 @@ def convert_subnetwork(num: str, folder: Path):
 
     return len(nodes), len(lines), len(consumers), len(trafos)
 
-
-# ── Main ───────────────────────────────────────────────────────────────────────
-print("\n" + "═"*60)
 print("  Prof File Converter → CIM Platform format")
-print("═"*60)
 
 totals = {}
 for num, folder in SUBNETWORKS.items():
@@ -373,9 +359,7 @@ for num, folder in SUBNETWORKS.items():
     else:
         print(f"\n  SKIP: {folder} not found")
 
-print("\n" + "═"*60)
 print("  Summary")
-print("═"*60)
 for num, (n, l, c, t) in totals.items():
     print(f"  Subnetwork {num}: {n} buses, {l} lines, {c} consumers, {t} transformers")
 print(f"\n  Output folder: {OUT_DIR}")
@@ -383,4 +367,3 @@ print("\n  To import into the platform:")
 print("  1. Upload subnetwork_X.rdf  via  Data Import > CIM/RDF")
 print("  OR")
 print("  2. Upload subnetwork_X_merged.xlsx  via  Data Import > Excel")
-print("═"*60 + "\n")

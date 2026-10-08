@@ -28,7 +28,6 @@ interface ImportHistoryItem {
 type SortField = 'importDate' | 'fileName' | 'triplesCount' | 'fileSize' | 'duration';
 type SortDir = 'asc' | 'desc';
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
 function formatFileSize(bytes: number): string {
   if (!bytes) return '-';
   const k = 1024;
@@ -65,7 +64,6 @@ function getFileType(name: string): { label: string; icon: React.ComponentType<a
   return { label: 'File', icon: FileText, color: 'text-accent-400', bg: 'bg-accent-500/15 border-accent-500/30' };
 }
 
-// ── Stat Card ──────────────────────────────────────────────────────────────────
 const StatCard = ({
   icon: Icon, label, value, color, border,
 }: {
@@ -87,7 +85,6 @@ const StatCard = ({
   </div>
 );
 
-// ── Main Component ─────────────────────────────────────────────────────────────
 const History = () => {
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();

@@ -24,8 +24,6 @@ public class AnalysisService {
     @Value("${cim.namespaces.cim:http://iec.ch/TC57/CIM100#}")
     private String cimNamespace;
 
-    // ── Public response types ──────────────────────────────────────────────
-
     public record TopEntity(String uri, String name, String type, long connections) {}
 
     public record QualityCheck(String name, String category, String severity, long count, String description) {}
@@ -38,8 +36,6 @@ public class AnalysisService {
             List<TopEntity> topConnectedEntities,
             long computedAt
     ) {}
-
-    // ── Main entry point ───────────────────────────────────────────────────
 
     public AnalysisSummary getSummary() {
         log.info("Computing analysis summary");
@@ -56,8 +52,6 @@ public class AnalysisService {
         return new AnalysisSummary(stats, health, quality, qualityScore, topEntities, System.currentTimeMillis());
     }
 
-    // ── Statistics ─────────────────────────────────────────────────────────
-
     private Map<String, Object> fetchStatistics() {
         try {
             return jenaService.getGraphStatistics();
@@ -66,8 +60,6 @@ public class AnalysisService {
             return Map.of("error", e.getMessage());
         }
     }
-
-    // ── Health / Diagnostics ───────────────────────────────────────────────
 
     private Map<String, Object> fetchHealth() {
         try {
@@ -93,8 +85,6 @@ public class AnalysisService {
             return Map.of("status", "ERROR", "message", e.getMessage(), "errors", List.of());
         }
     }
-
-    // ── Data quality checks ────────────────────────────────────────────────
 
     private List<QualityCheck> runQualityChecks() {
         List<QualityCheck> checks = new ArrayList<>();
@@ -199,8 +189,6 @@ public class AnalysisService {
         return Math.max(0, score);
     }
 
-    // ── Top connected entities ─────────────────────────────────────────────
-
     private List<TopEntity> fetchTopConnectedEntities() {
         String sparql = """
                 PREFIX cim: <%s>
@@ -232,8 +220,6 @@ public class AnalysisService {
             return List.of();
         }
     }
-
-    // ── Helpers ────────────────────────────────────────────────────────────
 
     private long queryCount(String sparql) {
         try {

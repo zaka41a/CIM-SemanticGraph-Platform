@@ -5,7 +5,6 @@ from .models import NetworkInput, BusType, BranchType
 
 logger = logging.getLogger(__name__)
 
-
 def convert_to_pandapower(network: NetworkInput) -> tuple[pp.pandapowerNet, dict[str, int], dict[str, tuple[str, int]]]:
     """
     Convert a CIM NetworkInput (JSON from Spring Boot) into a pandapower network.
@@ -129,7 +128,6 @@ def convert_to_pandapower(network: NetworkInput) -> tuple[pp.pandapowerNet, dict
 
     return net, bus_id_to_pp_idx, branch_result_map
 
-
 def _create_line(
     net: pp.pandapowerNet,
     network: NetworkInput,
@@ -186,7 +184,6 @@ def _create_line(
         in_service=branch.inService,
     )
     logger.info(f"Line {branch.name}: R={r_ohm:.4f}Ω, X={x_ohm:.4f}Ω, C={c_nf:.1f}nF, Vn={vn_kv}kV")
-
 
 def _create_transformer(
     net: pp.pandapowerNet,

@@ -24,7 +24,6 @@ except ImportError:
     print("WARNING: openpyxl not installed – Excel files will be skipped.")
     print("Install with:  pip install openpyxl")
 
-# ── Paths ──────────────────────────────────────────────────────────────────────
 SCRIPT_DIR = Path(__file__).parent
 CIM_XML_DIR  = SCRIPT_DIR / "cim_xml"
 CIM_RDF_DIR  = SCRIPT_DIR / "cim_rdf"
@@ -35,7 +34,6 @@ EXCEL_DIR    = SCRIPT_DIR / "excel"
 for d in [CIM_XML_DIR, CIM_RDF_DIR, RDF_XML_DIR, TURTLE_DIR, EXCEL_DIR]:
     d.mkdir(exist_ok=True)
 
-# ── Namespaces ─────────────────────────────────────────────────────────────────
 CIM_NS   = "http://iec.ch/TC57/CIM100#"
 RDF_NS   = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 RDFS_NS  = "http://www.w3.org/2000/01/rdf-schema#"
@@ -43,7 +41,6 @@ OWL_NS   = "http://www.w3.org/2002/07/owl#"
 MD_NS    = "http://iec.ch/TC57/61970-552/ModelDescription/1#"
 EQ_NS    = "http://iec.ch/TC57/2013/CIM-schema-cim16/EquipmentCore#"
 
-# ── Size configs ───────────────────────────────────────────────────────────────
 # (label, n_buses, n_lines, n_gens, n_loads, n_trafos)
 SIZES = [
     ("tiny_1bus",      1,   0, 1,  1,  0),
@@ -58,7 +55,6 @@ SIZES = [
     ("large_100bus", 100, 130,20, 40, 12),
 ]
 
-# ── Helpers ────────────────────────────────────────────────────────────────────
 def uid(): return "_" + str(uuid.uuid4()).replace("-","")
 
 def base_voltage(n):
@@ -84,9 +80,7 @@ def gen_topology(n_buses, n_lines):
             edges.append((a, b))
     return edges
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # CIM/XML  (IEC 61970 CIM/XML header, rdf:RDF body)
-# ═══════════════════════════════════════════════════════════════════════════════
 CIM_XML_HEADER = """\
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- CIM/XML  IEC 61970-552  –  {label} -->
@@ -242,9 +236,7 @@ def build_cim_xml(label, buses, edges, gens, loads, trafos):
     lines.append("</rdf:RDF>")
     return "\n".join(lines)
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TURTLE
-# ═══════════════════════════════════════════════════════════════════════════════
 TURTLE_PREFIXES = """\
 @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -363,9 +355,7 @@ def build_turtle(label, buses, edges, gens, loads, trafos):
 
     return "\n".join(lines) + "\n"
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # Excel
-# ═══════════════════════════════════════════════════════════════════════════════
 HDR_FILL  = PatternFill("solid", fgColor="1E3A5F")
 HDR_FONT  = Font(bold=True, color="FFFFFF", size=10)
 HDR_ALIGN = Alignment(horizontal="center", vertical="center")
@@ -464,9 +454,7 @@ def build_excel(label, buses, edges, gens, loads, trafos, out_path):
 
     wb.save(out_path)
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # Main generation loop
-# ═══════════════════════════════════════════════════════════════════════════════
 def bus_names(n):
     return [f"BUS_{i+1:03d}" for i in range(n)]
 
@@ -508,10 +496,7 @@ for label, n_buses, n_lines, n_gens, n_loads, n_trafos in SIZES:
         build_excel(label, buses, edges, n_gens, n_loads, n_trafos, p)
         generated["excel"].append((p.name, p.stat().st_size))
 
-# ── Summary ────────────────────────────────────────────────────────────────────
-print("\n" + "═"*60)
 print("  CIM Test Files Generated")
-print("═"*60)
 for fmt, files in generated.items():
     if not files: continue
     print(f"\n  [{fmt.upper()}]  →  {list(SIZES[0])[0]}  …  format")
@@ -520,4 +505,3 @@ for fmt, files in generated.items():
         bar = "█" * min(int(kb/2), 40)
         print(f"    {name:<38}  {kb:7.1f} KB  {bar}")
 print(f"\n  Total files: {sum(len(v) for v in generated.values())}")
-print("═"*60 + "\n")
