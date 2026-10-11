@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="frontend/public/logo.svg" alt="CIM SemanticGraph Platform logo" width="128" />
+</p>
+
 # CIM SemanticGraph Platform
 
 Web application for importing CIM power networks, querying them with SPARQL and
