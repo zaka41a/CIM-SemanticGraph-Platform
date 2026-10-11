@@ -1,8 +1,8 @@
-<p align="center">
-  <img src="frontend/public/logo.svg" alt="CIM SemanticGraph Platform logo" width="128" />
-</p>
+ <p align="center">
+    <img src="frontend/public/logo.svg" alt="CIM SemanticGraph Platform logo" width="128" />
+  </p>
 
-# CIM SemanticGraph Platform
+  <h1 align="center">CIM SemanticGraph Platform</h1>
 
 Web application for importing CIM power networks, querying them with SPARQL and
 GraphRAG, and calculating power flow.
